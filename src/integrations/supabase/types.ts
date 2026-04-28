@@ -61,6 +61,7 @@ export type Database = {
           recurrence_weekdays: number[] | null
           role_id: string | null
           scheduled_date: string
+          time_spent_seconds: number
           title: string
           updated_at: string
           user_id: string
@@ -81,6 +82,7 @@ export type Database = {
           recurrence_weekdays?: number[] | null
           role_id?: string | null
           scheduled_date?: string
+          time_spent_seconds?: number
           title: string
           updated_at?: string
           user_id: string
@@ -101,6 +103,7 @@ export type Database = {
           recurrence_weekdays?: number[] | null
           role_id?: string | null
           scheduled_date?: string
+          time_spent_seconds?: number
           title?: string
           updated_at?: string
           user_id?: string
