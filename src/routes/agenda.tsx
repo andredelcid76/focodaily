@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
@@ -66,6 +67,10 @@ function AgendaInner({ userId }: { userId: string }) {
     last_sync_at?: string | null;
   }>({ connected: false });
   const meetingsApi = useMeetings(userId);
+  const getOutlookStatusFn = useServerFn(getOutlookStatus);
+  const getOutlookAuthUrlFn = useServerFn(getOutlookAuthUrl);
+  const syncOutlookCalendarFn = useServerFn(syncOutlookCalendar);
+  const disconnectOutlookFn = useServerFn(disconnectOutlook);
 
   // Read callback message from URL (?outlook=success|error&msg=...)
   useEffect(() => {
@@ -83,7 +88,7 @@ function AgendaInner({ userId }: { userId: string }) {
 
   const refreshOutlookStatus = async () => {
     try {
-      const res = await getOutlookStatus();
+      const res = await getOutlookStatusFn();
       setOutlook({
         connected: res.connected,
         email: res.connection?.email,
@@ -128,7 +133,7 @@ function AgendaInner({ userId }: { userId: string }) {
   const onConnect = async () => {
     setConnecting(true);
     try {
-      const res = await getOutlookAuthUrl({ data: { origin: window.location.origin } });
+      const res = await getOutlookAuthUrlFn({ data: { origin: window.location.origin } });
       window.location.href = res.url;
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao iniciar conexão");
@@ -138,7 +143,7 @@ function AgendaInner({ userId }: { userId: string }) {
 
   const onDisconnect = async () => {
     try {
-      await disconnectOutlook();
+      await disconnectOutlookFn();
       toast.success("Outlook desconectado");
       setOutlook({ connected: false });
     } catch (e: any) {
@@ -153,7 +158,7 @@ function AgendaInner({ userId }: { userId: string }) {
     }
     setSyncing(true);
     try {
-      const res = await syncOutlookCalendar();
+      const res = await syncOutlookCalendarFn();
       toast.success(`${res.imported} reuniões sincronizadas do Outlook`);
       await meetingsApi.refresh();
       await refreshOutlookStatus();
