@@ -53,11 +53,12 @@ const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
   path: '/api/public/outlook',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicOutlookCallbackRoute = ApiPublicOutlookCallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => ApiPublicOutlookRoute,
-} as any)
+const ApiPublicOutlookCallbackRoute =
+  ApiPublicOutlookCallbackRouteImport.update({
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => ApiPublicOutlookRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -202,9 +203,8 @@ const ApiPublicOutlookRouteChildren: ApiPublicOutlookRouteChildren = {
   ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
 }
 
-const ApiPublicOutlookRouteWithChildren = ApiPublicOutlookRoute._addFileChildren(
-  ApiPublicOutlookRouteChildren,
-)
+const ApiPublicOutlookRouteWithChildren =
+  ApiPublicOutlookRoute._addFileChildren(ApiPublicOutlookRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -218,3 +218,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
