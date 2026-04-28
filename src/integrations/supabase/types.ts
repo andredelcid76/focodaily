@@ -68,6 +68,51 @@ export type Database = {
         }
         Relationships: []
       }
+      outlook_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          display_name: string | null
+          email: string | null
+          expires_at: string
+          id: string
+          last_sync_at: string | null
+          ms_user_id: string | null
+          refresh_token: string
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          expires_at: string
+          id?: string
+          last_sync_at?: string | null
+          ms_user_id?: string | null
+          refresh_token: string
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          last_sync_at?: string | null
+          ms_user_id?: string | null
+          refresh_token?: string
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           color: string
