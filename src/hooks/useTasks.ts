@@ -33,6 +33,8 @@ function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
   }
   if (parent.recurrence === "weekly") return diffDays % 7 === 0;
   if (parent.recurrence === "monthly") return startD.getDate() === dayD.getDate();
+  if (parent.recurrence === "yearly")
+    return startD.getDate() === dayD.getDate() && startD.getMonth() === dayD.getMonth();
   if (parent.recurrence === "custom") {
     const interval = parent.recurrence_interval ?? 0;
     const weekdays = parent.recurrence_weekdays ?? [];
@@ -136,6 +138,8 @@ export function useTasks(userId: string | undefined) {
           }
           else if (p.recurrence === "weekly") matches = diffDays % 7 === 0;
           else if (p.recurrence === "monthly") matches = startD.getDate() === dayD.getDate();
+          else if (p.recurrence === "yearly")
+            matches = startD.getDate() === dayD.getDate() && startD.getMonth() === dayD.getMonth();
           else if (p.recurrence === "custom") {
             const interval = p.recurrence_interval ?? 0;
             const weekdays = p.recurrence_weekdays ?? [];
