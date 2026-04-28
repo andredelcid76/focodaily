@@ -33,6 +33,8 @@ function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
   }
   if (parent.recurrence === "weekly") return diffDays % 7 === 0;
   if (parent.recurrence === "monthly") return startD.getDate() === dayD.getDate();
+  if (parent.recurrence === "yearly")
+    return startD.getDate() === dayD.getDate() && startD.getMonth() === dayD.getMonth();
   if (parent.recurrence === "custom") {
     const interval = parent.recurrence_interval ?? 0;
     const weekdays = parent.recurrence_weekdays ?? [];
