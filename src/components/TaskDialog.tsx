@@ -10,6 +10,7 @@ import type { Role } from "@/hooks/useRoles";
 import { toast } from "sonner";
 import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
+import { CategoryIcon } from "@/components/CategoryBadge";
 
 type Props = {
   open: boolean;
@@ -124,9 +125,21 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
               <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="urgent">🔥 Urgente</SelectItem>
-                  <SelectItem value="important">⭐ Importante</SelectItem>
-                  <SelectItem value="circumstantial">💧 Circunstancial</SelectItem>
+                  <SelectItem value="urgent">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon category="urgent" /> Urgente
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="important">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon category="important" /> Importante
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="circumstantial">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon category="circumstantial" /> Circunstancial
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
