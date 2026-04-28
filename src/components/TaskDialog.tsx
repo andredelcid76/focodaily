@@ -29,6 +29,8 @@ type Props = {
       role_id: string | null;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
+      recurrence_week_interval: number | null;
+      recurrence_monthly_pattern: { week: number; weekday: number } | null;
     },
     scope?: RecurrenceScope
   ) => Promise<void>;
@@ -58,6 +60,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
   const [roleId, setRoleId] = useState<string | null>(null);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [weekInterval, setWeekInterval] = useState(1);
+  const [monthlyMode, setMonthlyMode] = useState(false);
+  const [monthlyWeek, setMonthlyWeek] = useState<number>(1); // 1..5 or -1
+  const [monthlyWeekday, setMonthlyWeekday] = useState<number>(1); // 0..6
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -71,6 +77,18 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
       setRoleId(task?.role_id ?? null);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
+      const t: any = task;
+      setWeekInterval(t?.recurrence_week_interval ?? 1);
+      const mp = t?.recurrence_monthly_pattern as { week: number; weekday: number } | null | undefined;
+      if (mp && typeof mp.week === "number") {
+        setMonthlyMode(true);
+        setMonthlyWeek(mp.week);
+        setMonthlyWeekday(mp.weekday);
+      } else {
+        setMonthlyMode(false);
+        setMonthlyWeek(1);
+        setMonthlyWeekday(1);
+      }
     }
   }, [open, task, defaultDate]);
 
@@ -94,8 +112,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
           scheduled_date: date,
           recurrence,
           role_id: roleId,
-          recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
-          recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
+          recurrence_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
+          recurrence_weekdays:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekdays : null,
+          recurrence_week_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekInterval : null,
+          recurrence_monthly_pattern:
+            recurrence === "custom" && monthlyMode ? { week: monthlyWeek, weekday: monthlyWeekday } : null,
         },
         scope
       );
@@ -263,6 +287,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
                 <SelectContent>
                   <SelectItem value="none">Não repete</SelectItem>
                   <SelectItem value="daily">Diariamente</SelectItem>
+                  <SelectItem value="weekdays">Dias úteis (seg–sex)</SelectItem>
                   <SelectItem value="weekly">Semanalmente</SelectItem>
                   <SelectItem value="monthly">Mensalmente</SelectItem>
                   <SelectItem value="custom">Personalizada</SelectItem>
@@ -273,38 +298,115 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
 
           {recurrence === "custom" && (
             <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-3">
-              <div>
-                <Label className="text-xs">Dias da semana (opcional)</Label>
-                <div className="mt-1.5 flex gap-1">
-                  {WEEKDAYS.map((d) => (
-                    <button
-                      key={d.v}
-                      type="button"
-                      onClick={() => toggleWeekday(d.v)}
-                      className={`h-8 w-8 rounded-lg border text-xs font-semibold transition-colors ${
-                        weekdays.includes(d.v)
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-card hover:border-primary/40"
-                      }`}
-                    >
-                      {d.l}
-                    </button>
-                  ))}
-                </div>
+              {/* Mode toggle */}
+              <div className="flex gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setMonthlyMode(false)}
+                  className={`flex-1 rounded-lg border px-2 py-1.5 font-medium transition-colors ${
+                    !monthlyMode ? "border-primary bg-primary/15 text-primary" : "border-border bg-card hover:border-primary/40"
+                  }`}
+                >
+                  Por semana
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMonthlyMode(true)}
+                  className={`flex-1 rounded-lg border px-2 py-1.5 font-medium transition-colors ${
+                    monthlyMode ? "border-primary bg-primary/15 text-primary" : "border-border bg-card hover:border-primary/40"
+                  }`}
+                >
+                  Padrão mensal
+                </button>
               </div>
-              {weekdays.length === 0 && (
-                <div>
-                  <Label className="text-xs">Ou repita a cada</Label>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      value={interval}
-                      onChange={(e) => setIntervalDays(Number(e.target.value))}
-                      className="h-8 w-20"
-                    />
-                    <span className="text-sm text-muted-foreground">dia(s)</span>
+
+              {!monthlyMode && (
+                <>
+                  <div>
+                    <Label className="text-xs">Dias da semana (opcional)</Label>
+                    <div className="mt-1.5 flex gap-1">
+                      {WEEKDAYS.map((d) => (
+                        <button
+                          key={d.v}
+                          type="button"
+                          onClick={() => toggleWeekday(d.v)}
+                          className={`h-8 w-8 rounded-lg border text-xs font-semibold transition-colors ${
+                            weekdays.includes(d.v)
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-card hover:border-primary/40"
+                          }`}
+                        >
+                          {d.l}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  {weekdays.length > 0 ? (
+                    <div>
+                      <Label className="text-xs">A cada</Label>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={12}
+                          value={weekInterval}
+                          onChange={(e) => setWeekInterval(Math.max(1, Number(e.target.value) || 1))}
+                          className="h-8 w-20"
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          semana(s) {weekInterval > 1 ? "(ex.: semana sim, semana não)" : ""}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label className="text-xs">Ou repita a cada</Label>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={interval}
+                          onChange={(e) => setIntervalDays(Number(e.target.value))}
+                          className="h-8 w-20"
+                        />
+                        <span className="text-sm text-muted-foreground">dia(s)</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {monthlyMode && (
+                <div>
+                  <Label className="text-xs">Padrão mensal</Label>
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
+                    <Select value={String(monthlyWeek)} onValueChange={(v) => setMonthlyWeek(Number(v))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Primeira</SelectItem>
+                        <SelectItem value="2">Segunda</SelectItem>
+                        <SelectItem value="3">Terceira</SelectItem>
+                        <SelectItem value="4">Quarta</SelectItem>
+                        <SelectItem value="5">Quinta</SelectItem>
+                        <SelectItem value="-1">Última</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={String(monthlyWeekday)} onValueChange={(v) => setMonthlyWeekday(Number(v))}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">segunda-feira</SelectItem>
+                        <SelectItem value="2">terça-feira</SelectItem>
+                        <SelectItem value="3">quarta-feira</SelectItem>
+                        <SelectItem value="4">quinta-feira</SelectItem>
+                        <SelectItem value="5">sexta-feira</SelectItem>
+                        <SelectItem value="6">sábado</SelectItem>
+                        <SelectItem value="0">domingo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Ex.: "primeira segunda de cada mês" ou "última sexta do mês".
+                  </p>
                 </div>
               )}
             </div>

@@ -57,7 +57,9 @@ export type Database = {
           position: number
           recurrence: Database["public"]["Enums"]["task_recurrence"]
           recurrence_interval: number | null
+          recurrence_monthly_pattern: Json | null
           recurrence_parent_id: string | null
+          recurrence_week_interval: number | null
           recurrence_weekdays: number[] | null
           role_id: string | null
           scheduled_date: string
@@ -79,7 +81,9 @@ export type Database = {
           position?: number
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
           recurrence_interval?: number | null
+          recurrence_monthly_pattern?: Json | null
           recurrence_parent_id?: string | null
+          recurrence_week_interval?: number | null
           recurrence_weekdays?: number[] | null
           role_id?: string | null
           scheduled_date?: string
@@ -101,7 +105,9 @@ export type Database = {
           position?: number
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
           recurrence_interval?: number | null
+          recurrence_monthly_pattern?: Json | null
           recurrence_parent_id?: string | null
+          recurrence_week_interval?: number | null
           recurrence_weekdays?: number[] | null
           role_id?: string | null
           scheduled_date?: string
@@ -137,7 +143,13 @@ export type Database = {
     }
     Enums: {
       task_category: "urgent" | "important" | "circumstantial"
-      task_recurrence: "none" | "daily" | "weekly" | "monthly" | "custom"
+      task_recurrence:
+        | "none"
+        | "daily"
+        | "weekly"
+        | "monthly"
+        | "custom"
+        | "weekdays"
       task_status: "todo" | "doing" | "done"
     }
     CompositeTypes: {
@@ -267,7 +279,14 @@ export const Constants = {
   public: {
     Enums: {
       task_category: ["urgent", "important", "circumstantial"],
-      task_recurrence: ["none", "daily", "weekly", "monthly", "custom"],
+      task_recurrence: [
+        "none",
+        "daily",
+        "weekly",
+        "monthly",
+        "custom",
+        "weekdays",
+      ],
       task_status: ["todo", "doing", "done"],
     },
   },
