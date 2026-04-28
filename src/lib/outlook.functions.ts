@@ -71,7 +71,7 @@ export const disconnectOutlook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: Record<string, never> | undefined) => data ?? {})
   .handler(async ({ context }) => {
-    const { error } = await context.supabase
+    const { error } = await supabaseAdmin
       .from("outlook_connections")
       .delete()
       .eq("user_id", context.userId);
@@ -109,9 +109,9 @@ export const syncOutlookCalendar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: Record<string, never> | undefined) => data ?? {})
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
 
-    const { data: conn, error: connErr } = await supabase
+    const { data: conn, error: connErr } = await supabaseAdmin
       .from("outlook_connections")
       .select("*")
       .eq("user_id", userId)
