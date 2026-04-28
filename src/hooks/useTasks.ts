@@ -248,6 +248,14 @@ export function useTasks(userId: string | undefined) {
     "original_date",
   ]);
 
+  const RECURRENCE_RULE_KEYS = new Set([
+    "recurrence",
+    "recurrence_interval",
+    "recurrence_weekdays",
+    "recurrence_week_interval",
+    "recurrence_monthly_pattern",
+  ]);
+
   const updateTaskWithScope = async (
     task: Task,
     patch: Partial<Task>,
@@ -264,33 +272,70 @@ export function useTasks(userId: string | undefined) {
     }
     // Always also apply full patch to the originating row (so its date/etc. update too)
     await updateTask(task.id, patch);
-    if (Object.keys(seriesPatch).length === 0) return;
 
     const { parent, parentId, instances } = getRecurrenceFamily(task);
     const baseDate = task.scheduled_date;
-    const targets: Task[] = [];
-    if (scope === "all") {
-      if (parent && parent.id !== task.id) targets.push(parent);
-      for (const t of instances) {
-        if (t.id !== task.id) targets.push(t);
+
+    if (Object.keys(seriesPatch).length > 0) {
+      const targets: Task[] = [];
+      if (scope === "all") {
+        if (parent && parent.id !== task.id) targets.push(parent);
+        for (const t of instances) {
+          if (t.id !== task.id) targets.push(t);
+        }
+      } else {
+        // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
+        if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
+          targets.push(parent);
+        }
+        for (const t of instances) {
+          if (t.id === task.id) continue;
+          if (t.completed) continue;
+          if (t.scheduled_date >= baseDate) targets.push(t);
+        }
       }
-    } else {
-      // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
-      if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
-        targets.push(parent);
-      }
-      for (const t of instances) {
-        if (t.id === task.id) continue;
-        if (t.completed) continue;
-        if (t.scheduled_date >= baseDate) targets.push(t);
+      if (targets.length > 0) {
+        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
+        const ids = targets.map((t) => t.id);
+        await supabase.from("tasks").update(seriesPatch).in("id", ids);
       }
     }
-    if (targets.length === 0) return;
-    setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
-    const ids = targets.map((t) => t.id);
-    // Use parent id as filter since RLS scopes by user
-    await supabase.from("tasks").update(seriesPatch).in("id", ids);
-    void parentId; // silence unused
+
+    // If recurrence rule changed, prune future open instances that no longer match
+    // and let ensureRecurring create any newly-required instances.
+    const ruleChanged = Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+    if (ruleChanged) {
+      const today = todayISO();
+      const cutoff = baseDate > today ? baseDate : today;
+      // Re-fetch fresh state from DB to get the updated parent
+      const { data: freshParent } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("id", parentId)
+        .single();
+      if (freshParent) {
+        const { data: futureInstances } = await supabase
+          .from("tasks")
+          .select("*")
+          .eq("recurrence_parent_id", parentId)
+          .gte("scheduled_date", cutoff)
+          .eq("completed", false);
+        const idsToDelete: string[] = [];
+        for (const inst of futureInstances ?? []) {
+          if (!instanceMatchesRecurrence(freshParent as Task, inst.scheduled_date)) {
+            idsToDelete.push(inst.id);
+          }
+        }
+        if (idsToDelete.length > 0) {
+          setTasks((prev) => prev.filter((t) => !idsToDelete.includes(t.id)));
+          await supabase.from("tasks").delete().in("id", idsToDelete);
+        }
+      }
+      // Materialize any new instances that should now exist
+      await ensureRecurring();
+      await refresh();
+    }
+    void parentId;
   };
 
   const deleteTaskWithScope = async (task: Task, scope: "this" | "future" | "all" = "this") => {
