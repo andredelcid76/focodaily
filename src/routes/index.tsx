@@ -488,12 +488,7 @@ function QuickAdd({
             </div>
             <div>
               <Label className="text-xs">Data</Label>
-              <Input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-9"
-              />
+              <DatePickerField value={date} onChange={setDate} size="sm" />
             </div>
             <div>
               <Label className="text-xs">Tempo</Label>
