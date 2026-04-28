@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
+import { DatePickerField } from "@/components/DatePickerField";
 
 type Props = {
   open: boolean;
@@ -277,8 +278,8 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="t-date">Data</Label>
-              <Input id="t-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Label>Data</Label>
+              <DatePickerField value={date} onChange={setDate} />
             </div>
             <div>
               <Label>Recorrência</Label>
