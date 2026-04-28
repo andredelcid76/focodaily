@@ -317,6 +317,7 @@ export type Database = {
         | "monthly"
         | "custom"
         | "weekdays"
+        | "yearly"
       task_status: "todo" | "doing" | "done"
     }
     CompositeTypes: {
@@ -453,6 +454,7 @@ export const Constants = {
         "monthly",
         "custom",
         "weekdays",
+        "yearly",
       ],
       task_status: ["todo", "doing", "done"],
     },
