@@ -22,6 +22,7 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { Switch } from "@/components/ui/switch";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Plus,
@@ -37,6 +38,8 @@ import {
   MapPin,
   ExternalLink,
   X,
+  Trash2,
+  CalendarPlus,
 } from "lucide-react";
 import {
   DndContext,
@@ -440,6 +443,73 @@ function TodayInner({ userId }: { userId: string }) {
         onSave={handleSave}
         onDelete={editing ? handleDelete : undefined}
       />
+
+      {/* Floating bulk-action bar */}
+      {selectionMode && (
+        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2 shadow-[var(--shadow-glow)] backdrop-blur-xl max-w-full">
+            <span className="px-1 text-sm font-medium tabular-nums">
+              {selectedIds.size} selecionada{selectedIds.size === 1 ? "" : "s"}
+            </span>
+            <div className="hidden sm:block h-5 w-px bg-border/60" />
+            <Button size="sm" variant="outline" onClick={() => handleBulkMove(today, "hoje")}>
+              Hoje
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkMove(addDays(today, 1), "amanhã")}>
+              Amanhã
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const [y, m, d] = addDays(today, 1).split("-").map(Number);
+                setBulkPickerDate(new Date(y, m - 1, d));
+                setBulkPickerOpen(true);
+              }}
+            >
+              <CalendarPlus className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Outra data…</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBulkDelete}
+              className="text-destructive hover:text-destructive hover:border-destructive/50"
+            >
+              <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Excluir</span>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={bulkPickerOpen} onOpenChange={setBulkPickerOpen}>
+        <DialogContent className="w-auto max-w-[20rem] p-0">
+          <DialogHeader className="border-b border-border/60 p-3">
+            <DialogTitle className="text-sm">
+              Mover {selectedIds.size} tarefa{selectedIds.size === 1 ? "" : "s"} para…
+            </DialogTitle>
+          </DialogHeader>
+          <Calendar
+            mode="single"
+            selected={bulkPickerDate}
+            onSelect={(d) => d && setBulkPickerDate(d)}
+            initialFocus
+            className="p-3 pointer-events-auto"
+          />
+          <div className="flex justify-end gap-2 border-t border-border/60 p-2">
+            <Button size="sm" variant="ghost" onClick={() => setBulkPickerOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleBulkPickerConfirm}>
+              Confirmar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
