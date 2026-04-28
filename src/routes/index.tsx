@@ -2,13 +2,22 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
-import { useTasks, type Task } from "@/hooks/useTasks";
+import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
 import { useRoles } from "@/hooks/useRoles";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
-import { TaskDialog } from "@/components/TaskDialog";
+import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CategoryIcon } from "@/components/CategoryBadge";
 import {
   Plus,
   Clock,
@@ -18,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  X,
 } from "lucide-react";
 import {
   DndContext,
@@ -53,7 +63,6 @@ function TodayInner({ userId }: { userId: string }) {
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
-  const [quickTitle, setQuickTitle] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -88,9 +97,13 @@ function TodayInner({ userId }: { userId: string }) {
     setDialogOpen(true);
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: any, scope?: RecurrenceScope) => {
     if (editing) {
-      await tasksApi.updateTask(editing.id, data);
+      if (scope && (editing.recurrence_parent_id || editing.recurrence !== "none")) {
+        await tasksApi.updateTaskWithScope(editing, data, scope);
+      } else {
+        await tasksApi.updateTask(editing.id, data);
+      }
       toast.success("Tarefa atualizada");
     } else {
       await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: dayTasks.length });
@@ -98,41 +111,44 @@ function TodayInner({ userId }: { userId: string }) {
     }
   };
 
-  const handleQuickAdd = async () => {
-    const title = quickTitle.trim();
-    if (!title) return;
-    try {
-      await tasksApi.createTask({
-        title,
-        category: "important",
-        scheduled_date: viewDate,
-        original_date: viewDate,
-        duration_minutes: 30,
-        recurrence: "none",
-        position: dayTasks.length,
-      });
-      setQuickTitle("");
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao criar");
+  const handleDelete = async (scope?: RecurrenceScope) => {
+    if (!editing) return;
+    if (scope && (editing.recurrence_parent_id || editing.recurrence !== "none")) {
+      await tasksApi.deleteTaskWithScope(editing, scope);
+    } else {
+      await tasksApi.deleteTask(editing.id);
     }
+    toast.success("Tarefa excluída");
   };
 
   const moveOverdueToToday = async (t: Task) => {
     await tasksApi.moveTaskToDay(t.id, today, dayTasks.length);
   };
 
+  // Timer integration: persist accumulated time on pause/stop/switch.
   const handleStartTimer = (t: Task) => {
-    // If switching tasks, stop the previous and persist its time
     if (timer.activeTaskId && timer.activeTaskId !== t.id) {
       const stopped = timer.stop();
-      if (stopped) tasksApi.addTimeSpent(stopped.taskId, stopped.seconds);
+      if (stopped && stopped.deltaSeconds > 0) {
+        tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+      }
     }
     timer.start(t.id);
   };
-
+  const handlePauseTimer = () => {
+    const paused = timer.pause();
+    if (paused && paused.deltaSeconds > 0) {
+      tasksApi.addTimeSpent(paused.taskId, paused.deltaSeconds);
+    }
+  };
+  const handleResumeTimer = () => {
+    timer.resume();
+  };
   const handleStopTimer = () => {
     const stopped = timer.stop();
-    if (stopped) tasksApi.addTimeSpent(stopped.taskId, stopped.seconds);
+    if (stopped && stopped.deltaSeconds > 0) {
+      tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+    }
   };
 
   const dayLabel = isViewingToday
@@ -201,26 +217,20 @@ function TodayInner({ userId }: { userId: string }) {
         />
       </div>
 
-      {/* Tarefa rápida */}
-      <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-card/60 p-2 backdrop-blur-sm focus-within:border-primary/50 transition-colors">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <Zap className="h-4 w-4" />
-        </div>
-        <Input
-          value={quickTitle}
-          onChange={(e) => setQuickTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleQuickAdd()}
-          placeholder={`Tarefa rápida — Enter para adicionar (Importante · 30 min · ${
-            isViewingToday ? "hoje" : "neste dia"
-          })`}
-          className="border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
-        />
-        {quickTitle.trim() && (
-          <Button size="sm" onClick={handleQuickAdd}>
-            Adicionar
-          </Button>
-        )}
-      </div>
+      {/* Tarefa rápida — expansível */}
+      <QuickAdd
+        defaultDate={viewDate}
+        roles={roles}
+        onCreate={async (payload) => {
+          await tasksApi.createTask({
+            ...payload,
+            original_date: payload.scheduled_date,
+            position: dayTasks.length,
+            recurrence: "none",
+          });
+        }}
+        onOpenFull={openNew}
+      />
 
       {isViewingToday && tasksApi.overdueTasks.length > 0 && (
         <section className="rounded-2xl border border-overdue/30 bg-overdue/5 p-4">
@@ -241,8 +251,11 @@ function TodayInner({ userId }: { userId: string }) {
                     onEdit={() => openEdit(t)}
                     isOverdue
                     isActive={timer.activeTaskId === t.id}
+                    isPaused={timer.activeTaskId === t.id && timer.isPaused}
                     liveSeconds={timer.elapsedSeconds}
                     onStart={() => handleStartTimer(t)}
+                    onPause={handlePauseTimer}
+                    onResume={handleResumeTimer}
                     onStop={handleStopTimer}
                   />
                 </div>
@@ -265,16 +278,20 @@ function TodayInner({ userId }: { userId: string }) {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={dayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
-                {dayTasks.map((t) => (
+                {dayTasks.map((t, i) => (
                   <TaskCard
                     key={t.id}
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                     onToggle={() => tasksApi.toggleComplete(t)}
                     onEdit={() => openEdit(t)}
+                    index={i + 1}
                     isActive={timer.activeTaskId === t.id}
+                    isPaused={timer.activeTaskId === t.id && timer.isPaused}
                     liveSeconds={timer.elapsedSeconds}
                     onStart={() => handleStartTimer(t)}
+                    onPause={handlePauseTimer}
+                    onResume={handleResumeTimer}
                     onStop={handleStopTimer}
                   />
                 ))}
@@ -291,14 +308,7 @@ function TodayInner({ userId }: { userId: string }) {
         task={editing}
         roles={roles}
         onSave={handleSave}
-        onDelete={
-          editing
-            ? async () => {
-                await tasksApi.deleteTask(editing.id);
-                toast.success("Tarefa excluída");
-              }
-            : undefined
-        }
+        onDelete={editing ? handleDelete : undefined}
       />
     </div>
   );
@@ -347,5 +357,202 @@ function TaskCardStatic(props: React.ComponentProps<typeof TaskCard>) {
         <TaskCard {...props} />
       </SortableContext>
     </DndContext>
+  );
+}
+
+// ===================== Quick Add =====================
+
+const QUICK_DURATIONS = [15, 30, 45, 60, 90];
+
+function QuickAdd({
+  defaultDate,
+  roles,
+  onCreate,
+  onOpenFull,
+}: {
+  defaultDate: string;
+  roles: { id: string; name: string; color: string }[];
+  onCreate: (payload: {
+    title: string;
+    category: TaskCategory;
+    scheduled_date: string;
+    duration_minutes: number;
+    role_id: string | null;
+  }) => Promise<void>;
+  onOpenFull: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<TaskCategory>("important");
+  const [date, setDate] = useState(defaultDate);
+  const [duration, setDuration] = useState(30);
+  const [roleId, setRoleId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Keep date synced with viewDate when not yet expanded
+  if (!expanded && date !== defaultDate) {
+    // light reset on view-day change while collapsed
+    setDate(defaultDate);
+  }
+
+  const reset = () => {
+    setTitle("");
+    setCategory("important");
+    setDate(defaultDate);
+    setDuration(30);
+    setRoleId(null);
+    setExpanded(false);
+  };
+
+  const submit = async () => {
+    const t = title.trim();
+    if (!t) {
+      toast.error("Dê um título à tarefa");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onCreate({
+        title: t,
+        category,
+        scheduled_date: date,
+        duration_minutes: Math.max(5, Math.min(600, duration)),
+        role_id: roleId,
+      });
+      reset();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao criar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm transition-colors focus-within:border-primary/50">
+      <div className="flex items-center gap-2 p-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <Zap className="h-4 w-4" />
+        </div>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onFocus={() => setExpanded(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+            if (e.key === "Escape" && expanded) reset();
+          }}
+          placeholder="Tarefa rápida — clique para detalhes"
+          className="border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
+        />
+        {expanded && (
+          <button
+            onClick={reset}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+            aria-label="Cancelar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="border-t border-border/40 p-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <Label className="text-xs">Tríade</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="urgent">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon category="urgent" /> Urgente
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="important">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon category="important" /> Importante
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="circumstantial">
+                    <span className="inline-flex items-center gap-2">
+                      <CategoryIcon category="circumstantial" /> Circunstancial
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Data</Label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Tempo</Label>
+              <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v))}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUICK_DURATIONS.map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {formatMinutes(m)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Papel</Label>
+              <Select
+                value={roleId ?? "__none"}
+                onValueChange={(v) => setRoleId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Sem papel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem papel</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
+                        {r.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                onOpenFull();
+                reset();
+              }}
+              className="text-xs text-muted-foreground"
+            >
+              Mais opções (descrição, recorrência…)
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={reset}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={submit} disabled={saving}>
+                {saving ? "Salvando…" : "Adicionar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
