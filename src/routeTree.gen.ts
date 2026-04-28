@@ -15,8 +15,8 @@ import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiOutlookRouteImport } from './routes/api/outlook'
-import { Route as ApiOutlookCallbackRouteImport } from './routes/api/outlook/callback'
+import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
+import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 
 const SemanaRoute = SemanaRouteImport.update({
   id: '/semana',
@@ -48,15 +48,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOutlookRoute = ApiOutlookRouteImport.update({
-  id: '/api/outlook',
-  path: '/api/outlook',
+const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
+  id: '/api/public/outlook',
+  path: '/api/public/outlook',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOutlookCallbackRoute = ApiOutlookCallbackRouteImport.update({
+const ApiPublicOutlookCallbackRoute = ApiPublicOutlookCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
-  getParentRoute: () => ApiOutlookRoute,
+  getParentRoute: () => ApiPublicOutlookRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -66,8 +66,8 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
-  '/api/outlook': typeof ApiOutlookRouteWithChildren
-  '/api/outlook/callback': typeof ApiOutlookCallbackRoute
+  '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
+  '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,8 +76,8 @@ export interface FileRoutesByTo {
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
-  '/api/outlook': typeof ApiOutlookRouteWithChildren
-  '/api/outlook/callback': typeof ApiOutlookCallbackRoute
+  '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
+  '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,8 +87,8 @@ export interface FileRoutesById {
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
-  '/api/outlook': typeof ApiOutlookRouteWithChildren
-  '/api/outlook/callback': typeof ApiOutlookCallbackRoute
+  '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
+  '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,8 +99,8 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/papeis'
     | '/semana'
-    | '/api/outlook'
-    | '/api/outlook/callback'
+    | '/api/public/outlook'
+    | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,8 +109,8 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/papeis'
     | '/semana'
-    | '/api/outlook'
-    | '/api/outlook/callback'
+    | '/api/public/outlook'
+    | '/api/public/outlook/callback'
   id:
     | '__root__'
     | '/'
@@ -119,8 +119,8 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/papeis'
     | '/semana'
-    | '/api/outlook'
-    | '/api/outlook/callback'
+    | '/api/public/outlook'
+    | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,7 +130,7 @@ export interface RootRouteChildren {
   KanbanRoute: typeof KanbanRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
-  ApiOutlookRoute: typeof ApiOutlookRouteWithChildren
+  ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -177,33 +177,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/outlook': {
-      id: '/api/outlook'
-      path: '/api/outlook'
-      fullPath: '/api/outlook'
-      preLoaderRoute: typeof ApiOutlookRouteImport
+    '/api/public/outlook': {
+      id: '/api/public/outlook'
+      path: '/api/public/outlook'
+      fullPath: '/api/public/outlook'
+      preLoaderRoute: typeof ApiPublicOutlookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/outlook/callback': {
-      id: '/api/outlook/callback'
+    '/api/public/outlook/callback': {
+      id: '/api/public/outlook/callback'
       path: '/callback'
-      fullPath: '/api/outlook/callback'
-      preLoaderRoute: typeof ApiOutlookCallbackRouteImport
-      parentRoute: typeof ApiOutlookRoute
+      fullPath: '/api/public/outlook/callback'
+      preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
+      parentRoute: typeof ApiPublicOutlookRoute
     }
   }
 }
 
-interface ApiOutlookRouteChildren {
-  ApiOutlookCallbackRoute: typeof ApiOutlookCallbackRoute
+interface ApiPublicOutlookRouteChildren {
+  ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
 }
 
-const ApiOutlookRouteChildren: ApiOutlookRouteChildren = {
-  ApiOutlookCallbackRoute: ApiOutlookCallbackRoute,
+const ApiPublicOutlookRouteChildren: ApiPublicOutlookRouteChildren = {
+  ApiPublicOutlookCallbackRoute: ApiPublicOutlookCallbackRoute,
 }
 
-const ApiOutlookRouteWithChildren = ApiOutlookRoute._addFileChildren(
-  ApiOutlookRouteChildren,
+const ApiPublicOutlookRouteWithChildren = ApiPublicOutlookRoute._addFileChildren(
+  ApiPublicOutlookRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -213,17 +213,8 @@ const rootRouteChildren: RootRouteChildren = {
   KanbanRoute: KanbanRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
-  ApiOutlookRoute: ApiOutlookRouteWithChildren,
+  ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
