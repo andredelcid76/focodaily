@@ -192,6 +192,100 @@ export function useTasks(userId: string | undefined) {
     if (error) throw error;
   };
 
+  // Scope-aware update/delete for recurring instances.
+  // - "this": only the single row
+  // - "future": this row and all sibling instances scheduled on/after its date (plus the parent if its original_date >= this date)
+  // - "all": this row + all siblings + parent
+  const getRecurrenceFamily = (task: Task) => {
+    const parentId = task.recurrence_parent_id ?? task.id;
+    const parent = tasks.find((t) => t.id === parentId);
+    const instances = tasks.filter((t) => t.recurrence_parent_id === parentId);
+    return { parent, parentId, instances };
+  };
+
+  // Patch keys that should NOT be propagated to siblings (per-instance only).
+  const PER_INSTANCE_KEYS = new Set([
+    "scheduled_date",
+    "completed",
+    "completed_at",
+    "status",
+    "time_spent_seconds",
+    "position",
+    "original_date",
+  ]);
+
+  const updateTaskWithScope = async (
+    task: Task,
+    patch: Partial<Task>,
+    scope: "this" | "future" | "all" = "this"
+  ) => {
+    if (scope === "this") {
+      await updateTask(task.id, patch);
+      return;
+    }
+    // Strip per-instance fields from the propagated patch
+    const seriesPatch: Partial<Task> = {};
+    for (const [k, v] of Object.entries(patch)) {
+      if (!PER_INSTANCE_KEYS.has(k)) (seriesPatch as any)[k] = v;
+    }
+    // Always also apply full patch to the originating row (so its date/etc. update too)
+    await updateTask(task.id, patch);
+    if (Object.keys(seriesPatch).length === 0) return;
+
+    const { parent, parentId, instances } = getRecurrenceFamily(task);
+    const baseDate = task.scheduled_date;
+    const targets: Task[] = [];
+    if (scope === "all") {
+      if (parent && parent.id !== task.id) targets.push(parent);
+      for (const t of instances) {
+        if (t.id !== task.id) targets.push(t);
+      }
+    } else {
+      // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
+      if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
+        targets.push(parent);
+      }
+      for (const t of instances) {
+        if (t.id === task.id) continue;
+        if (t.completed) continue;
+        if (t.scheduled_date >= baseDate) targets.push(t);
+      }
+    }
+    if (targets.length === 0) return;
+    setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
+    const ids = targets.map((t) => t.id);
+    // Use parent id as filter since RLS scopes by user
+    await supabase.from("tasks").update(seriesPatch).in("id", ids);
+    void parentId; // silence unused
+  };
+
+  const deleteTaskWithScope = async (task: Task, scope: "this" | "future" | "all" = "this") => {
+    if (scope === "this") {
+      await deleteTask(task.id);
+      return;
+    }
+    const { parent, parentId, instances } = getRecurrenceFamily(task);
+    const baseDate = task.scheduled_date;
+    const idsToDelete = new Set<string>([task.id]);
+    if (scope === "all") {
+      if (parent) idsToDelete.add(parent.id);
+      instances.forEach((t) => idsToDelete.add(t.id));
+    } else {
+      // future
+      if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
+        idsToDelete.add(parent.id);
+      }
+      for (const t of instances) {
+        if (t.completed) continue;
+        if (t.scheduled_date >= baseDate) idsToDelete.add(t.id);
+      }
+    }
+    const ids = Array.from(idsToDelete);
+    setTasks((prev) => prev.filter((t) => !idsToDelete.has(t.id)));
+    await supabase.from("tasks").delete().in("id", ids);
+    void parentId;
+  };
+
   const toggleComplete = async (t: Task) => {
     const next = !t.completed;
     await updateTask(t.id, {
@@ -260,6 +354,8 @@ export function useTasks(userId: string | undefined) {
     createTask,
     updateTask,
     deleteTask,
+    updateTaskWithScope,
+    deleteTaskWithScope,
     toggleComplete,
     setStatus,
     reorderInDay,

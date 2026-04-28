@@ -3,7 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
-import { GripVertical, Repeat, AlertCircle, Clock, Play, Square, Timer } from "lucide-react";
+import { GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer } from "lucide-react";
 import { formatMinutes } from "@/lib/date";
 import { formatTimer } from "@/hooks/useActiveTimer";
 import type { Task } from "@/hooks/useTasks";
@@ -16,10 +16,14 @@ type Props = {
   onEdit: () => void;
   isOverdue?: boolean;
   compact?: boolean;
+  index?: number; // 1-based ordering number
   // Timer
   isActive?: boolean;
+  isPaused?: boolean;
   liveSeconds?: number;
   onStart?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
   onStop?: () => void;
 };
 
@@ -30,9 +34,13 @@ export function TaskCard({
   onEdit,
   isOverdue,
   compact,
+  index,
   isActive,
+  isPaused,
   liveSeconds,
   onStart,
+  onPause,
+  onResume,
   onStop,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -47,6 +55,7 @@ export function TaskCard({
   };
 
   const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
+  const running = isActive && !isPaused;
 
   return (
     <div
@@ -66,6 +75,17 @@ export function TaskCard({
       >
         <GripVertical className="h-4 w-4" />
       </button>
+
+      {typeof index === "number" && (
+        <span
+          className={`mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-border/60 bg-muted/40 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground ${
+            task.completed ? "line-through" : ""
+          }`}
+          aria-label={`Posição ${index}`}
+        >
+          {index}
+        </span>
+      )}
 
       <Checkbox checked={task.completed} onCheckedChange={onToggle} className="mt-1" />
 
@@ -91,7 +111,7 @@ export function TaskCard({
           {totalSpent > 0 && (
             <span
               className={`inline-flex items-center gap-1 ${
-                isActive ? "text-primary font-medium" : ""
+                running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
               }`}
             >
               <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
@@ -110,25 +130,51 @@ export function TaskCard({
         </div>
       </button>
 
-      {!compact && !task.completed && (onStart || onStop) && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isActive) onStop?.();
-            else onStart?.();
-          }}
-          className={`mt-0.5 inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors ${
-            isActive
-              ? "bg-primary text-primary-foreground hover:opacity-90"
-              : "bg-primary/15 text-primary hover:bg-primary/25"
-          }`}
-          aria-label={isActive ? "Parar cronômetro" : "Iniciar tarefa"}
-        >
-          {isActive ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
-          <span className="tabular-nums">
-            {isActive ? formatTimer(liveSeconds ?? 0) : "Iniciar"}
-          </span>
-        </button>
+      {!compact && !task.completed && (onStart || onPause || onStop) && (
+        <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+          {!isActive ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onStart?.(); }}
+              className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary/15 px-2.5 text-xs font-medium text-primary hover:bg-primary/25"
+              aria-label="Iniciar tarefa"
+            >
+              <Play className="h-3 w-3 fill-current" />
+              <span>Iniciar</span>
+            </button>
+          ) : (
+            <>
+              {running ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPause?.(); }}
+                  className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+                  aria-label="Pausar"
+                  title="Pausar"
+                >
+                  <Pause className="h-3 w-3 fill-current" />
+                  <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onResume?.(); }}
+                  className="inline-flex h-8 items-center gap-1 rounded-lg bg-circumstantial/20 px-2.5 text-xs font-medium text-circumstantial hover:bg-circumstantial/30"
+                  aria-label="Retomar"
+                  title="Retomar"
+                >
+                  <Play className="h-3 w-3 fill-current" />
+                  <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onStop?.(); }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+                aria-label="Parar e zerar"
+                title="Parar e zerar"
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </button>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

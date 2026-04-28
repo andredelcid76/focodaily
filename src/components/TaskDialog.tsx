@@ -18,19 +18,24 @@ type Props = {
   defaultDate: string;
   task?: Task | null;
   roles: Role[];
-  onSave: (data: {
-    title: string;
-    description: string | null;
-    category: TaskCategory;
-    duration_minutes: number;
-    scheduled_date: string;
-    recurrence: TaskRecurrence;
-    role_id: string | null;
-    recurrence_interval: number | null;
-    recurrence_weekdays: number[] | null;
-  }) => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onSave: (
+    data: {
+      title: string;
+      description: string | null;
+      category: TaskCategory;
+      duration_minutes: number;
+      scheduled_date: string;
+      recurrence: TaskRecurrence;
+      role_id: string | null;
+      recurrence_interval: number | null;
+      recurrence_weekdays: number[] | null;
+    },
+    scope?: RecurrenceScope
+  ) => Promise<void>;
+  onDelete?: (scope?: RecurrenceScope) => Promise<void>;
 };
+
+export type RecurrenceScope = "this" | "future" | "all";
 
 const PRESET_DURATIONS = [15, 30, 45, 60, 90, 120, 180];
 const WEEKDAYS = [
@@ -73,6 +78,45 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
   };
 
+  const isRecurringInstance = !!(task && (task.recurrence_parent_id || task.recurrence !== "none"));
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
+
+  const doSave = async (scope?: RecurrenceScope) => {
+    setSaving(true);
+    try {
+      await onSave(
+        {
+          title: title.trim(),
+          description: description.trim() || null,
+          category,
+          duration_minutes: Math.max(5, Math.min(600, duration)),
+          scheduled_date: date,
+          recurrence,
+          role_id: roleId,
+          recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
+          recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
+        },
+        scope
+      );
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const doDelete = async (scope?: RecurrenceScope) => {
+    if (!onDelete) return;
+    try {
+      await onDelete(scope);
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao excluir");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error("Dê um título à tarefa");
@@ -82,25 +126,29 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
       toast.error("Defina o intervalo ou os dias da semana");
       return;
     }
-    setSaving(true);
-    try {
-      await onSave({
-        title: title.trim(),
-        description: description.trim() || null,
-        category,
-        duration_minutes: Math.max(5, Math.min(600, duration)),
-        scheduled_date: date,
-        recurrence,
-        role_id: roleId,
-        recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
-        recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
-      });
-      onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao salvar");
-    } finally {
-      setSaving(false);
+    if (isRecurringInstance) {
+      setPendingAction("save");
+      setScopeOpen(true);
+      return;
     }
+    await doSave();
+  };
+
+  const handleDeleteClick = () => {
+    if (!onDelete) return;
+    if (isRecurringInstance) {
+      setPendingAction("delete");
+      setScopeOpen(true);
+      return;
+    }
+    doDelete();
+  };
+
+  const applyScope = async (scope: RecurrenceScope) => {
+    setScopeOpen(false);
+    if (pendingAction === "save") await doSave(scope);
+    else if (pendingAction === "delete") await doDelete(scope);
+    setPendingAction(null);
   };
 
   return (
@@ -265,7 +313,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
         <DialogFooter className="flex justify-between sm:justify-between">
           <div>
             {task && onDelete && (
-              <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={async () => { await onDelete(); onOpenChange(false); }}>
+              <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={handleDeleteClick}>
                 Excluir
               </Button>
             )}
@@ -276,6 +324,46 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Recurrence scope sub-dialog */}
+      <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) { setScopeOpen(false); setPendingAction(null); } }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>
+              {pendingAction === "delete" ? "Excluir tarefa recorrente" : "Alterar tarefa recorrente"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Esta tarefa se repete. O que você quer {pendingAction === "delete" ? "excluir" : "alterar"}?
+          </p>
+          <div className="mt-2 space-y-2">
+            <button
+              onClick={() => applyScope("this")}
+              className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="text-sm font-semibold">Apenas esta instância</div>
+              <div className="text-xs text-muted-foreground">As outras ocorrências continuam como estão.</div>
+            </button>
+            <button
+              onClick={() => applyScope("future")}
+              className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="text-sm font-semibold">Esta e todas as futuras em aberto</div>
+              <div className="text-xs text-muted-foreground">Ocorrências passadas e concluídas não mudam.</div>
+            </button>
+            <button
+              onClick={() => applyScope("all")}
+              className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="text-sm font-semibold">Todas as instâncias (sempre)</div>
+              <div className="text-xs text-muted-foreground">Aplica a toda a série, inclusive as anteriores em aberto.</div>
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setScopeOpen(false); setPendingAction(null); }}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

@@ -124,25 +124,28 @@ function WeekInner({ userId }: { userId: string }) {
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-7">
-          {days.map((d) => {
-            const list = tasksByDay.get(d) ?? [];
-            const total = list.reduce((s, t) => s + t.duration_minutes, 0);
-            const isToday = d === today;
-            return (
-              <DayColumn
-                key={d}
-                day={d}
-                tasks={list}
-                rolesById={rolesById}
-                isToday={isToday}
-                totalMinutes={total}
-                onAdd={() => openNew(d)}
-                onToggle={(t) => tasksApi.toggleComplete(t)}
-                onEdit={(t) => openEdit(t)}
-              />
-            );
-          })}
+        <div className="-mx-4 overflow-x-auto px-4 pb-2">
+          <div className="flex gap-3 min-w-max">
+            {days.map((d) => {
+              const list = tasksByDay.get(d) ?? [];
+              const total = list.reduce((s, t) => s + t.duration_minutes, 0);
+              const isToday = d === today;
+              return (
+                <div key={d} className="w-[260px] shrink-0">
+                  <DayColumn
+                    day={d}
+                    tasks={list}
+                    rolesById={rolesById}
+                    isToday={isToday}
+                    totalMinutes={total}
+                    onAdd={() => openNew(d)}
+                    onToggle={(t) => tasksApi.toggleComplete(t)}
+                    onEdit={(t) => openEdit(t)}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </DndContext>
 

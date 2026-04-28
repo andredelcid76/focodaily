@@ -1,27 +1,32 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type TimerState = {
   taskId: string | null;
-  startedAt: number | null; // epoch ms
+  startedAt: number | null; // epoch ms when current run started (null when paused)
+  accumulatedMs: number; // ms accumulated from previous runs in this session
 };
 
-const STORAGE_KEY = "foco_active_timer_v1";
+const STORAGE_KEY = "foco_active_timer_v2";
 
 function load(): TimerState {
-  if (typeof window === "undefined") return { taskId: null, startedAt: null };
+  if (typeof window === "undefined") return { taskId: null, startedAt: null, accumulatedMs: 0 };
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { taskId: null, startedAt: null };
-    const parsed = JSON.parse(raw);
-    return { taskId: parsed.taskId ?? null, startedAt: parsed.startedAt ?? null };
+    if (!raw) return { taskId: null, startedAt: null, accumulatedMs: 0 };
+    const p = JSON.parse(raw);
+    return {
+      taskId: p.taskId ?? null,
+      startedAt: p.startedAt ?? null,
+      accumulatedMs: p.accumulatedMs ?? 0,
+    };
   } catch {
-    return { taskId: null, startedAt: null };
+    return { taskId: null, startedAt: null, accumulatedMs: 0 };
   }
 }
 
 function save(state: TimerState) {
   if (typeof window === "undefined") return;
-  if (state.taskId && state.startedAt) {
+  if (state.taskId) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } else {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -38,8 +43,11 @@ function setCurrent(next: TimerState) {
 }
 
 /**
- * Single global active timer. Persists across reloads via localStorage.
- * Returns the elapsed seconds (live) for the active task, plus controls.
+ * Single global active timer with pause/resume/stop, persisted via localStorage.
+ * - start(taskId): begin or switch to a task (resets accumulator)
+ * - pause(): pauses; elapsed is preserved. Returns delta seconds since last commit.
+ * - resume(): resumes a paused task
+ * - stop(): clears timer entirely (reset to 0). Returns final delta seconds.
  */
 export function useActiveTimer() {
   const [state, setState] = useState<TimerState>(current);
@@ -52,28 +60,59 @@ export function useActiveTimer() {
     };
   }, []);
 
+  const isRunning = !!(state.taskId && state.startedAt);
+
   useEffect(() => {
-    if (!state.taskId || !state.startedAt) return;
+    if (!isRunning) return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [state.taskId, state.startedAt]);
+  }, [isRunning]);
 
-  const elapsedSeconds =
-    state.taskId && state.startedAt ? Math.floor((now - state.startedAt) / 1000) : 0;
+  const liveMs = isRunning ? now - (state.startedAt as number) : 0;
+  const elapsedSeconds = Math.floor((state.accumulatedMs + liveMs) / 1000);
 
   const start = useCallback((taskId: string) => {
-    setCurrent({ taskId, startedAt: Date.now() });
+    setCurrent({ taskId, startedAt: Date.now(), accumulatedMs: 0 });
   }, []);
 
-  const stop = useCallback((): { taskId: string; seconds: number } | null => {
+  const pause = useCallback((): { taskId: string; deltaSeconds: number } | null => {
     if (!current.taskId || !current.startedAt) return null;
-    const seconds = Math.floor((Date.now() - current.startedAt) / 1000);
-    const taskId = current.taskId;
-    setCurrent({ taskId: null, startedAt: null });
-    return { taskId, seconds };
+    const runMs = Date.now() - current.startedAt;
+    const deltaSeconds = Math.floor(runMs / 1000);
+    setCurrent({
+      taskId: current.taskId,
+      startedAt: null,
+      accumulatedMs: current.accumulatedMs + runMs,
+    });
+    return { taskId: current.taskId, deltaSeconds };
   }, []);
 
-  return { activeTaskId: state.taskId, elapsedSeconds, start, stop };
+  const resume = useCallback(() => {
+    if (!current.taskId || current.startedAt) return;
+    setCurrent({ ...current, startedAt: Date.now() });
+  }, []);
+
+  const stop = useCallback((): { taskId: string; deltaSeconds: number } | null => {
+    if (!current.taskId) return null;
+    const taskId = current.taskId;
+    let deltaSeconds = 0;
+    if (current.startedAt) {
+      deltaSeconds = Math.floor((Date.now() - current.startedAt) / 1000);
+    }
+    setCurrent({ taskId: null, startedAt: null, accumulatedMs: 0 });
+    return { taskId, deltaSeconds };
+  }, []);
+
+  return {
+    activeTaskId: state.taskId,
+    isRunning,
+    isPaused: !!state.taskId && !state.startedAt,
+    elapsedSeconds,
+    start,
+    pause,
+    resume,
+    stop,
+  };
 }
 
 export function formatTimer(seconds: number) {
