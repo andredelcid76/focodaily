@@ -25,7 +25,11 @@ function Shell({ children }: { children: ReactNode }) {
 
   if (!user) return <>{children}</>;
 
-  const navItem = (to: "/" | "/semana" | "/papeis", label: string, Icon: typeof ListTodo) => {
+  const navItem = (
+    to: "/" | "/semana" | "/kanban" | "/papeis",
+    label: string,
+    Icon: typeof ListTodo
+  ) => {
     const active = location.pathname === to;
     return (
       <Link
