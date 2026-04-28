@@ -35,6 +35,10 @@ type Props = {
   onPause?: () => void;
   onResume?: () => void;
   onStop?: () => void;
+  // Quick actions
+  onPostpone?: (date: string) => void;
+  onDuplicate?: (date: string) => void;
+  onFollowUp?: (date: string) => void;
 };
 
 export function TaskCard({
