@@ -119,6 +119,7 @@ function TodayInner({ userId }: { userId: string }) {
   const completedCount = dayTasks.filter((t) => t.completed).length;
 
   const handleDragEnd = async (e: DragEndEvent) => {
+    if (selectionMode) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const oldIdx = dayTasks.findIndex((t) => t.id === active.id);
@@ -126,6 +127,33 @@ function TodayInner({ userId }: { userId: string }) {
     if (oldIdx < 0 || newIdx < 0) return;
     const reordered = arrayMove(dayTasks, oldIdx, newIdx);
     await tasksApi.reorderInDay(viewDate, reordered.map((t) => t.id));
+  };
+
+  // Bulk actions
+  const handleBulkMove = async (date: string, label: string) => {
+    const ids = Array.from(selectedIds);
+    await tasksApi.bulkMoveToDay(ids, date);
+    toast.success(`${ids.length} tarefa${ids.length === 1 ? "" : "s"} movida${ids.length === 1 ? "" : "s"} para ${label}`);
+    clearSelection();
+  };
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!window.confirm(`Excluir ${ids.length} tarefa${ids.length === 1 ? "" : "s"}? Esta ação não pode ser desfeita.`)) return;
+    await tasksApi.bulkDelete(ids);
+    toast.success(`${ids.length} tarefa${ids.length === 1 ? "" : "s"} excluída${ids.length === 1 ? "" : "s"}`);
+    clearSelection();
+  };
+  const handleBulkPickerConfirm = async () => {
+    const iso = toISODate(bulkPickerDate);
+    setBulkPickerOpen(false);
+    await handleBulkMove(iso, formatHuman(iso));
+  };
+
+  const selectAllVisible = () => {
+    const ids = new Set(selectedIds);
+    dayTasks.forEach((t) => ids.add(t.id));
+    if (isViewingToday) tasksApi.overdueTasks.forEach((t) => ids.add(t.id));
+    setSelectedIds(ids);
   };
 
   const openNew = () => {
