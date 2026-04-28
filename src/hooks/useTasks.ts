@@ -193,10 +193,24 @@ export function useTasks(userId: string | undefined) {
   };
 
   const toggleComplete = async (t: Task) => {
+    const next = !t.completed;
     await updateTask(t.id, {
-      completed: !t.completed,
-      completed_at: !t.completed ? new Date().toISOString() : null,
+      completed: next,
+      completed_at: next ? new Date().toISOString() : null,
+      status: next ? "done" : "todo",
     });
+  };
+
+  const setStatus = async (id: string, status: TaskStatus) => {
+    const patch: Partial<Task> = { status };
+    if (status === "done") {
+      patch.completed = true;
+      patch.completed_at = new Date().toISOString();
+    } else {
+      patch.completed = false;
+      patch.completed_at = null;
+    }
+    await updateTask(id, patch);
   };
 
   const reorderInDay = async (date: string, orderedIds: string[]) => {
