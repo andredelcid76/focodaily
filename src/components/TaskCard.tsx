@@ -6,12 +6,8 @@ import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  MoreVertical, CalendarPlus, CalendarClock, Copy, Repeat2, ArrowRight,
+  CalendarClock, Copy, Repeat2, ArrowRight,
 } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
