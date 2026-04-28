@@ -56,6 +56,7 @@ function Shell({ children }: { children: ReactNode }) {
           </Link>
           <nav className="flex items-center gap-1">
             {navItem("/", "Hoje", ListTodo)}
+            {navItem("/kanban", "Kanban", KanbanSquare)}
             {navItem("/semana", "Semana", CalendarDays)}
             {navItem("/papeis", "Papéis", Users)}
           </nav>
