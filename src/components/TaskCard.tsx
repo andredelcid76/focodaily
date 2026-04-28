@@ -1,10 +1,20 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
-import { GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer } from "lucide-react";
-import { formatMinutes } from "@/lib/date";
+import {
+  GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
+  MoreVertical, CalendarPlus, CalendarClock, Copy, Repeat2, ArrowRight,
+} from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
 import { formatTimer } from "@/hooks/useActiveTimer";
 import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
