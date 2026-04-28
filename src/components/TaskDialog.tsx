@@ -77,6 +77,18 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
       setRoleId(task?.role_id ?? null);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
+      const t: any = task;
+      setWeekInterval(t?.recurrence_week_interval ?? 1);
+      const mp = t?.recurrence_monthly_pattern as { week: number; weekday: number } | null | undefined;
+      if (mp && typeof mp.week === "number") {
+        setMonthlyMode(true);
+        setMonthlyWeek(mp.week);
+        setMonthlyWeekday(mp.weekday);
+      } else {
+        setMonthlyMode(false);
+        setMonthlyWeek(1);
+        setMonthlyWeekday(1);
+      }
     }
   }, [open, task, defaultDate]);
 
