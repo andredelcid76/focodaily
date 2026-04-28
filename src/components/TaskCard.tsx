@@ -295,16 +295,15 @@ function TaskActionsMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Popover open={pickerMode !== null} onOpenChange={(o) => !o && closePicker()}>
-        <PopoverTrigger asChild>
-          <span className="sr-only" />
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-auto p-0">
-          <div className="border-b border-border/60 p-2 text-xs font-medium">
-            {pickerMode === "postpone" && "Mover para…"}
-            {pickerMode === "duplicate" && "Duplicar em…"}
-            {pickerMode === "followup" && "Follow-up em…"}
-          </div>
+      <Dialog open={pickerMode !== null} onOpenChange={(o) => !o && closePicker()}>
+        <DialogContent className="w-auto max-w-[20rem] p-0">
+          <DialogHeader className="border-b border-border/60 p-3">
+            <DialogTitle className="text-sm">
+              {pickerMode === "postpone" && "Mover para…"}
+              {pickerMode === "duplicate" && "Duplicar em…"}
+              {pickerMode === "followup" && "Follow-up em…"}
+            </DialogTitle>
+          </DialogHeader>
           <Calendar
             mode="single"
             selected={pickerDate}
@@ -326,8 +325,8 @@ function TaskActionsMenu({
               Confirmar
             </button>
           </div>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
