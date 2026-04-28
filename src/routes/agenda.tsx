@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
+import {
+  getOutlookAuthUrl,
+  getOutlookStatus,
+  syncOutlookCalendar,
+  disconnectOutlook,
+} from "@/lib/outlook.functions";
+import { Link2, Link2Off, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +59,44 @@ function AgendaInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Meeting | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [outlook, setOutlook] = useState<{
+    connected: boolean;
+    email?: string | null;
+    last_sync_at?: string | null;
+  }>({ connected: false });
   const meetingsApi = useMeetings(userId);
+
+  // Read callback message from URL (?outlook=success|error&msg=...)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const status = url.searchParams.get("outlook");
+    const msg = url.searchParams.get("msg");
+    if (status && msg) {
+      if (status === "success") toast.success(msg);
+      else toast.error(msg);
+      url.searchParams.delete("outlook");
+      url.searchParams.delete("msg");
+      window.history.replaceState({}, "", url.pathname + (url.search ? `?${url.searchParams}` : ""));
+    }
+  }, []);
+
+  const refreshOutlookStatus = async () => {
+    try {
+      const res = await getOutlookStatus();
+      setOutlook({
+        connected: res.connected,
+        email: res.connection?.email,
+        last_sync_at: res.connection?.last_sync_at,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    refreshOutlookStatus();
+  }, []);
 
   const dayMeetings = useMemo(
     () =>
@@ -81,13 +125,40 @@ function AgendaInner({ userId }: { userId: string }) {
     setDialogOpen(true);
   };
 
+  const onConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await getOutlookAuthUrl({ data: { origin: window.location.origin } });
+      window.location.href = res.url;
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao iniciar conexão");
+      setConnecting(false);
+    }
+  };
+
+  const onDisconnect = async () => {
+    try {
+      await disconnectOutlook();
+      toast.success("Outlook desconectado");
+      setOutlook({ connected: false });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao desconectar");
+    }
+  };
+
   const onSync = async () => {
+    if (!outlook.connected) {
+      toast.error("Conecte o Outlook primeiro");
+      return;
+    }
     setSyncing(true);
     try {
-      // Estrutura pronta para Outlook. A integração real (Calendars.ReadWrite)
-      // requer OAuth com app no Azure/Entra — pendente de credenciais.
-      await new Promise((r) => setTimeout(r, 600));
-      toast.info("Conector Outlook ligado, mas o escopo Calendars ainda não está liberado. Conecte um app Azure para puxar reuniões.");
+      const res = await syncOutlookCalendar();
+      toast.success(`${res.imported} reuniões sincronizadas do Outlook`);
+      await meetingsApi.refresh();
+      await refreshOutlookStatus();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao sincronizar");
     } finally {
       setSyncing(false);
     }
@@ -129,15 +200,36 @@ function AgendaInner({ userId }: { userId: string }) {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="outline" onClick={onSync} disabled={syncing}>
-            <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            Sincronizar Outlook
-          </Button>
+          {outlook.connected ? (
+            <>
+              <Button variant="outline" onClick={onSync} disabled={syncing}>
+                <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                Sincronizar Outlook
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onDisconnect} title={outlook.email ?? "Outlook conectado"}>
+                <Link2Off className="mr-1.5 h-4 w-4" /> Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={onConnect} disabled={connecting}>
+              <Link2 className="mr-1.5 h-4 w-4" /> {connecting ? "Abrindo…" : "Conectar Outlook"}
+            </Button>
+          )}
           <Button onClick={openNew} className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90">
             <Plus className="mr-1 h-4 w-4" /> Nova reunião
           </Button>
         </div>
       </div>
+
+      {outlook.connected && outlook.email && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Conectado como <span className="font-medium">{outlook.email}</span>
+          {outlook.last_sync_at && (
+            <span className="text-muted-foreground">· última sincronização {new Date(outlook.last_sync_at).toLocaleString("pt-BR")}</span>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatCard icon={<CalendarClock className="h-4 w-4" />} label="Reuniões no dia" value={String(dayMeetings.length)} />

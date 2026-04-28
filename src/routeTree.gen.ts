@@ -15,6 +15,7 @@ import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiOutlookCallbackRouteImport } from './routes/api/outlook/callback'
 
 const SemanaRoute = SemanaRouteImport.update({
   id: '/semana',
@@ -46,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOutlookCallbackRoute = ApiOutlookCallbackRouteImport.update({
+  id: '/api/outlook/callback',
+  path: '/api/outlook/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
+  '/api/outlook/callback': typeof ApiOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
+  '/api/outlook/callback': typeof ApiOutlookCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,36 @@ export interface FileRoutesById {
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
+  '/api/outlook/callback': typeof ApiOutlookCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agenda' | '/auth' | '/kanban' | '/papeis' | '/semana'
+  fullPaths:
+    | '/'
+    | '/agenda'
+    | '/auth'
+    | '/kanban'
+    | '/papeis'
+    | '/semana'
+    | '/api/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agenda' | '/auth' | '/kanban' | '/papeis' | '/semana'
-  id: '__root__' | '/' | '/agenda' | '/auth' | '/kanban' | '/papeis' | '/semana'
+  to:
+    | '/'
+    | '/agenda'
+    | '/auth'
+    | '/kanban'
+    | '/papeis'
+    | '/semana'
+    | '/api/outlook/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/agenda'
+    | '/auth'
+    | '/kanban'
+    | '/papeis'
+    | '/semana'
+    | '/api/outlook/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,6 +118,7 @@ export interface RootRouteChildren {
   KanbanRoute: typeof KanbanRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
+  ApiOutlookCallbackRoute: typeof ApiOutlookCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -133,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/outlook/callback': {
+      id: '/api/outlook/callback'
+      path: '/api/outlook/callback'
+      fullPath: '/api/outlook/callback'
+      preLoaderRoute: typeof ApiOutlookCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -143,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   KanbanRoute: KanbanRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
+  ApiOutlookCallbackRoute: ApiOutlookCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
