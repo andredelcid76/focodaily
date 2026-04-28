@@ -137,6 +137,15 @@ function TodayInner({ userId }: { userId: string }) {
     dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
     (includeMeetings ? upcomingMeetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
+  const visibleDayTasks = useMemo(
+    () => (showCompleted ? dayTasks : dayTasks.filter((t) => !t.completed)),
+    [dayTasks, showCompleted]
+  );
+  const visibleOverdue = useMemo(
+    () => (showCompleted ? tasksApi.overdueTasks : tasksApi.overdueTasks.filter((t) => !t.completed)),
+    [tasksApi.overdueTasks, showCompleted]
+  );
+  const hiddenCompletedCount = completedCount - (showCompleted ? completedCount : 0);
 
   const handleDragEnd = async (e: DragEndEvent) => {
     if (selectionMode) return;
