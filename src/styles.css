@@ -62,12 +62,13 @@
   --input: oklch(0.26 0.022 265);
   --ring: oklch(0.72 0.18 280);
 
-  --urgent: oklch(0.68 0.22 22);
+  /* Urgente = vermelho, Importante = azul, Circunstancial = amarelo */
+  --urgent: oklch(0.65 0.24 25);
   --urgent-foreground: oklch(0.98 0 0);
-  --important: oklch(0.78 0.17 75);
-  --important-foreground: oklch(0.18 0.02 265);
-  --circumstantial: oklch(0.72 0.15 200);
-  --circumstantial-foreground: oklch(0.16 0.018 265);
+  --important: oklch(0.65 0.2 255);
+  --important-foreground: oklch(0.98 0 0);
+  --circumstantial: oklch(0.82 0.17 90);
+  --circumstantial-foreground: oklch(0.18 0.02 265);
   --overdue: oklch(0.62 0.24 12);
 
   --gradient-bg: radial-gradient(ellipse at top, oklch(0.22 0.05 280 / 0.5), transparent 60%),
