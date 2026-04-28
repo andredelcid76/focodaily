@@ -367,6 +367,9 @@ function TodayInner({ userId }: { userId: string }) {
                     onPostpone={(date) => handlePostpone(t, date)}
                     onDuplicate={(date) => handleDuplicate(t, date)}
                     onFollowUp={(date) => handleFollowUp(t, date)}
+                    selectionMode={selectionMode}
+                    selected={selectedIds.has(t.id)}
+                    onSelectToggle={() => toggleSelect(t.id)}
                   />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => moveOverdueToToday(t)}>
@@ -379,9 +382,20 @@ function TodayInner({ userId }: { userId: string }) {
       )}
 
       <section>
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Tarefas {isViewingToday ? "de hoje" : "do dia"}
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Tarefas {isViewingToday ? "de hoje" : "do dia"}
+          </h2>
+          {dayTasks.length > 0 && (
+            <button
+              type="button"
+              onClick={selectionMode ? clearSelection : selectAllVisible}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {selectionMode ? "Cancelar seleção" : "Selecionar"}
+            </button>
+          )}
+        </div>
         {dayTasks.length === 0 ? (
           <EmptyState onAdd={openNew} />
         ) : (
@@ -406,6 +420,9 @@ function TodayInner({ userId }: { userId: string }) {
                     onPostpone={(date) => handlePostpone(t, date)}
                     onDuplicate={(date) => handleDuplicate(t, date)}
                     onFollowUp={(date) => handleFollowUp(t, date)}
+                    selectionMode={selectionMode}
+                    selected={selectedIds.has(t.id)}
+                    onSelectToggle={() => toggleSelect(t.id)}
                   />
                 ))}
               </div>
