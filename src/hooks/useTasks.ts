@@ -461,6 +461,8 @@ export function useTasks(userId: string | undefined) {
     reorderInDay,
     moveTaskToDay,
     addTimeSpent,
+    duplicateTask,
+    createFollowUp,
     refresh,
   };
 }
