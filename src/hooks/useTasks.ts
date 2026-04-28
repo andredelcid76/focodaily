@@ -78,13 +78,47 @@ export function useTasks(userId: string | undefined) {
 
           let matches = false;
           if (p.recurrence === "daily") matches = true;
+          else if (p.recurrence === "weekdays") {
+            const dow = dayD.getDay();
+            matches = dow >= 1 && dow <= 5;
+          }
           else if (p.recurrence === "weekly") matches = diffDays % 7 === 0;
           else if (p.recurrence === "monthly") matches = startD.getDate() === dayD.getDate();
           else if (p.recurrence === "custom") {
             const interval = p.recurrence_interval ?? 0;
             const weekdays = p.recurrence_weekdays ?? [];
-            if (weekdays.length > 0) matches = weekdays.includes(dayD.getDay());
-            else if (interval > 0) matches = diffDays % interval === 0;
+            const weekInterval = (p as any).recurrence_week_interval as number | null ?? null;
+            const monthlyPattern = (p as any).recurrence_monthly_pattern as { week: number; weekday: number } | null ?? null;
+
+            if (monthlyPattern && typeof monthlyPattern.week === "number" && typeof monthlyPattern.weekday === "number") {
+              // e.g. first Monday of the month, last Friday
+              if (dayD.getDay() === monthlyPattern.weekday) {
+                if (monthlyPattern.week === -1) {
+                  // last weekday of the month
+                  const next = new Date(dayD.getFullYear(), dayD.getMonth(), dayD.getDate() + 7);
+                  matches = next.getMonth() !== dayD.getMonth();
+                } else {
+                  const nth = Math.floor((dayD.getDate() - 1) / 7) + 1;
+                  matches = nth === monthlyPattern.week;
+                }
+              }
+            } else if (weekdays.length > 0) {
+              const wInt = weekInterval && weekInterval > 0 ? weekInterval : 1;
+              if (weekdays.includes(dayD.getDay())) {
+                if (wInt === 1) matches = true;
+                else {
+                  // weeks since the parent's start, Monday-based
+                  const startMonday = new Date(startD);
+                  const sDow = (startMonday.getDay() + 6) % 7; // 0 = Mon
+                  startMonday.setDate(startMonday.getDate() - sDow);
+                  const dayMonday = new Date(dayD);
+                  const dDow = (dayMonday.getDay() + 6) % 7;
+                  dayMonday.setDate(dayMonday.getDate() - dDow);
+                  const weeksDiff = Math.round((dayMonday.getTime() - startMonday.getTime()) / (7 * 86400000));
+                  matches = weeksDiff >= 0 && weeksDiff % wInt === 0;
+                }
+              }
+            } else if (interval > 0) matches = diffDays % interval === 0;
           }
 
           if (!matches) continue;
