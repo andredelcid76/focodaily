@@ -39,6 +39,7 @@ function WeekInner({ userId }: { userId: string }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(todayISO()));
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const tasksApi = useTasks(userId);
+  const meetingsApi = useMeetings(userId);
   const { roles } = useRoles(userId);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const [dialogOpen, setDialogOpen] = useState(false);
