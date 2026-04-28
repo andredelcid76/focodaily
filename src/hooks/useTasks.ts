@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { todayISO, addDays } from "@/lib/date";
@@ -6,9 +6,13 @@ import { todayISO, addDays } from "@/lib/date";
 export type Task = Tables<"tasks">;
 export type TaskCategory = Task["category"];
 export type TaskRecurrence = Task["recurrence"];
+export type TaskStatus = Task["status"];
 
 // How many days ahead we materialize recurring task instances
 const FUTURE_DAYS = 14;
+
+// Module-level guard prevents concurrent ensureRecurring runs (StrictMode, multi-mount, multi-tab races)
+const ensureLocks = new Map<string, Promise<void>>();
 
 export function useTasks(userId: string | undefined) {
   const [tasks, setTasks] = useState<Task[]>([]);
