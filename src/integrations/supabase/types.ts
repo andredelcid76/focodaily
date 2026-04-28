@@ -68,6 +68,30 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_pending_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          provider: string
+          state_token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          provider?: string
+          state_token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          provider?: string
+          state_token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       outlook_connections: {
         Row: {
           access_token: string
@@ -241,7 +265,45 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      outlook_connections_safe: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          email: string | null
+          expires_at: string | null
+          id: string | null
+          last_sync_at: string | null
+          ms_user_id: string | null
+          scope: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          ms_user_id?: string | null
+          scope?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          ms_user_id?: string | null
+          scope?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
