@@ -1,10 +1,20 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
-import { GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer } from "lucide-react";
-import { formatMinutes } from "@/lib/date";
+import {
+  GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
+  MoreVertical, CalendarPlus, CalendarClock, Copy, Repeat2, ArrowRight,
+} from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
 import { formatTimer } from "@/hooks/useActiveTimer";
 import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
@@ -25,6 +35,10 @@ type Props = {
   onPause?: () => void;
   onResume?: () => void;
   onStop?: () => void;
+  // Quick actions
+  onPostpone?: (date: string) => void;
+  onDuplicate?: (date: string) => void;
+  onFollowUp?: (date: string) => void;
 };
 
 export function TaskCard({
@@ -42,6 +56,9 @@ export function TaskCard({
   onPause,
   onResume,
   onStop,
+  onPostpone,
+  onDuplicate,
+  onFollowUp,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -56,6 +73,11 @@ export function TaskCard({
 
   const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
   const running = isActive && !isPaused;
+
+  const today = todayISO();
+  const tomorrow = addDays(today, 1);
+  const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
+  const followupNumber = task.followup_count ?? 0;
 
   return (
     <div
@@ -100,6 +122,14 @@ export function TaskCard({
             {task.title}
           </span>
           {role && <RoleBadge role={role} size="xs" />}
+          {followupNumber > 1 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-md border border-circumstantial/40 bg-circumstantial/10 px-1.5 py-0.5 text-[10px] font-semibold text-circumstantial"
+              title={`Follow-up #${followupNumber}`}
+            >
+              <Repeat2 className="h-2.5 w-2.5" /> #{followupNumber}
+            </span>
+          )}
         </div>
         {!compact && task.description && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
@@ -176,6 +206,127 @@ export function TaskCard({
           )}
         </div>
       )}
+
+      {hasActions && !task.completed && (
+        <TaskActionsMenu
+          task={task}
+          today={today}
+          tomorrow={tomorrow}
+          onPostpone={onPostpone}
+          onDuplicate={onDuplicate}
+          onFollowUp={onFollowUp}
+        />
+      )}
+    </div>
+  );
+}
+
+function TaskActionsMenu({
+  task,
+  today,
+  tomorrow,
+  onPostpone,
+  onDuplicate,
+  onFollowUp,
+}: {
+  task: Task;
+  today: string;
+  tomorrow: string;
+  onPostpone?: (date: string) => void;
+  onDuplicate?: (date: string) => void;
+  onFollowUp?: (date: string) => void;
+}) {
+  const [pickerMode, setPickerMode] = useState<null | "postpone" | "duplicate" | "followup">(null);
+  const [pickerDate, setPickerDate] = useState<Date>(() => {
+    const [y, m, d] = tomorrow.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  });
+
+  const closePicker = () => setPickerMode(null);
+  const confirmPicker = () => {
+    const iso = toISODate(pickerDate);
+    if (pickerMode === "postpone") onPostpone?.(iso);
+    else if (pickerMode === "duplicate") onDuplicate?.(iso);
+    else if (pickerMode === "followup") onFollowUp?.(iso);
+    closePicker();
+  };
+
+  const isToday = task.scheduled_date === today;
+
+  return (
+    <div onClick={(e) => e.stopPropagation()} className="mt-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            aria-label="Mais ações"
+            title="Mais ações"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          {onPostpone && !isToday && (
+            <DropdownMenuItem onClick={() => onPostpone(today)}>
+              <ArrowRight className="mr-2 h-4 w-4" /> Mover para hoje
+            </DropdownMenuItem>
+          )}
+          {onPostpone && (
+            <DropdownMenuItem onClick={() => onPostpone(tomorrow)}>
+              <CalendarPlus className="mr-2 h-4 w-4" /> Mover para amanhã
+            </DropdownMenuItem>
+          )}
+          {onPostpone && (
+            <DropdownMenuItem onClick={() => setPickerMode("postpone")}>
+              <CalendarClock className="mr-2 h-4 w-4" /> Mover para data…
+            </DropdownMenuItem>
+          )}
+          {(onDuplicate || onFollowUp) && <DropdownMenuSeparator />}
+          {onDuplicate && (
+            <DropdownMenuItem onClick={() => setPickerMode("duplicate")}>
+              <Copy className="mr-2 h-4 w-4" /> Duplicar para…
+            </DropdownMenuItem>
+          )}
+          {onFollowUp && (
+            <DropdownMenuItem onClick={() => setPickerMode("followup")}>
+              <Repeat2 className="mr-2 h-4 w-4" /> Follow-up…
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={pickerMode !== null} onOpenChange={(o: boolean) => !o && closePicker()}>
+        <DialogContent className="w-auto max-w-[20rem] p-0">
+          <DialogHeader className="border-b border-border/60 p-3">
+            <DialogTitle className="text-sm">
+              {pickerMode === "postpone" && "Mover para…"}
+              {pickerMode === "duplicate" && "Duplicar em…"}
+              {pickerMode === "followup" && "Follow-up em…"}
+            </DialogTitle>
+          </DialogHeader>
+          <Calendar
+            mode="single"
+            selected={pickerDate}
+            onSelect={(d) => d && setPickerDate(d)}
+            initialFocus
+            className="p-3 pointer-events-auto"
+          />
+          <div className="flex justify-end gap-2 border-t border-border/60 p-2">
+            <button
+              onClick={closePicker}
+              className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent/40"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmPicker}
+              className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+            >
+              Confirmar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

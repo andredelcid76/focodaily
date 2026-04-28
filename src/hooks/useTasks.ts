@@ -369,6 +369,72 @@ export function useTasks(userId: string | undefined) {
     await updateTask(id, { time_spent_seconds: next });
   };
 
+  // Duplicate a task to a target date (creates a fresh row, no recurrence link)
+  const duplicateTask = async (task: Task, targetDate: string) => {
+    if (!userId) return;
+    const payload: TablesInsert<"tasks"> = {
+      user_id: userId,
+      title: task.title,
+      description: task.description,
+      category: task.category,
+      role_id: task.role_id,
+      scheduled_date: targetDate,
+      original_date: targetDate,
+      duration_minutes: task.duration_minutes,
+      recurrence: "none",
+      position: 999,
+    };
+    const { data, error } = await supabase.from("tasks").insert(payload).select().single();
+    if (error) throw error;
+    if (data) setTasks((prev) => (prev.some((t) => t.id === data.id) ? prev : [...prev, data]));
+    return data;
+  };
+
+  // Create a follow-up: new task linked via followup_chain_id, original is marked done
+  const createFollowUp = async (task: Task, targetDate: string) => {
+    if (!userId) return;
+    const chainId = task.followup_chain_id ?? task.id;
+    // Find max followup_count across the chain (including the originating task)
+    const chainMembers = tasks.filter(
+      (t) => t.followup_chain_id === chainId || t.id === chainId
+    );
+    const maxCount = chainMembers.reduce((m, t) => Math.max(m, t.followup_count ?? 0), 0);
+    // The original (root) is #1; each follow-up increments
+    const originalCount = maxCount === 0 ? 1 : maxCount;
+    const nextCount = originalCount + 1;
+
+    // Backfill chain on the original if it wasn't part of one yet
+    if (!task.followup_chain_id) {
+      await updateTask(task.id, { followup_chain_id: chainId, followup_count: 1 });
+    }
+
+    const payload: TablesInsert<"tasks"> = {
+      user_id: userId,
+      title: task.title,
+      description: task.description,
+      category: task.category,
+      role_id: task.role_id,
+      scheduled_date: targetDate,
+      original_date: targetDate,
+      duration_minutes: task.duration_minutes,
+      recurrence: "none",
+      followup_chain_id: chainId,
+      followup_count: nextCount,
+      position: 999,
+    };
+    const { data, error } = await supabase.from("tasks").insert(payload).select().single();
+    if (error) throw error;
+    if (data) setTasks((prev) => (prev.some((t) => t.id === data.id) ? prev : [...prev, data]));
+
+    // Mark original as completed
+    await updateTask(task.id, {
+      completed: true,
+      completed_at: new Date().toISOString(),
+      status: "done",
+    });
+    return data;
+  };
+
   // Overdue = scheduled_date < today AND not completed
   const todayStr = todayISO();
   const overdueTasks = tasks.filter((t) => !t.completed && t.scheduled_date < todayStr);
@@ -395,6 +461,8 @@ export function useTasks(userId: string | undefined) {
     reorderInDay,
     moveTaskToDay,
     addTimeSpent,
+    duplicateTask,
+    createFollowUp,
     refresh,
   };
 }

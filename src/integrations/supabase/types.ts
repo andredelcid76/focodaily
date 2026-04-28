@@ -106,6 +106,8 @@ export type Database = {
           created_at: string
           description: string | null
           duration_minutes: number
+          followup_chain_id: string | null
+          followup_count: number
           id: string
           original_date: string
           position: number
@@ -130,6 +132,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_minutes?: number
+          followup_chain_id?: string | null
+          followup_count?: number
           id?: string
           original_date?: string
           position?: number
@@ -154,6 +158,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_minutes?: number
+          followup_chain_id?: string | null
+          followup_count?: number
           id?: string
           original_date?: string
           position?: number
