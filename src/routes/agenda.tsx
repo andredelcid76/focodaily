@@ -88,7 +88,7 @@ function AgendaInner({ userId }: { userId: string }) {
 
   const refreshOutlookStatus = async () => {
     try {
-      const res = await getOutlookStatusFn();
+      const res = await getOutlookStatusFn({ data: {} });
       setOutlook({
         connected: res.connected,
         email: res.connection?.email,
@@ -143,7 +143,7 @@ function AgendaInner({ userId }: { userId: string }) {
 
   const onDisconnect = async () => {
     try {
-      await disconnectOutlookFn();
+      await disconnectOutlookFn({ data: {} });
       toast.success("Outlook desconectado");
       setOutlook({ connected: false });
     } catch (e: any) {
@@ -158,7 +158,7 @@ function AgendaInner({ userId }: { userId: string }) {
     }
     setSyncing(true);
     try {
-      const res = await syncOutlookCalendarFn();
+      const res = await syncOutlookCalendarFn({ data: {} });
       toast.success(`${res.imported} reuniões sincronizadas do Outlook`);
       await meetingsApi.refresh();
       await refreshOutlookStatus();

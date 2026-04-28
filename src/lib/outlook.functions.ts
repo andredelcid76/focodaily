@@ -41,6 +41,7 @@ export const getOutlookAuthUrl = createServerFn({ method: "POST" })
 /** Returns connection status for the current user. */
 export const getOutlookStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+  .inputValidator((data: Record<string, never> | undefined) => data ?? {})
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("outlook_connections")
@@ -53,6 +54,7 @@ export const getOutlookStatus = createServerFn({ method: "POST" })
 /** Disconnect: drop tokens. */
 export const disconnectOutlook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+  .inputValidator((data: Record<string, never> | undefined) => data ?? {})
   .handler(async ({ context }) => {
     const { error } = await context.supabase
       .from("outlook_connections")
@@ -90,6 +92,7 @@ async function refreshAccessToken(refreshToken: string) {
 /** Sync calendar events from Outlook into meetings table. */
 export const syncOutlookCalendar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
+  .inputValidator((data: Record<string, never> | undefined) => data ?? {})
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
