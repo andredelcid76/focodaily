@@ -35,6 +35,10 @@ type Props = {
   onPostpone?: (date: string) => void;
   onDuplicate?: (date: string) => void;
   onFollowUp?: (date: string) => void;
+  // Bulk selection
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelectToggle?: () => void;
 };
 
 export function TaskCard({
