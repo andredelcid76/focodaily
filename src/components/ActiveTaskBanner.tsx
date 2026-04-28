@@ -29,12 +29,13 @@ export function ActiveTaskBanner() {
       setTask(null);
       return;
     }
+    const activeId = timer.activeTaskId;
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("tasks")
         .select("id,title,scheduled_date,time_spent_seconds")
-        .eq("id", timer.activeTaskId)
+        .eq("id", activeId)
         .maybeSingle();
       if (!cancelled && data) setTask(data);
     })();
