@@ -281,7 +281,7 @@ function TodayInner({ userId }: { userId: string }) {
           await tasksApi.createTask({
             ...payload,
             original_date: payload.scheduled_date,
-            position: dayTasks.length,
+            position: tasksApi.topPositionForDay(payload.scheduled_date),
             recurrence: "none",
           });
         }}
