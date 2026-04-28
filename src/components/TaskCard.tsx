@@ -85,7 +85,7 @@ export function TaskCard({
       style={style}
       className={`group relative flex items-start gap-2 rounded-xl border bg-card/80 backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-all hover:border-primary/40 ${
         isOverdue ? "border-overdue/40" : ""
-      } ${isActive ? "border-primary/60 ring-1 ring-primary/30" : ""} ${
+      } ${isActive ? (running ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]" : "border-circumstantial/60 ring-1 ring-circumstantial/30") : ""} ${
         task.completed ? "opacity-60" : ""
       }`}
     >

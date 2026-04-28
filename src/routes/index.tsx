@@ -119,7 +119,7 @@ function TodayInner({ userId }: { userId: string }) {
       }
       toast.success("Tarefa atualizada");
     } else {
-      await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: dayTasks.length });
+      await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: tasksApi.topPositionForDay(data.scheduled_date) });
       toast.success("Tarefa criada");
     }
   };
@@ -135,7 +135,7 @@ function TodayInner({ userId }: { userId: string }) {
   };
 
   const moveOverdueToToday = async (t: Task) => {
-    await tasksApi.moveTaskToDay(t.id, today, dayTasks.length);
+    await tasksApi.moveTaskToDay(t.id, today, tasksApi.topPositionForDay(today));
   };
 
   // Quick actions for today's task list
@@ -281,7 +281,7 @@ function TodayInner({ userId }: { userId: string }) {
           await tasksApi.createTask({
             ...payload,
             original_date: payload.scheduled_date,
-            position: dayTasks.length,
+            position: tasksApi.topPositionForDay(payload.scheduled_date),
             recurrence: "none",
           });
         }}

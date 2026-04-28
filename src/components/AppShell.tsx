@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { CalendarClock, CalendarDays, KanbanSquare, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
+import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 
 function Shell({ children }: { children: ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -66,6 +67,7 @@ function Shell({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </header>
+      <ActiveTaskBanner />
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   );

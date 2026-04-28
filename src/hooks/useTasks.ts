@@ -382,7 +382,11 @@ export function useTasks(userId: string | undefined) {
       original_date: targetDate,
       duration_minutes: task.duration_minutes,
       recurrence: "none",
-      position: 999,
+      position: (() => {
+        const dayList = tasks.filter((t) => t.scheduled_date === targetDate);
+        if (dayList.length === 0) return 0;
+        return Math.min(...dayList.map((t) => t.position ?? 0)) - 1;
+      })(),
     };
     const { data, error } = await supabase.from("tasks").insert(payload).select().single();
     if (error) throw error;
@@ -420,7 +424,11 @@ export function useTasks(userId: string | undefined) {
       recurrence: "none",
       followup_chain_id: chainId,
       followup_count: nextCount,
-      position: 999,
+      position: (() => {
+        const dayList = tasks.filter((t) => t.scheduled_date === targetDate);
+        if (dayList.length === 0) return 0;
+        return Math.min(...dayList.map((t) => t.position ?? 0)) - 1;
+      })(),
     };
     const { data, error } = await supabase.from("tasks").insert(payload).select().single();
     if (error) throw error;
@@ -444,6 +452,14 @@ export function useTasks(userId: string | undefined) {
 
   const tasksByDay = (date: string) => tasks.filter((t) => t.scheduled_date === date);
 
+  // Position helper to insert a new task at the TOP of a given day
+  const topPositionForDay = (date: string) => {
+    const dayList = tasks.filter((t) => t.scheduled_date === date);
+    if (dayList.length === 0) return 0;
+    const min = Math.min(...dayList.map((t) => t.position ?? 0));
+    return min - 1;
+  };
+
   return {
     tasks,
     loading,
@@ -451,6 +467,7 @@ export function useTasks(userId: string | undefined) {
     todayTasks,
     tomorrowTasks,
     tasksByDay,
+    topPositionForDay,
     createTask,
     updateTask,
     deleteTask,
