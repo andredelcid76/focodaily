@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read Calendars.ReadWrite";
 
-export const Route = createFileRoute("/api/outlook/callback")({
+export const Route = createFileRoute("/api/public/outlook/callback")({
   server: {
     handlers: {
       GET: async ({ request }) => {
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/outlook/callback")({
           return redirectWithMsg("MS_CLIENT_ID/MS_CLIENT_SECRET não configurados");
         }
 
-        const redirectUri = `${url.origin}/api/outlook/callback`;
+        const redirectUri = `${url.origin}/api/public/outlook/callback`;
         const body = new URLSearchParams({
           client_id: clientId,
           client_secret: clientSecret,

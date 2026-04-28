@@ -62,7 +62,7 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
   const meetingsApi = useMeetings(userId);
 
   const outlookRequest = async <T,>(method: "GET" | "POST", body?: Record<string, unknown>) => {
-    const response = await fetch("/api/outlook", {
+    const response = await fetch("/api/public/outlook", {
       method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
