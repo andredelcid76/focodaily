@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task } from "@/hooks/useTasks";
+import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
 import { useRoles, type Role } from "@/hooks/useRoles";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
