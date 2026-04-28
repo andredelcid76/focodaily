@@ -61,11 +61,26 @@ export const Route = createFileRoute("/api/public/outlook")({
           if (payload.action === "connect") {
             const clientId = process.env.MS_CLIENT_ID;
             if (!clientId) {
-              return json({ error: "MS_CLIENT_ID is not configured" }, 500);
+              console.error("[outlook connect] MS_CLIENT_ID not configured");
+              return json({ error: "Configuração do servidor incompleta" }, 500);
             }
 
             if (!payload.origin) {
               return json({ error: "Origin is required" }, 400);
+            }
+
+            // Generate cryptographically random state token (CSRF protection)
+            const stateToken = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
+            const { error: stateErr } = await supabaseAdmin
+              .from("oauth_pending_states")
+              .insert({
+                state_token: stateToken,
+                user_id: userId,
+                provider: "outlook",
+              });
+            if (stateErr) {
+              console.error("[outlook connect] failed to store state", stateErr);
+              return json({ error: "Não foi possível iniciar a conexão" }, 500);
             }
 
             const redirectOrigin = getPreferredCallbackOrigin(payload.origin);
@@ -76,7 +91,7 @@ export const Route = createFileRoute("/api/public/outlook")({
               redirect_uri: redirectUri,
               response_mode: "query",
               scope: SCOPES,
-              state: userId,
+              state: stateToken,
               prompt: "select_account",
             });
 
