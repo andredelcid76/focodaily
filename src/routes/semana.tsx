@@ -1,0 +1,212 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { useAuth } from "@/lib/auth";
+import { useTasks, type Task } from "@/hooks/useTasks";
+import { TaskCard } from "@/components/TaskCard";
+import { TaskDialog } from "@/components/TaskDialog";
+import { Button } from "@/components/ui/button";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { todayISO, addDays, startOfWeek, weekDays, formatShort, formatMinutes } from "@/lib/date";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/semana")({
+  component: () => (
+    <AppShell>
+      <WeekPage />
+    </AppShell>
+  ),
+});
+
+function WeekPage() {
+  const { user } = useAuth();
+  if (!user) return null;
+  return <WeekInner userId={user.id} />;
+}
+
+function WeekInner({ userId }: { userId: string }) {
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(todayISO()));
+  const days = useMemo(() => weekDays(weekStart), [weekStart]);
+  const tasksApi = useTasks(userId);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Task | null>(null);
+  const [defaultDate, setDefaultDate] = useState(todayISO());
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const tasksByDay = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    days.forEach((d) => map.set(d, []));
+    for (const t of tasksApi.tasks) {
+      if (map.has(t.scheduled_date)) {
+        map.get(t.scheduled_date)!.push(t);
+      }
+    }
+    for (const arr of map.values()) arr.sort((a, b) => a.position - b.position);
+    return map;
+  }, [tasksApi.tasks, days]);
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over) return;
+    const activeTask = active.data.current?.task as Task | undefined;
+    const overData = over.data.current as { task?: Task; day?: string } | undefined;
+    if (!activeTask) return;
+
+    const overTask = overData?.task;
+    const targetDay = overTask?.scheduled_date ?? overData?.day;
+    if (!targetDay) return;
+
+    if (activeTask.scheduled_date === targetDay && overTask) {
+      // reorder within same day
+      const list = tasksByDay.get(targetDay) ?? [];
+      const oldIdx = list.findIndex((t) => t.id === activeTask.id);
+      const newIdx = list.findIndex((t) => t.id === overTask.id);
+      if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return;
+      const reordered = arrayMove(list, oldIdx, newIdx);
+      await tasksApi.reorderInDay(targetDay, reordered.map((t) => t.id));
+    } else {
+      // move to another day
+      const targetList = tasksByDay.get(targetDay) ?? [];
+      const insertIdx = overTask ? targetList.findIndex((t) => t.id === overTask.id) : targetList.length;
+      const newOrder = [...targetList.filter((t) => t.id !== activeTask.id)];
+      newOrder.splice(insertIdx >= 0 ? insertIdx : newOrder.length, 0, activeTask);
+      await tasksApi.reorderInDay(targetDay, newOrder.map((t) => t.id));
+    }
+  };
+
+  const openNew = (date: string) => {
+    setEditing(null);
+    setDefaultDate(date);
+    setDialogOpen(true);
+  };
+  const openEdit = (t: Task) => {
+    setEditing(t);
+    setDefaultDate(t.scheduled_date);
+    setDialogOpen(true);
+  };
+  const handleSave = async (data: any) => {
+    if (editing) {
+      await tasksApi.updateTask(editing.id, data);
+      toast.success("Tarefa atualizada");
+    } else {
+      await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: 999 });
+      toast.success("Tarefa criada");
+    }
+  };
+
+  const today = todayISO();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Planejamento</p>
+          <h1 className="font-display text-3xl font-bold">Visão semanal</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(todayISO()))}>Esta semana</Button>
+          <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight className="h-4 w-4" /></Button>
+        </div>
+      </div>
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-7">
+          {days.map((d) => {
+            const list = tasksByDay.get(d) ?? [];
+            const total = list.reduce((s, t) => s + t.duration_minutes, 0);
+            const isToday = d === today;
+            return (
+              <DayColumn
+                key={d}
+                day={d}
+                tasks={list}
+                isToday={isToday}
+                totalMinutes={total}
+                onAdd={() => openNew(d)}
+                onToggle={(t) => tasksApi.toggleComplete(t)}
+                onEdit={(t) => openEdit(t)}
+              />
+            );
+          })}
+        </div>
+      </DndContext>
+
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultDate={defaultDate}
+        task={editing}
+        onSave={handleSave}
+        onDelete={editing ? async () => { await tasksApi.deleteTask(editing.id); toast.success("Tarefa excluída"); } : undefined}
+      />
+    </div>
+  );
+}
+
+function DayColumn({
+  day, tasks, isToday, totalMinutes, onAdd, onToggle, onEdit,
+}: {
+  day: string;
+  tasks: Task[];
+  isToday: boolean;
+  totalMinutes: number;
+  onAdd: () => void;
+  onToggle: (t: Task) => void;
+  onEdit: (t: Task) => void;
+}) {
+  return (
+    <div className={`rounded-2xl border p-3 backdrop-blur-sm min-h-[200px] flex flex-col ${
+      isToday ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/40"
+    }`}>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <div className={`text-xs uppercase tracking-wider ${isToday ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+            {formatShort(day)}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">{formatMinutes(totalMinutes)}</div>
+        </div>
+        <button onClick={onAdd} className="rounded-md p-1 text-muted-foreground hover:bg-accent/40 hover:text-foreground" aria-label="Adicionar">
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <div className="flex-1 space-y-2" data-day={day}>
+          {tasks.length === 0 ? (
+            <DropZone day={day} />
+          ) : (
+            tasks.map((t) => (
+              <TaskCard key={t.id} task={t} onToggle={() => onToggle(t)} onEdit={() => onEdit(t)} compact />
+            ))
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
+import { useDroppable } from "@dnd-kit/core";
+
+function DropZone({ day }: { day: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `empty-${day}`, data: { day } });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg border border-dashed py-6 text-center text-xs text-muted-foreground/60 transition-colors ${
+        isOver ? "border-primary bg-primary/10" : "border-border/40"
+      }`}
+    >
+      Arraste aqui
+    </div>
+  );
+}
