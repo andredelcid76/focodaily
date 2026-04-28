@@ -60,6 +60,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
   const [roleId, setRoleId] = useState<string | null>(null);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [weekInterval, setWeekInterval] = useState(1);
+  const [monthlyMode, setMonthlyMode] = useState(false);
+  const [monthlyWeek, setMonthlyWeek] = useState<number>(1); // 1..5 or -1
+  const [monthlyWeekday, setMonthlyWeekday] = useState<number>(1); // 0..6
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
