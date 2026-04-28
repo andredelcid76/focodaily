@@ -112,8 +112,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
           scheduled_date: date,
           recurrence,
           role_id: roleId,
-          recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
-          recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
+          recurrence_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
+          recurrence_weekdays:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekdays : null,
+          recurrence_week_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekInterval : null,
+          recurrence_monthly_pattern:
+            recurrence === "custom" && monthlyMode ? { week: monthlyWeek, weekday: monthlyWeekday } : null,
         },
         scope
       );
