@@ -4,9 +4,24 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const TENANT = "common"; // multi-tenant + personal accounts
 const SCOPES = "offline_access openid profile User.Read Calendars.ReadWrite";
+const LOVABLE_PROJECT_ID = "0f679b02-63a6-46ee-ae66-8b953bfe9f15";
 
 function getRedirectUri(origin: string) {
-  return `${origin}/api/outlook/callback`;
+  try {
+    const url = new URL(origin);
+
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return `${url.origin}/api/public/outlook/callback`;
+    }
+
+    if (url.hostname.endsWith(".lovableproject.com")) {
+      return `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app/api/public/outlook/callback`;
+    }
+
+    return `${url.origin}/api/public/outlook/callback`;
+  } catch {
+    return `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app/api/public/outlook/callback`;
+  }
 }
 
 function authBase() {
