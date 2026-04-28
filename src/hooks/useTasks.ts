@@ -424,7 +424,11 @@ export function useTasks(userId: string | undefined) {
       recurrence: "none",
       followup_chain_id: chainId,
       followup_count: nextCount,
-      position: 999,
+      position: (() => {
+        const dayList = tasks.filter((t) => t.scheduled_date === targetDate);
+        if (dayList.length === 0) return 0;
+        return Math.min(...dayList.map((t) => t.position ?? 0)) - 1;
+      })(),
     };
     const { data, error } = await supabase.from("tasks").insert(payload).select().single();
     if (error) throw error;
