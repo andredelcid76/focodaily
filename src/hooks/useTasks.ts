@@ -14,6 +14,58 @@ const FUTURE_DAYS = 14;
 // Module-level guard prevents concurrent ensureRecurring runs (StrictMode, multi-mount, multi-tab races)
 const ensureLocks = new Map<string, Promise<void>>();
 
+// Decide whether a recurring parent should have an instance on a given date.
+// Returns false for the parent's own original_date (parent occupies that slot itself).
+function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
+  if (dayISO === parent.original_date) return false;
+  const [sy, sm, sd] = parent.original_date.split("-").map(Number);
+  const startD = new Date(sy, sm - 1, sd);
+  const [ty, tm, td] = dayISO.split("-").map(Number);
+  const dayD = new Date(ty, tm - 1, td);
+  if (dayD < startD) return false;
+  const diffDays = Math.floor((dayD.getTime() - startD.getTime()) / 86400000);
+  if (diffDays === 0) return false;
+
+  if (parent.recurrence === "daily") return true;
+  if (parent.recurrence === "weekdays") {
+    const dow = dayD.getDay();
+    return dow >= 1 && dow <= 5;
+  }
+  if (parent.recurrence === "weekly") return diffDays % 7 === 0;
+  if (parent.recurrence === "monthly") return startD.getDate() === dayD.getDate();
+  if (parent.recurrence === "custom") {
+    const interval = parent.recurrence_interval ?? 0;
+    const weekdays = parent.recurrence_weekdays ?? [];
+    const weekInterval = (parent as any).recurrence_week_interval as number | null ?? null;
+    const monthlyPattern = (parent as any).recurrence_monthly_pattern as { week: number; weekday: number } | null ?? null;
+
+    if (monthlyPattern && typeof monthlyPattern.week === "number" && typeof monthlyPattern.weekday === "number") {
+      if (dayD.getDay() !== monthlyPattern.weekday) return false;
+      if (monthlyPattern.week === -1) {
+        const next = new Date(dayD.getFullYear(), dayD.getMonth(), dayD.getDate() + 7);
+        return next.getMonth() !== dayD.getMonth();
+      }
+      const nth = Math.floor((dayD.getDate() - 1) / 7) + 1;
+      return nth === monthlyPattern.week;
+    }
+    if (weekdays.length > 0) {
+      const wInt = weekInterval && weekInterval > 0 ? weekInterval : 1;
+      if (!weekdays.includes(dayD.getDay())) return false;
+      if (wInt === 1) return true;
+      const startMonday = new Date(startD);
+      const sDow = (startMonday.getDay() + 6) % 7;
+      startMonday.setDate(startMonday.getDate() - sDow);
+      const dayMonday = new Date(dayD);
+      const dDow = (dayMonday.getDay() + 6) % 7;
+      dayMonday.setDate(dayMonday.getDate() - dDow);
+      const weeksDiff = Math.round((dayMonday.getTime() - startMonday.getTime()) / (7 * 86400000));
+      return weeksDiff >= 0 && weeksDiff % wInt === 0;
+    }
+    if (interval > 0) return diffDays % interval === 0;
+  }
+  return false;
+}
+
 export function useTasks(userId: string | undefined) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
