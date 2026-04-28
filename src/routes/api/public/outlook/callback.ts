@@ -3,6 +3,21 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read Calendars.ReadWrite";
+const LOVABLE_PROJECT_ID = "0f679b02-63a6-46ee-ae66-8b953bfe9f15";
+
+function getExpectedRedirectUri(url: URL) {
+  const hostname = url.hostname;
+
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return `${url.origin}/api/public/outlook/callback`;
+  }
+
+  if (hostname.endsWith(".lovableproject.com")) {
+    return `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app/api/public/outlook/callback`;
+  }
+
+  return `${url.origin}/api/public/outlook/callback`;
+}
 
 export const Route = createFileRoute("/api/public/outlook/callback")({
   server: {
@@ -26,7 +41,7 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
           return redirectWithMsg("MS_CLIENT_ID/MS_CLIENT_SECRET não configurados");
         }
 
-        const redirectUri = `${url.origin}/api/public/outlook/callback`;
+        const redirectUri = getExpectedRedirectUri(url);
         const body = new URLSearchParams({
           client_id: clientId,
           client_secret: clientSecret,
