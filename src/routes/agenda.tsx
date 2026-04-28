@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
+import {
+  getOutlookAuthUrl,
+  getOutlookStatus,
+  syncOutlookCalendar,
+  disconnectOutlook,
+} from "@/lib/outlook.functions";
+import { Link2, Link2Off, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +59,44 @@ function AgendaInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Meeting | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [outlook, setOutlook] = useState<{
+    connected: boolean;
+    email?: string | null;
+    last_sync_at?: string | null;
+  }>({ connected: false });
   const meetingsApi = useMeetings(userId);
+
+  // Read callback message from URL (?outlook=success|error&msg=...)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const status = url.searchParams.get("outlook");
+    const msg = url.searchParams.get("msg");
+    if (status && msg) {
+      if (status === "success") toast.success(msg);
+      else toast.error(msg);
+      url.searchParams.delete("outlook");
+      url.searchParams.delete("msg");
+      window.history.replaceState({}, "", url.pathname + (url.search ? `?${url.searchParams}` : ""));
+    }
+  }, []);
+
+  const refreshOutlookStatus = async () => {
+    try {
+      const res = await getOutlookStatus();
+      setOutlook({
+        connected: res.connected,
+        email: res.connection?.email,
+        last_sync_at: res.connection?.last_sync_at,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    refreshOutlookStatus();
+  }, []);
 
   const dayMeetings = useMemo(
     () =>
@@ -81,13 +125,40 @@ function AgendaInner({ userId }: { userId: string }) {
     setDialogOpen(true);
   };
 
+  const onConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await getOutlookAuthUrl({ data: { origin: window.location.origin } });
+      window.location.href = res.url;
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao iniciar conexão");
+      setConnecting(false);
+    }
+  };
+
+  const onDisconnect = async () => {
+    try {
+      await disconnectOutlook();
+      toast.success("Outlook desconectado");
+      setOutlook({ connected: false });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao desconectar");
+    }
+  };
+
   const onSync = async () => {
+    if (!outlook.connected) {
+      toast.error("Conecte o Outlook primeiro");
+      return;
+    }
     setSyncing(true);
     try {
-      // Estrutura pronta para Outlook. A integração real (Calendars.ReadWrite)
-      // requer OAuth com app no Azure/Entra — pendente de credenciais.
-      await new Promise((r) => setTimeout(r, 600));
-      toast.info("Conector Outlook ligado, mas o escopo Calendars ainda não está liberado. Conecte um app Azure para puxar reuniões.");
+      const res = await syncOutlookCalendar();
+      toast.success(`${res.imported} reuniões sincronizadas do Outlook`);
+      await meetingsApi.refresh();
+      await refreshOutlookStatus();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao sincronizar");
     } finally {
       setSyncing(false);
     }
