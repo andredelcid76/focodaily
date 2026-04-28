@@ -138,6 +138,8 @@ export function useTasks(userId: string | undefined) {
           }
           else if (p.recurrence === "weekly") matches = diffDays % 7 === 0;
           else if (p.recurrence === "monthly") matches = startD.getDate() === dayD.getDate();
+          else if (p.recurrence === "yearly")
+            matches = startD.getDate() === dayD.getDate() && startD.getMonth() === dayD.getMonth();
           else if (p.recurrence === "custom") {
             const interval = p.recurrence_interval ?? 0;
             const weekdays = p.recurrence_weekdays ?? [];
