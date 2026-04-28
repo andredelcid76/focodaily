@@ -81,6 +81,19 @@ function TodayInner({ userId }: { userId: string }) {
   const [selectionActive, setSelectionActive] = useState(false);
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
+  const [showCompleted, setShowCompleted] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("focodaily.showCompleted") === "1";
+  });
+  const toggleShowCompleted = () => {
+    setShowCompleted((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("focodaily.showCompleted", next ? "1" : "0");
+      }
+      return next;
+    });
+  };
   const selectionMode = selectionActive || selectedIds.size > 0;
 
   const toggleSelect = (id: string) => {
@@ -124,6 +137,15 @@ function TodayInner({ userId }: { userId: string }) {
     dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
     (includeMeetings ? upcomingMeetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
+  const visibleDayTasks = useMemo(
+    () => (showCompleted ? dayTasks : dayTasks.filter((t) => !t.completed)),
+    [dayTasks, showCompleted]
+  );
+  const visibleOverdue = useMemo(
+    () => (showCompleted ? tasksApi.overdueTasks : tasksApi.overdueTasks.filter((t) => !t.completed)),
+    [tasksApi.overdueTasks, showCompleted]
+  );
+  
 
   const handleDragEnd = async (e: DragEndEvent) => {
     if (selectionMode) return;
@@ -344,16 +366,16 @@ function TodayInner({ userId }: { userId: string }) {
         onOpenFull={openNew}
       />
 
-      {isViewingToday && tasksApi.overdueTasks.length > 0 && (
+      {isViewingToday && visibleOverdue.length > 0 && (
         <section className="rounded-2xl border border-overdue/30 bg-overdue/5 p-4">
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-overdue" />
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-overdue">
-              Atrasadas ({tasksApi.overdueTasks.length})
+              Atrasadas ({visibleOverdue.length})
             </h2>
           </div>
           <div className="space-y-2">
-            {tasksApi.overdueTasks.map((t) => (
+            {visibleOverdue.map((t) => (
               <div key={t.id} className="flex items-center gap-2">
                 <div className="flex-1">
                   <TaskCardStatic
@@ -391,23 +413,47 @@ function TodayInner({ userId }: { userId: string }) {
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Tarefas {isViewingToday ? "de hoje" : "do dia"}
           </h2>
-          {dayTasks.length > 0 && (
-            <button
-              type="button"
-              onClick={selectionMode ? clearSelection : enterSelectionMode}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {selectionMode ? "Cancelar seleção" : "Selecionar"}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {completedCount > 0 && (
+              <button
+                type="button"
+                onClick={toggleShowCompleted}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showCompleted
+                  ? `Ocultar concluídas (${completedCount})`
+                  : `Mostrar concluídas (${completedCount})`}
+              </button>
+            )}
+            {visibleDayTasks.length > 0 && (
+              <button
+                type="button"
+                onClick={selectionMode ? clearSelection : enterSelectionMode}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {selectionMode ? "Cancelar seleção" : "Selecionar"}
+              </button>
+            )}
+          </div>
         </div>
-        {dayTasks.length === 0 ? (
-          <EmptyState onAdd={openNew} />
+        {visibleDayTasks.length === 0 ? (
+          dayTasks.length > 0 && !showCompleted ? (
+            <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Tudo concluído por aqui! 🎉
+              </p>
+              <Button variant="ghost" size="sm" className="mt-2" onClick={toggleShowCompleted}>
+                Mostrar {completedCount} concluída{completedCount === 1 ? "" : "s"}
+              </Button>
+            </div>
+          ) : (
+            <EmptyState onAdd={openNew} />
+          )
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={dayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={visibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
-                {dayTasks.map((t, i) => (
+                {visibleDayTasks.map((t, i) => (
                   <TaskCard
                     key={t.id}
                     task={t}
