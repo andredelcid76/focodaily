@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
+import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -22,6 +23,11 @@ const SemanaRoute = SemanaRouteImport.update({
 const PapeisRoute = PapeisRouteImport.update({
   id: '/papeis',
   path: '/papeis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KanbanRoute = KanbanRouteImport.update({
+  id: '/kanban',
+  path: '/kanban',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -38,12 +44,14 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/papeis' | '/semana'
+  fullPaths: '/' | '/auth' | '/kanban' | '/papeis' | '/semana'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/papeis' | '/semana'
-  id: '__root__' | '/' | '/auth' | '/papeis' | '/semana'
+  to: '/' | '/auth' | '/kanban' | '/papeis' | '/semana'
+  id: '__root__' | '/' | '/auth' | '/kanban' | '/papeis' | '/semana'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  KanbanRoute: typeof KanbanRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
 }
@@ -83,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/papeis'
       fullPath: '/papeis'
       preLoaderRoute: typeof PapeisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kanban': {
+      id: '/kanban'
+      path: '/kanban'
+      fullPath: '/kanban'
+      preLoaderRoute: typeof KanbanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -105,6 +122,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  KanbanRoute: KanbanRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
 }

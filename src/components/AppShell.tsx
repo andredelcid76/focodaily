@@ -2,7 +2,7 @@ import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
+import { CalendarDays, KanbanSquare, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
 
 function Shell({ children }: { children: ReactNode }) {
   const { user, loading, signOut } = useAuth();
