@@ -413,23 +413,47 @@ function TodayInner({ userId }: { userId: string }) {
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Tarefas {isViewingToday ? "de hoje" : "do dia"}
           </h2>
-          {dayTasks.length > 0 && (
-            <button
-              type="button"
-              onClick={selectionMode ? clearSelection : enterSelectionMode}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {selectionMode ? "Cancelar seleção" : "Selecionar"}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {completedCount > 0 && (
+              <button
+                type="button"
+                onClick={toggleShowCompleted}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showCompleted
+                  ? `Ocultar concluídas (${completedCount})`
+                  : `Mostrar concluídas (${completedCount})`}
+              </button>
+            )}
+            {visibleDayTasks.length > 0 && (
+              <button
+                type="button"
+                onClick={selectionMode ? clearSelection : enterSelectionMode}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {selectionMode ? "Cancelar seleção" : "Selecionar"}
+              </button>
+            )}
+          </div>
         </div>
-        {dayTasks.length === 0 ? (
-          <EmptyState onAdd={openNew} />
+        {visibleDayTasks.length === 0 ? (
+          dayTasks.length > 0 && !showCompleted ? (
+            <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Tudo concluído por aqui! 🎉
+              </p>
+              <Button variant="ghost" size="sm" className="mt-2" onClick={toggleShowCompleted}>
+                Mostrar {completedCount} concluída{completedCount === 1 ? "" : "s"}
+              </Button>
+            </div>
+          ) : (
+            <EmptyState onAdd={openNew} />
+          )
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={dayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={visibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
-                {dayTasks.map((t, i) => (
+                {visibleDayTasks.map((t, i) => (
                   <TaskCard
                     key={t.id}
                     task={t}
