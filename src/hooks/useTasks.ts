@@ -58,6 +58,16 @@ export function useTasks(userId: string | undefined) {
       if (p.recurrence === "daily") matches = true;
       else if (p.recurrence === "weekly") matches = diffDays % 7 === 0;
       else if (p.recurrence === "monthly") matches = startD.getDate() === todayD.getDate();
+      else if (p.recurrence === "custom") {
+        const interval = p.recurrence_interval ?? 0;
+        const weekdays = p.recurrence_weekdays ?? [];
+        if (weekdays.length > 0) {
+          // 0=Sun..6=Sat (JS getDay)
+          matches = weekdays.includes(todayD.getDay());
+        } else if (interval > 0) {
+          matches = diffDays % interval === 0;
+        }
+      }
 
       if (!matches || diffDays === 0) continue;
 
@@ -66,6 +76,7 @@ export function useTasks(userId: string | undefined) {
         title: p.title,
         description: p.description,
         category: p.category,
+        role_id: p.role_id,
         scheduled_date: today,
         original_date: today,
         duration_minutes: p.duration_minutes,
