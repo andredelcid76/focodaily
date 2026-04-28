@@ -1,0 +1,1 @@
+ALTER TYPE public.task_recurrence ADD VALUE IF NOT EXISTS 'custom';
