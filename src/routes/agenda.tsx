@@ -200,15 +200,36 @@ function AgendaInner({ userId }: { userId: string }) {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="outline" onClick={onSync} disabled={syncing}>
-            <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            Sincronizar Outlook
-          </Button>
+          {outlook.connected ? (
+            <>
+              <Button variant="outline" onClick={onSync} disabled={syncing}>
+                <RefreshCw className={`mr-1.5 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                Sincronizar Outlook
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onDisconnect} title={outlook.email ?? "Outlook conectado"}>
+                <Link2Off className="mr-1.5 h-4 w-4" /> Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={onConnect} disabled={connecting}>
+              <Link2 className="mr-1.5 h-4 w-4" /> {connecting ? "Abrindo…" : "Conectar Outlook"}
+            </Button>
+          )}
           <Button onClick={openNew} className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90">
             <Plus className="mr-1 h-4 w-4" /> Nova reunião
           </Button>
         </div>
       </div>
+
+      {outlook.connected && outlook.email && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Conectado como <span className="font-medium">{outlook.email}</span>
+          {outlook.last_sync_at && (
+            <span className="text-muted-foreground">· última sincronização {new Date(outlook.last_sync_at).toLocaleString("pt-BR")}</span>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatCard icon={<CalendarClock className="h-4 w-4" />} label="Reuniões no dia" value={String(dayMeetings.length)} />
