@@ -2,7 +2,7 @@ import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, ListTodo, LogOut, Sparkles } from "lucide-react";
+import { CalendarDays, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
 
 function Shell({ children }: { children: ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -25,7 +25,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   if (!user) return <>{children}</>;
 
-  const navItem = (to: "/" | "/semana", label: string, Icon: typeof ListTodo) => {
+  const navItem = (to: "/" | "/semana" | "/papeis", label: string, Icon: typeof ListTodo) => {
     const active = location.pathname === to;
     return (
       <Link
@@ -35,7 +35,7 @@ function Shell({ children }: { children: ReactNode }) {
         }`}
       >
         <Icon className="h-4 w-4" />
-        {label}
+        <span className="hidden sm:inline">{label}</span>
       </Link>
     );
   };
@@ -53,6 +53,7 @@ function Shell({ children }: { children: ReactNode }) {
           <nav className="flex items-center gap-1">
             {navItem("/", "Hoje", ListTodo)}
             {navItem("/semana", "Semana", CalendarDays)}
+            {navItem("/papeis", "Papéis", Users)}
           </nav>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
             <LogOut className="h-4 w-4" />
