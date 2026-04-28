@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      roles: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category: Database["public"]["Enums"]["task_category"]
@@ -26,7 +56,10 @@ export type Database = {
           original_date: string
           position: number
           recurrence: Database["public"]["Enums"]["task_recurrence"]
+          recurrence_interval: number | null
           recurrence_parent_id: string | null
+          recurrence_weekdays: number[] | null
+          role_id: string | null
           scheduled_date: string
           title: string
           updated_at: string
@@ -43,7 +76,10 @@ export type Database = {
           original_date?: string
           position?: number
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
+          recurrence_interval?: number | null
           recurrence_parent_id?: string | null
+          recurrence_weekdays?: number[] | null
+          role_id?: string | null
           scheduled_date?: string
           title: string
           updated_at?: string
@@ -60,7 +96,10 @@ export type Database = {
           original_date?: string
           position?: number
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
+          recurrence_interval?: number | null
           recurrence_parent_id?: string | null
+          recurrence_weekdays?: number[] | null
+          role_id?: string | null
           scheduled_date?: string
           title?: string
           updated_at?: string
@@ -74,6 +113,13 @@ export type Database = {
             referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tasks_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -85,7 +131,7 @@ export type Database = {
     }
     Enums: {
       task_category: "urgent" | "important" | "circumstantial"
-      task_recurrence: "none" | "daily" | "weekly" | "monthly"
+      task_recurrence: "none" | "daily" | "weekly" | "monthly" | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -214,7 +260,7 @@ export const Constants = {
   public: {
     Enums: {
       task_category: ["urgent", "important", "circumstantial"],
-      task_recurrence: ["none", "daily", "weekly", "monthly"],
+      task_recurrence: ["none", "daily", "weekly", "monthly", "custom"],
     },
   },
 } as const

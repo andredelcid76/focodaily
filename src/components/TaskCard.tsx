@@ -2,19 +2,22 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CategoryDot } from "./CategoryBadge";
+import { RoleBadge } from "./RoleBadge";
 import { GripVertical, Repeat, AlertCircle, Clock } from "lucide-react";
 import { formatMinutes } from "@/lib/date";
 import type { Task } from "@/hooks/useTasks";
+import type { Role } from "@/hooks/useRoles";
 
 type Props = {
   task: Task;
+  role?: Role | null;
   onToggle: () => void;
   onEdit: () => void;
   isOverdue?: boolean;
   compact?: boolean;
 };
 
-export function TaskCard({ task, onToggle, onEdit, isOverdue, compact }: Props) {
+export function TaskCard({ task, role, onToggle, onEdit, isOverdue, compact }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
@@ -51,6 +54,7 @@ export function TaskCard({ task, onToggle, onEdit, isOverdue, compact }: Props) 
           <span className={`font-medium leading-tight ${task.completed ? "line-through" : ""} ${compact ? "text-xs" : "text-sm"}`}>
             {task.title}
           </span>
+          {role && <RoleBadge role={role} size={compact ? "xs" : "xs"} />}
         </div>
         {!compact && task.description && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>

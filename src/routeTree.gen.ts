@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
+import { Route as PapeisRouteImport } from './routes/papeis'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SemanaRoute = SemanaRouteImport.update({
   id: '/semana',
   path: '/semana',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PapeisRoute = PapeisRouteImport.update({
+  id: '/papeis',
+  path: '/papeis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/semana'
+  fullPaths: '/' | '/auth' | '/papeis' | '/semana'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/semana'
-  id: '__root__' | '/' | '/auth' | '/semana'
+  to: '/' | '/auth' | '/papeis' | '/semana'
+  id: '__root__' | '/' | '/auth' | '/papeis' | '/semana'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/semana'
       fullPath: '/semana'
       preLoaderRoute: typeof SemanaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/papeis': {
+      id: '/papeis'
+      path: '/papeis'
+      fullPath: '/papeis'
+      preLoaderRoute: typeof PapeisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
 }
 export const routeTree = rootRouteImport
