@@ -169,32 +169,64 @@ function WeekInner({ userId }: { userId: string }) {
 }
 
 function DayColumn({
-  day, tasks, rolesById, isToday, totalMinutes, onAdd, onToggle, onEdit,
+  day, tasks, meetings, rolesById, isToday, tasksMinutes, meetingsMinutes, onAdd, onToggle, onEdit,
 }: {
   day: string;
   tasks: Task[];
+  meetings: Meeting[];
   rolesById: Map<string, Role>;
   isToday: boolean;
-  totalMinutes: number;
+  tasksMinutes: number;
+  meetingsMinutes: number;
   onAdd: () => void;
   onToggle: (t: Task) => void;
   onEdit: (t: Task) => void;
 }) {
+  const totalMinutes = tasksMinutes + meetingsMinutes;
   return (
     <div className={`rounded-2xl border p-3 backdrop-blur-sm min-h-[200px] flex flex-col ${
       isToday ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card/40"
     }`}>
-      <div className="mb-3 flex items-center justify-between">
-        <div>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <div className={`text-xs uppercase tracking-wider ${isToday ? "text-primary font-semibold" : "text-muted-foreground"}`}>
             {formatShort(day)}
           </div>
-          <div className="text-xs text-muted-foreground mt-0.5">{formatMinutes(totalMinutes)}</div>
+          <div className="mt-1 space-y-0.5 text-[11px] text-muted-foreground leading-tight">
+            <div className="flex items-center justify-between gap-2">
+              <span>Tarefas</span>
+              <span className="tabular-nums">{formatMinutes(tasksMinutes)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span>Reuniões</span>
+              <span className="tabular-nums">{formatMinutes(meetingsMinutes)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-0.5 border-t border-border/40 text-foreground/80 font-medium">
+              <span>Total</span>
+              <span className="tabular-nums">{formatMinutes(totalMinutes)}</span>
+            </div>
+          </div>
         </div>
-        <button onClick={onAdd} className="rounded-md p-1 text-muted-foreground hover:bg-accent/40 hover:text-foreground" aria-label="Adicionar">
+        <button onClick={onAdd} className="rounded-md p-1 text-muted-foreground hover:bg-accent/40 hover:text-foreground shrink-0" aria-label="Adicionar">
           <Plus className="h-4 w-4" />
         </button>
       </div>
+      {meetings.length > 0 && (
+        <div className="mb-2 space-y-1">
+          {meetings.map((m) => (
+            <div key={m.id} className="rounded-md border border-border/40 bg-muted/30 px-2 py-1 text-[11px]">
+              <div className="font-medium truncate">{m.title}</div>
+              {!m.is_all_day && (
+                <div className="text-muted-foreground tabular-nums">
+                  {new Date(m.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  {" – "}
+                  {new Date(m.ends_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div className="flex-1 space-y-2" data-day={day}>
           {tasks.length === 0 ? (
