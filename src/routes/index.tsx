@@ -138,6 +138,20 @@ function TodayInner({ userId }: { userId: string }) {
     await tasksApi.moveTaskToDay(t.id, today, dayTasks.length);
   };
 
+  // Quick actions for today's task list
+  const handlePostpone = async (t: Task, date: string) => {
+    await tasksApi.moveTaskToDay(t.id, date, 999);
+    toast.success(date === today ? "Movida para hoje" : `Movida para ${formatHuman(date)}`);
+  };
+  const handleDuplicate = async (t: Task, date: string) => {
+    await tasksApi.duplicateTask(t, date);
+    toast.success(`Duplicada para ${formatHuman(date)}`);
+  };
+  const handleFollowUp = async (t: Task, date: string) => {
+    await tasksApi.createFollowUp(t, date);
+    toast.success(`Follow-up criado para ${formatHuman(date)}`);
+  };
+
   // Timer integration: persist accumulated time on pause/stop/switch.
   const handleStartTimer = (t: Task) => {
     if (timer.activeTaskId && timer.activeTaskId !== t.id) {
