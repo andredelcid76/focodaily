@@ -296,7 +296,7 @@ async function syncOutlookCalendar(userId: string) {
     throw new Error(syncError.message);
   }
 
-  return { imported, total: events.length };
+  return { imported, total: events.length, errors };
 }
 
 function json(payload: unknown, status = 200) {
