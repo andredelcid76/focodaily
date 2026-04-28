@@ -737,7 +737,7 @@ function TaskCardStatic(props: React.ComponentProps<typeof TaskCard>) {
 
 // ===================== Quick Add =====================
 
-const QUICK_DURATIONS = [15, 30, 45, 60, 90];
+const QUICK_DURATIONS = [5, 15, 30, 45, 60, 90, 120];
 
 function QuickAdd({
   defaultDate,
