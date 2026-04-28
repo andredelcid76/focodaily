@@ -29,6 +29,8 @@ type Props = {
       role_id: string | null;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
+      recurrence_week_interval: number | null;
+      recurrence_monthly_pattern: { week: number; weekday: number } | null;
     },
     scope?: RecurrenceScope
   ) => Promise<void>;
