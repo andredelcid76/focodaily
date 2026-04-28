@@ -21,6 +21,8 @@ import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { Switch } from "@/components/ui/switch";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Plus,
   Clock,
@@ -30,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  CalendarClock,
   X,
 } from "lucide-react";
 import {
@@ -41,7 +44,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { todayISO, addDays, formatHuman, formatMinutes } from "@/lib/date";
+import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
