@@ -1,15 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
-import {
-  getOutlookAuthUrl,
-  getOutlookStatus,
-  syncOutlookCalendar,
-  disconnectOutlook,
-} from "@/lib/outlook.functions";
 import { Link2, Link2Off, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,12 +42,12 @@ export const Route = createFileRoute("/agenda")({
 });
 
 function AgendaPage() {
-  const { user } = useAuth();
-  if (!user) return null;
-  return <AgendaInner userId={user.id} />;
+  const { user, session } = useAuth();
+  if (!user || !session) return null;
+  return <AgendaInner userId={user.id} accessToken={session.access_token} />;
 }
 
-function AgendaInner({ userId }: { userId: string }) {
+function AgendaInner({ userId, accessToken }: { userId: string; accessToken: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -67,10 +60,24 @@ function AgendaInner({ userId }: { userId: string }) {
     last_sync_at?: string | null;
   }>({ connected: false });
   const meetingsApi = useMeetings(userId);
-  const getOutlookStatusFn = useServerFn(getOutlookStatus);
-  const getOutlookAuthUrlFn = useServerFn(getOutlookAuthUrl);
-  const syncOutlookCalendarFn = useServerFn(syncOutlookCalendar);
-  const disconnectOutlookFn = useServerFn(disconnectOutlook);
+
+  const outlookRequest = async <T,>(method: "GET" | "POST", body?: Record<string, unknown>) => {
+    const response = await fetch("/api/outlook", {
+      method,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Erro ao comunicar com Outlook");
+    }
+
+    return payload as T;
+  };
 
   // Read callback message from URL (?outlook=success|error&msg=...)
   useEffect(() => {
@@ -88,7 +95,10 @@ function AgendaInner({ userId }: { userId: string }) {
 
   const refreshOutlookStatus = async () => {
     try {
-      const res = await getOutlookStatusFn({ data: {} });
+      const res = await outlookRequest<{
+        connected: boolean;
+        connection: { email?: string | null; last_sync_at?: string | null } | null;
+      }>("GET");
       setOutlook({
         connected: res.connected,
         email: res.connection?.email,
@@ -133,7 +143,10 @@ function AgendaInner({ userId }: { userId: string }) {
   const onConnect = async () => {
     setConnecting(true);
     try {
-      const res = await getOutlookAuthUrlFn({ data: { origin: window.location.origin } });
+      const res = await outlookRequest<{ url: string }>("POST", {
+        action: "connect",
+        origin: window.location.origin,
+      });
       window.location.href = res.url;
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao iniciar conexão");
@@ -143,7 +156,7 @@ function AgendaInner({ userId }: { userId: string }) {
 
   const onDisconnect = async () => {
     try {
-      await disconnectOutlookFn({ data: {} });
+      await outlookRequest("POST", { action: "disconnect" });
       toast.success("Outlook desconectado");
       setOutlook({ connected: false });
     } catch (e: any) {
@@ -158,7 +171,7 @@ function AgendaInner({ userId }: { userId: string }) {
     }
     setSyncing(true);
     try {
-      const res = await syncOutlookCalendarFn({ data: {} });
+      const res = await outlookRequest<{ imported: number }>("POST", { action: "sync" });
       toast.success(`${res.imported} reuniões sincronizadas do Outlook`);
       await meetingsApi.refresh();
       await refreshOutlookStatus();
