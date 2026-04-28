@@ -291,6 +291,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
                   <SelectItem value="weekdays">Dias úteis (seg–sex)</SelectItem>
                   <SelectItem value="weekly">Semanalmente</SelectItem>
                   <SelectItem value="monthly">Mensalmente</SelectItem>
+                  <SelectItem value="yearly">Anualmente</SelectItem>
                   <SelectItem value="custom">Personalizada</SelectItem>
                 </SelectContent>
               </Select>
