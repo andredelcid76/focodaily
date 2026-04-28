@@ -295,7 +295,7 @@ function TaskActionsMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={pickerMode !== null} onOpenChange={(o) => !o && closePicker()}>
+      <Dialog open={pickerMode !== null} onOpenChange={(o: boolean) => !o && closePicker()}>
         <DialogContent className="w-auto max-w-[20rem] p-0">
           <DialogHeader className="border-b border-border/60 p-3">
             <DialogTitle className="text-sm">
