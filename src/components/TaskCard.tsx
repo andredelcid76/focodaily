@@ -122,6 +122,14 @@ export function TaskCard({
             {task.title}
           </span>
           {role && <RoleBadge role={role} size="xs" />}
+          {followupNumber > 1 && (
+            <span
+              className="inline-flex items-center gap-1 rounded-md border border-circumstantial/40 bg-circumstantial/10 px-1.5 py-0.5 text-[10px] font-semibold text-circumstantial"
+              title={`Follow-up #${followupNumber}`}
+            >
+              <Repeat2 className="h-2.5 w-2.5" /> #{followupNumber}
+            </span>
+          )}
         </div>
         {!compact && task.description && (
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
