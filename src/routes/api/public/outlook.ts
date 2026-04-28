@@ -38,13 +38,14 @@ export const Route = createFileRoute("/api/public/outlook")({
         try {
           const { supabase, userId } = await authenticateRequest(request);
           const { data, error } = await supabase
-            .from("outlook_connections")
+            .from("outlook_connections_safe")
             .select("email, display_name, last_sync_at, expires_at")
             .eq("user_id", userId)
             .maybeSingle();
 
           if (error) {
-            return json({ error: error.message }, 500);
+            console.error("[outlook GET] db error", error);
+            return json({ error: "Erro ao consultar conexão" }, 500);
           }
 
           return json({ connected: !!data, connection: data ?? null });
