@@ -18,19 +18,24 @@ type Props = {
   defaultDate: string;
   task?: Task | null;
   roles: Role[];
-  onSave: (data: {
-    title: string;
-    description: string | null;
-    category: TaskCategory;
-    duration_minutes: number;
-    scheduled_date: string;
-    recurrence: TaskRecurrence;
-    role_id: string | null;
-    recurrence_interval: number | null;
-    recurrence_weekdays: number[] | null;
-  }) => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onSave: (
+    data: {
+      title: string;
+      description: string | null;
+      category: TaskCategory;
+      duration_minutes: number;
+      scheduled_date: string;
+      recurrence: TaskRecurrence;
+      role_id: string | null;
+      recurrence_interval: number | null;
+      recurrence_weekdays: number[] | null;
+    },
+    scope?: RecurrenceScope
+  ) => Promise<void>;
+  onDelete?: (scope?: RecurrenceScope) => Promise<void>;
 };
+
+export type RecurrenceScope = "this" | "future" | "all";
 
 const PRESET_DURATIONS = [15, 30, 45, 60, 90, 120, 180];
 const WEEKDAYS = [
@@ -73,6 +78,45 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
   };
 
+  const isRecurringInstance = !!(task && (task.recurrence_parent_id || task.recurrence !== "none"));
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
+
+  const doSave = async (scope?: RecurrenceScope) => {
+    setSaving(true);
+    try {
+      await onSave(
+        {
+          title: title.trim(),
+          description: description.trim() || null,
+          category,
+          duration_minutes: Math.max(5, Math.min(600, duration)),
+          scheduled_date: date,
+          recurrence,
+          role_id: roleId,
+          recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
+          recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
+        },
+        scope
+      );
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const doDelete = async (scope?: RecurrenceScope) => {
+    if (!onDelete) return;
+    try {
+      await onDelete(scope);
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao excluir");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error("Dê um título à tarefa");
@@ -82,25 +126,29 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
       toast.error("Defina o intervalo ou os dias da semana");
       return;
     }
-    setSaving(true);
-    try {
-      await onSave({
-        title: title.trim(),
-        description: description.trim() || null,
-        category,
-        duration_minutes: Math.max(5, Math.min(600, duration)),
-        scheduled_date: date,
-        recurrence,
-        role_id: roleId,
-        recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
-        recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
-      });
-      onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao salvar");
-    } finally {
-      setSaving(false);
+    if (isRecurringInstance) {
+      setPendingAction("save");
+      setScopeOpen(true);
+      return;
     }
+    await doSave();
+  };
+
+  const handleDeleteClick = () => {
+    if (!onDelete) return;
+    if (isRecurringInstance) {
+      setPendingAction("delete");
+      setScopeOpen(true);
+      return;
+    }
+    doDelete();
+  };
+
+  const applyScope = async (scope: RecurrenceScope) => {
+    setScopeOpen(false);
+    if (pendingAction === "save") await doSave(scope);
+    else if (pendingAction === "delete") await doDelete(scope);
+    setPendingAction(null);
   };
 
   return (
