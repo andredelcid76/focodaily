@@ -67,6 +67,7 @@ function Shell({ children }: { children: ReactNode }) {
           </Button>
         </div>
       </header>
+      <ActiveTaskBanner />
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   );
