@@ -313,7 +313,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
         <DialogFooter className="flex justify-between sm:justify-between">
           <div>
             {task && onDelete && (
-              <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={async () => { await onDelete(); onOpenChange(false); }}>
+              <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={handleDeleteClick}>
                 Excluir
               </Button>
             )}
@@ -324,6 +324,46 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Recurrence scope sub-dialog */}
+      <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) { setScopeOpen(false); setPendingAction(null); } }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>
+              {pendingAction === "delete" ? "Excluir tarefa recorrente" : "Alterar tarefa recorrente"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Esta tarefa se repete. O que você quer {pendingAction === "delete" ? "excluir" : "alterar"}?
+          </p>
+          <div className="mt-2 space-y-2">
+            <button
+              onClick={() => applyScope("this")}
+              className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="text-sm font-semibold">Apenas esta instância</div>
+              <div className="text-xs text-muted-foreground">As outras ocorrências continuam como estão.</div>
+            </button>
+            <button
+              onClick={() => applyScope("future")}
+              className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="text-sm font-semibold">Esta e todas as futuras em aberto</div>
+              <div className="text-xs text-muted-foreground">Ocorrências passadas e concluídas não mudam.</div>
+            </button>
+            <button
+              onClick={() => applyScope("all")}
+              className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
+            >
+              <div className="text-sm font-semibold">Todas as instâncias (sempre)</div>
+              <div className="text-xs text-muted-foreground">Aplica a toda a série, inclusive as anteriores em aberto.</div>
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setScopeOpen(false); setPendingAction(null); }}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
