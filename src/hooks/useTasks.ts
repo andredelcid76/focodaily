@@ -459,6 +459,7 @@ export function useTasks(userId: string | undefined) {
     todayTasks,
     tomorrowTasks,
     tasksByDay,
+    topPositionForDay,
     createTask,
     updateTask,
     deleteTask,
