@@ -349,6 +349,9 @@ function TodayInner({ userId }: { userId: string }) {
                     onPause={handlePauseTimer}
                     onResume={handleResumeTimer}
                     onStop={handleStopTimer}
+                    onPostpone={(date) => handlePostpone(t, date)}
+                    onDuplicate={(date) => handleDuplicate(t, date)}
+                    onFollowUp={(date) => handleFollowUp(t, date)}
                   />
                 ))}
               </div>
