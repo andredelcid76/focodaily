@@ -14,6 +14,58 @@ const FUTURE_DAYS = 14;
 // Module-level guard prevents concurrent ensureRecurring runs (StrictMode, multi-mount, multi-tab races)
 const ensureLocks = new Map<string, Promise<void>>();
 
+// Decide whether a recurring parent should have an instance on a given date.
+// Returns false for the parent's own original_date (parent occupies that slot itself).
+function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
+  if (dayISO === parent.original_date) return false;
+  const [sy, sm, sd] = parent.original_date.split("-").map(Number);
+  const startD = new Date(sy, sm - 1, sd);
+  const [ty, tm, td] = dayISO.split("-").map(Number);
+  const dayD = new Date(ty, tm - 1, td);
+  if (dayD < startD) return false;
+  const diffDays = Math.floor((dayD.getTime() - startD.getTime()) / 86400000);
+  if (diffDays === 0) return false;
+
+  if (parent.recurrence === "daily") return true;
+  if (parent.recurrence === "weekdays") {
+    const dow = dayD.getDay();
+    return dow >= 1 && dow <= 5;
+  }
+  if (parent.recurrence === "weekly") return diffDays % 7 === 0;
+  if (parent.recurrence === "monthly") return startD.getDate() === dayD.getDate();
+  if (parent.recurrence === "custom") {
+    const interval = parent.recurrence_interval ?? 0;
+    const weekdays = parent.recurrence_weekdays ?? [];
+    const weekInterval = (parent as any).recurrence_week_interval as number | null ?? null;
+    const monthlyPattern = (parent as any).recurrence_monthly_pattern as { week: number; weekday: number } | null ?? null;
+
+    if (monthlyPattern && typeof monthlyPattern.week === "number" && typeof monthlyPattern.weekday === "number") {
+      if (dayD.getDay() !== monthlyPattern.weekday) return false;
+      if (monthlyPattern.week === -1) {
+        const next = new Date(dayD.getFullYear(), dayD.getMonth(), dayD.getDate() + 7);
+        return next.getMonth() !== dayD.getMonth();
+      }
+      const nth = Math.floor((dayD.getDate() - 1) / 7) + 1;
+      return nth === monthlyPattern.week;
+    }
+    if (weekdays.length > 0) {
+      const wInt = weekInterval && weekInterval > 0 ? weekInterval : 1;
+      if (!weekdays.includes(dayD.getDay())) return false;
+      if (wInt === 1) return true;
+      const startMonday = new Date(startD);
+      const sDow = (startMonday.getDay() + 6) % 7;
+      startMonday.setDate(startMonday.getDate() - sDow);
+      const dayMonday = new Date(dayD);
+      const dDow = (dayMonday.getDay() + 6) % 7;
+      dayMonday.setDate(dayMonday.getDate() - dDow);
+      const weeksDiff = Math.round((dayMonday.getTime() - startMonday.getTime()) / (7 * 86400000));
+      return weeksDiff >= 0 && weeksDiff % wInt === 0;
+    }
+    if (interval > 0) return diffDays % interval === 0;
+  }
+  return false;
+}
+
 export function useTasks(userId: string | undefined) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,6 +300,14 @@ export function useTasks(userId: string | undefined) {
     "original_date",
   ]);
 
+  const RECURRENCE_RULE_KEYS = new Set([
+    "recurrence",
+    "recurrence_interval",
+    "recurrence_weekdays",
+    "recurrence_week_interval",
+    "recurrence_monthly_pattern",
+  ]);
+
   const updateTaskWithScope = async (
     task: Task,
     patch: Partial<Task>,
@@ -264,33 +324,70 @@ export function useTasks(userId: string | undefined) {
     }
     // Always also apply full patch to the originating row (so its date/etc. update too)
     await updateTask(task.id, patch);
-    if (Object.keys(seriesPatch).length === 0) return;
 
     const { parent, parentId, instances } = getRecurrenceFamily(task);
     const baseDate = task.scheduled_date;
-    const targets: Task[] = [];
-    if (scope === "all") {
-      if (parent && parent.id !== task.id) targets.push(parent);
-      for (const t of instances) {
-        if (t.id !== task.id) targets.push(t);
+
+    if (Object.keys(seriesPatch).length > 0) {
+      const targets: Task[] = [];
+      if (scope === "all") {
+        if (parent && parent.id !== task.id) targets.push(parent);
+        for (const t of instances) {
+          if (t.id !== task.id) targets.push(t);
+        }
+      } else {
+        // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
+        if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
+          targets.push(parent);
+        }
+        for (const t of instances) {
+          if (t.id === task.id) continue;
+          if (t.completed) continue;
+          if (t.scheduled_date >= baseDate) targets.push(t);
+        }
       }
-    } else {
-      // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
-      if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
-        targets.push(parent);
-      }
-      for (const t of instances) {
-        if (t.id === task.id) continue;
-        if (t.completed) continue;
-        if (t.scheduled_date >= baseDate) targets.push(t);
+      if (targets.length > 0) {
+        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
+        const ids = targets.map((t) => t.id);
+        await supabase.from("tasks").update(seriesPatch).in("id", ids);
       }
     }
-    if (targets.length === 0) return;
-    setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
-    const ids = targets.map((t) => t.id);
-    // Use parent id as filter since RLS scopes by user
-    await supabase.from("tasks").update(seriesPatch).in("id", ids);
-    void parentId; // silence unused
+
+    // If recurrence rule changed, prune future open instances that no longer match
+    // and let ensureRecurring create any newly-required instances.
+    const ruleChanged = Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+    if (ruleChanged) {
+      const today = todayISO();
+      const cutoff = baseDate > today ? baseDate : today;
+      // Re-fetch fresh state from DB to get the updated parent
+      const { data: freshParent } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("id", parentId)
+        .single();
+      if (freshParent) {
+        const { data: futureInstances } = await supabase
+          .from("tasks")
+          .select("*")
+          .eq("recurrence_parent_id", parentId)
+          .gte("scheduled_date", cutoff)
+          .eq("completed", false);
+        const idsToDelete: string[] = [];
+        for (const inst of futureInstances ?? []) {
+          if (!instanceMatchesRecurrence(freshParent as Task, inst.scheduled_date)) {
+            idsToDelete.push(inst.id);
+          }
+        }
+        if (idsToDelete.length > 0) {
+          setTasks((prev) => prev.filter((t) => !idsToDelete.includes(t.id)));
+          await supabase.from("tasks").delete().in("id", idsToDelete);
+        }
+      }
+      // Materialize any new instances that should now exist
+      await ensureRecurring();
+      await refresh();
+    }
+    void parentId;
   };
 
   const deleteTaskWithScope = async (task: Task, scope: "this" | "future" | "all" = "this") => {

@@ -78,17 +78,27 @@ function TodayInner({ userId }: { userId: string }) {
 
   const isViewingToday = viewDate === today;
   const dayTasks = useMemo(
-    () => tasksApi.tasksByDay(viewDate).slice().sort((a, b) => a.position - b.position),
+    () =>
+      tasksApi.tasksByDay(viewDate).slice().sort((a, b) => {
+        // Completed tasks always go to the bottom
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return a.position - b.position;
+      }),
     [tasksApi, viewDate]
   );
   const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
+  const nowMs = Date.now();
   const tasksMinutes = dayTasks.reduce((s, t) => s + t.duration_minutes, 0);
   const meetingsMinutes = dayMeetings.reduce((s, m) => s + meetingDurationMinutes(m), 0);
+  // Only meetings that haven't ended yet count toward "Restante"
+  const upcomingMeetingsMinutes = dayMeetings
+    .filter((m) => new Date(m.ends_at).getTime() > nowMs)
+    .reduce((s, m) => s + meetingDurationMinutes(m), 0);
   const totalMinutes = tasksMinutes + (includeMeetings ? meetingsMinutes : 0);
   const remainingMinutes =
     dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
-    (includeMeetings ? meetingsMinutes : 0);
+    (includeMeetings ? upcomingMeetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
 
   const handleDragEnd = async (e: DragEndEvent) => {
