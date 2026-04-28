@@ -331,6 +331,7 @@ function handleRouteError(error: unknown) {
     return json({ error: "Requisição inválida" }, 400);
   }
 
-  const message = error instanceof Error ? error.message : "Erro interno";
-  return json({ error: message }, 500);
+  // Log full details server-side, return generic message to client
+  console.error("[outlook route] internal error", error);
+  return json({ error: "Erro interno" }, 500);
 }
