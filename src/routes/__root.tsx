@@ -23,10 +23,10 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Foco — Gestão de tarefas diárias" },
+      { title: "Foco — Gestão de tarefas" },
       { name: "description", content: "Organize suas tarefas diárias com arrastar e soltar, planejamento semanal e categorização por urgência e importância." },
-      { property: "og:title", content: "Foco — Gestão de tarefas diárias" },
-      { name: "twitter:title", content: "Foco — Gestão de tarefas diárias" },
+      { property: "og:title", content: "Foco — Gestão de tarefas" },
+      { name: "twitter:title", content: "Foco — Gestão de tarefas" },
       { property: "og:description", content: "Organize suas tarefas diárias com arrastar e soltar, planejamento semanal e categorização por urgência e importância." },
       { name: "twitter:description", content: "Organize suas tarefas diárias com arrastar e soltar, planejamento semanal e categorização por urgência e importância." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/95fd5af7-a904-4534-bf76-084df4aee9f2/id-preview-ab874a95--0f679b02-63a6-46ee-ae66-8b953bfe9f15.lovable.app-1777408235769.png" },
