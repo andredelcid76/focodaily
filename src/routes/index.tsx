@@ -394,7 +394,7 @@ function TodayInner({ userId }: { userId: string }) {
           {dayTasks.length > 0 && (
             <button
               type="button"
-              onClick={selectionMode ? clearSelection : selectAllVisible}
+              onClick={selectionMode ? clearSelection : enterSelectionMode}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {selectionMode ? "Cancelar seleção" : "Selecionar"}
