@@ -366,16 +366,16 @@ function TodayInner({ userId }: { userId: string }) {
         onOpenFull={openNew}
       />
 
-      {isViewingToday && tasksApi.overdueTasks.length > 0 && (
+      {isViewingToday && visibleOverdue.length > 0 && (
         <section className="rounded-2xl border border-overdue/30 bg-overdue/5 p-4">
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-overdue" />
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-overdue">
-              Atrasadas ({tasksApi.overdueTasks.length})
+              Atrasadas ({visibleOverdue.length})
             </h2>
           </div>
           <div className="space-y-2">
-            {tasksApi.overdueTasks.map((t) => (
+            {visibleOverdue.map((t) => (
               <div key={t.id} className="flex items-center gap-2">
                 <div className="flex-1">
                   <TaskCardStatic
