@@ -6,13 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Task, TaskCategory, TaskRecurrence } from "@/hooks/useTasks";
+import type { Role } from "@/hooks/useRoles";
 import { toast } from "sonner";
+import { formatMinutes } from "@/lib/date";
+import { Link } from "@tanstack/react-router";
 
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultDate: string;
   task?: Task | null;
+  roles: Role[];
   onSave: (data: {
     title: string;
     description: string | null;
@@ -20,17 +24,34 @@ type Props = {
     duration_minutes: number;
     scheduled_date: string;
     recurrence: TaskRecurrence;
+    role_id: string | null;
+    recurrence_interval: number | null;
+    recurrence_weekdays: number[] | null;
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
 
-export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDelete }: Props) {
+const PRESET_DURATIONS = [15, 30, 45, 60, 90, 120, 180];
+const WEEKDAYS = [
+  { v: 1, l: "S" },
+  { v: 2, l: "T" },
+  { v: 3, l: "Q" },
+  { v: 4, l: "Q" },
+  { v: 5, l: "S" },
+  { v: 6, l: "S" },
+  { v: 0, l: "D" },
+];
+
+export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSave, onDelete }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TaskCategory>("important");
   const [duration, setDuration] = useState(30);
   const [date, setDate] = useState(defaultDate);
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
+  const [roleId, setRoleId] = useState<string | null>(null);
+  const [interval, setIntervalDays] = useState(2);
+  const [weekdays, setWeekdays] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -41,12 +62,23 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDe
       setDuration(task?.duration_minutes ?? 30);
       setDate(task?.scheduled_date ?? defaultDate);
       setRecurrence(task?.recurrence ?? "none");
+      setRoleId(task?.role_id ?? null);
+      setIntervalDays(task?.recurrence_interval ?? 2);
+      setWeekdays(task?.recurrence_weekdays ?? []);
     }
   }, [open, task, defaultDate]);
+
+  const toggleWeekday = (v: number) => {
+    setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
+  };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error("Dê um título à tarefa");
+      return;
+    }
+    if (recurrence === "custom" && weekdays.length === 0 && (!interval || interval < 1)) {
+      toast.error("Defina o intervalo ou os dias da semana");
       return;
     }
     setSaving(true);
@@ -58,6 +90,9 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDe
         duration_minutes: Math.max(5, Math.min(600, duration)),
         scheduled_date: date,
         recurrence,
+        role_id: roleId,
+        recurrence_interval: recurrence === "custom" && weekdays.length === 0 ? interval : null,
+        recurrence_weekdays: recurrence === "custom" && weekdays.length > 0 ? weekdays : null,
       });
       onOpenChange(false);
     } catch (e: any) {
@@ -69,7 +104,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
         </DialogHeader>
@@ -82,6 +117,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDe
             <Label htmlFor="t-desc">Descrição (opcional)</Label>
             <Textarea id="t-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Categoria</Label>
@@ -95,10 +131,65 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDe
               </Select>
             </div>
             <div>
-              <Label htmlFor="t-dur">Duração (min)</Label>
-              <Input id="t-dur" type="number" min={5} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+              <Label>Papel</Label>
+              <Select
+                value={roleId ?? "__none"}
+                onValueChange={(v) => setRoleId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger><SelectValue placeholder="Sem papel" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem papel</SelectItem>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
+                        {r.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {roles.length === 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <Link to="/papeis" className="underline hover:text-foreground" onClick={() => onOpenChange(false)}>
+                    Criar papéis →
+                  </Link>
+                </p>
+              )}
             </div>
           </div>
+
+          <div>
+            <Label>Duração</Label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {PRESET_DURATIONS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setDuration(m)}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    duration === m
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border bg-card hover:border-primary/40"
+                  }`}
+                >
+                  {formatMinutes(m)}
+                </button>
+              ))}
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={5}
+                  step={15}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="h-7 w-20 text-xs"
+                />
+                <span className="text-xs text-muted-foreground">min</span>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="t-date">Data</Label>
@@ -113,10 +204,50 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, onSave, onDe
                   <SelectItem value="daily">Diariamente</SelectItem>
                   <SelectItem value="weekly">Semanalmente</SelectItem>
                   <SelectItem value="monthly">Mensalmente</SelectItem>
+                  <SelectItem value="custom">Personalizada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
+          {recurrence === "custom" && (
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-3">
+              <div>
+                <Label className="text-xs">Dias da semana (opcional)</Label>
+                <div className="mt-1.5 flex gap-1">
+                  {WEEKDAYS.map((d) => (
+                    <button
+                      key={d.v}
+                      type="button"
+                      onClick={() => toggleWeekday(d.v)}
+                      className={`h-8 w-8 rounded-lg border text-xs font-semibold transition-colors ${
+                        weekdays.includes(d.v)
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card hover:border-primary/40"
+                      }`}
+                    >
+                      {d.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {weekdays.length === 0 && (
+                <div>
+                  <Label className="text-xs">Ou repita a cada</Label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={interval}
+                      onChange={(e) => setIntervalDays(Number(e.target.value))}
+                      className="h-8 w-20"
+                    />
+                    <span className="text-sm text-muted-foreground">dia(s)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter className="flex justify-between sm:justify-between">
           <div>
