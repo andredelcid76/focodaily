@@ -354,6 +354,8 @@ export function useTasks(userId: string | undefined) {
     createTask,
     updateTask,
     deleteTask,
+    updateTaskWithScope,
+    deleteTaskWithScope,
     toggleComplete,
     setStatus,
     reorderInDay,
