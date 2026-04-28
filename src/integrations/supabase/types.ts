@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      meetings: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          ends_at: string
+          external_id: string | null
+          id: string
+          is_all_day: boolean
+          location: string | null
+          scheduled_date: string
+          source: string
+          starts_at: string
+          title: string
+          updated_at: string
+          user_id: string
+          web_link: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          ends_at: string
+          external_id?: string | null
+          id?: string
+          is_all_day?: boolean
+          location?: string | null
+          scheduled_date: string
+          source?: string
+          starts_at: string
+          title: string
+          updated_at?: string
+          user_id: string
+          web_link?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          ends_at?: string
+          external_id?: string | null
+          id?: string
+          is_all_day?: boolean
+          location?: string | null
+          scheduled_date?: string
+          source?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          web_link?: string | null
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           color: string

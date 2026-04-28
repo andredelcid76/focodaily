@@ -18,6 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CategoryIcon } from "@/components/CategoryBadge";
+import { DatePickerField } from "@/components/DatePickerField";
+import { Switch } from "@/components/ui/switch";
+import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Plus,
   Clock,
@@ -27,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  CalendarClock,
   X,
 } from "lucide-react";
 import {
@@ -38,7 +44,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { todayISO, addDays, formatHuman, formatMinutes } from "@/lib/date";
+import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -58,8 +64,10 @@ function TodayPage() {
 function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
+  const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
   const { roles } = useRoles(userId);
+  const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -73,9 +81,14 @@ function TodayInner({ userId }: { userId: string }) {
     () => tasksApi.tasksByDay(viewDate).slice().sort((a, b) => a.position - b.position),
     [tasksApi, viewDate]
   );
+  const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
-  const totalMinutes = dayTasks.reduce((s, t) => s + t.duration_minutes, 0);
-  const remainingMinutes = dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0);
+  const tasksMinutes = dayTasks.reduce((s, t) => s + t.duration_minutes, 0);
+  const meetingsMinutes = dayMeetings.reduce((s, m) => s + meetingDurationMinutes(m), 0);
+  const totalMinutes = tasksMinutes + (includeMeetings ? meetingsMinutes : 0);
+  const remainingMinutes =
+    dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
+    (includeMeetings ? meetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
 
   const handleDragEnd = async (e: DragEndEvent) => {
@@ -177,14 +190,30 @@ function TodayInner({ userId }: { userId: string }) {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Escolher dia</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={(() => { const [y,m,d]=viewDate.split("-").map(Number); return new Date(y,m-1,d); })()}
+                  onSelect={(date) => { if (date) setViewDate(toISODate(date)); }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
             {!isViewingToday && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-1.5 px-2"
+                className="h-8 px-2"
                 onClick={() => setViewDate(today)}
               >
-                <CalendarDays className="h-3.5 w-3.5" />
                 Hoje
               </Button>
             )}
@@ -206,6 +235,19 @@ function TodayInner({ userId }: { userId: string }) {
           </Button>
         </div>
       </div>
+
+      {dayMeetings.length > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/40 px-4 py-2.5 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <CalendarClock className="h-4 w-4" />
+            {dayMeetings.length} reuni{dayMeetings.length === 1 ? "ão" : "ões"} no dia · {formatMinutes(meetingsMinutes)}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            Incluir nas somas
+            <Switch checked={includeMeetings} onCheckedChange={setIncludeMeetings} />
+          </label>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard icon={<Clock className="h-4 w-4" />} label="Total programado" value={formatMinutes(totalMinutes)} />
@@ -485,12 +527,7 @@ function QuickAdd({
             </div>
             <div>
               <Label className="text-xs">Data</Label>
-              <Input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-9"
-              />
+              <DatePickerField value={date} onChange={setDate} size="sm" />
             </div>
             <div>
               <Label className="text-xs">Tempo</Label>
