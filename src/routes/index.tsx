@@ -145,7 +145,7 @@ function TodayInner({ userId }: { userId: string }) {
     () => (showCompleted ? tasksApi.overdueTasks : tasksApi.overdueTasks.filter((t) => !t.completed)),
     [tasksApi.overdueTasks, showCompleted]
   );
-  const hiddenCompletedCount = completedCount - (showCompleted ? completedCount : 0);
+  
 
   const handleDragEnd = async (e: DragEndEvent) => {
     if (selectionMode) return;
