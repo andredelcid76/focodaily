@@ -25,20 +25,47 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const code = url.searchParams.get("code");
-        const state = url.searchParams.get("state"); // = userId
+        const state = url.searchParams.get("state");
         const errorParam = url.searchParams.get("error");
 
         if (errorParam) {
-          return redirectWithMsg(`Erro no Outlook: ${errorParam}`);
+          console.error("[outlook callback] provider returned error", errorParam);
+          return redirectWithMsg("Falha ao conectar o Outlook. Tente novamente.");
         }
         if (!code || !state) {
-          return redirectWithMsg("Callback inválido (faltando code/state)");
+          return redirectWithMsg("Callback inválido");
         }
+
+        // Validate the state token (CSRF protection): look up + delete in one step
+        const { data: pending, error: pendingErr } = await supabaseAdmin
+          .from("oauth_pending_states")
+          .select("user_id, expires_at")
+          .eq("state_token", state)
+          .eq("provider", "outlook")
+          .maybeSingle();
+
+        if (pendingErr) {
+          console.error("[outlook callback] state lookup failed", pendingErr);
+          return redirectWithMsg("Falha ao validar a conexão. Tente novamente.");
+        }
+        if (!pending) {
+          console.warn("[outlook callback] unknown state token");
+          return redirectWithMsg("Sessão de conexão inválida ou expirada. Tente novamente.");
+        }
+        if (new Date(pending.expires_at).getTime() < Date.now()) {
+          await supabaseAdmin.from("oauth_pending_states").delete().eq("state_token", state);
+          return redirectWithMsg("Sessão de conexão expirada. Tente novamente.");
+        }
+
+        const userId = pending.user_id as string;
+        // Consume the state token immediately to prevent replay
+        await supabaseAdmin.from("oauth_pending_states").delete().eq("state_token", state);
 
         const clientId = process.env.MS_CLIENT_ID;
         const clientSecret = process.env.MS_CLIENT_SECRET;
         if (!clientId || !clientSecret) {
-          return redirectWithMsg("MS_CLIENT_ID/MS_CLIENT_SECRET não configurados");
+          console.error("[outlook callback] MS credentials not configured");
+          return redirectWithMsg("Configuração do servidor incompleta.");
         }
 
         const redirectUri = getExpectedRedirectUri(url);
@@ -61,10 +88,8 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
         );
         const tok = await tokRes.json();
         if (!tokRes.ok) {
-          console.error("Outlook token exchange failed:", tok);
-          return redirectWithMsg(
-            `Falha ao obter token: ${tok.error_description || tok.error || tokRes.status}`
-          );
+          console.error("[outlook callback] token exchange failed", tok);
+          return redirectWithMsg("Falha ao conectar o Outlook. Tente novamente.");
         }
 
         // Fetch user profile to store email/name
@@ -79,7 +104,7 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
           .from("outlook_connections")
           .upsert(
             {
-              user_id: state,
+              user_id: userId,
               ms_user_id: me?.id ?? null,
               email: me?.mail ?? me?.userPrincipalName ?? null,
               display_name: me?.displayName ?? null,
@@ -92,8 +117,8 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
           );
 
         if (error) {
-          console.error("DB upsert failed:", error);
-          return redirectWithMsg(`Erro ao salvar conexão: ${error.message}`);
+          console.error("[outlook callback] DB upsert failed", error);
+          return redirectWithMsg("Erro ao salvar conexão. Tente novamente.");
         }
 
         return redirectWithMsg("Outlook conectado com sucesso!", "success");
