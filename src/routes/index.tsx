@@ -3,10 +3,12 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task } from "@/hooks/useTasks";
+import { useRoles } from "@/hooks/useRoles";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Clock, AlertTriangle, CheckCircle2, Zap } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -16,7 +18,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { todayISO, formatHuman, formatMinutes, addDays } from "@/lib/date";
+import { todayISO, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -36,10 +38,14 @@ function TodayPage() {
 function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const tasksApi = useTasks(userId);
+  const { roles } = useRoles(userId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [quickTitle, setQuickTitle] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
   const sortedToday = useMemo(
     () => [...tasksApi.todayTasks].sort((a, b) => a.position - b.position),
@@ -79,6 +85,25 @@ function TodayInner({ userId }: { userId: string }) {
     }
   };
 
+  const handleQuickAdd = async () => {
+    const title = quickTitle.trim();
+    if (!title) return;
+    try {
+      await tasksApi.createTask({
+        title,
+        category: "important",
+        scheduled_date: today,
+        original_date: today,
+        duration_minutes: 30,
+        recurrence: "none",
+        position: sortedToday.length,
+      });
+      setQuickTitle("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao criar");
+    }
+  };
+
   const moveOverdueToToday = async (t: Task) => {
     await tasksApi.moveTaskToDay(t.id, today, sortedToday.length);
   };
@@ -105,6 +130,23 @@ function TodayInner({ userId }: { userId: string }) {
         />
       </div>
 
+      {/* Tarefa rápida */}
+      <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-card/60 p-2 backdrop-blur-sm focus-within:border-primary/50 transition-colors">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <Zap className="h-4 w-4" />
+        </div>
+        <Input
+          value={quickTitle}
+          onChange={(e) => setQuickTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleQuickAdd()}
+          placeholder="Tarefa rápida — escreva e pressione Enter (Importante · 30 min · hoje)"
+          className="border-0 bg-transparent shadow-none focus-visible:ring-0 px-0"
+        />
+        {quickTitle.trim() && (
+          <Button size="sm" onClick={handleQuickAdd}>Adicionar</Button>
+        )}
+      </div>
+
       {tasksApi.overdueTasks.length > 0 && (
         <section className="rounded-2xl border border-overdue/30 bg-overdue/5 p-4">
           <div className="mb-3 flex items-center gap-2">
@@ -119,6 +161,7 @@ function TodayInner({ userId }: { userId: string }) {
                 <div className="flex-1">
                   <TaskCardStatic
                     task={t}
+                    role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                     onToggle={() => tasksApi.toggleComplete(t)}
                     onEdit={() => openEdit(t)}
                     isOverdue
@@ -144,7 +187,13 @@ function TodayInner({ userId }: { userId: string }) {
             <SortableContext items={sortedToday.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {sortedToday.map((t) => (
-                  <TaskCard key={t.id} task={t} onToggle={() => tasksApi.toggleComplete(t)} onEdit={() => openEdit(t)} />
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                    onToggle={() => tasksApi.toggleComplete(t)}
+                    onEdit={() => openEdit(t)}
+                  />
                 ))}
               </div>
             </SortableContext>
@@ -157,6 +206,7 @@ function TodayInner({ userId }: { userId: string }) {
         onOpenChange={setDialogOpen}
         defaultDate={today}
         task={editing}
+        roles={roles}
         onSave={handleSave}
         onDelete={editing ? async () => { await tasksApi.deleteTask(editing.id); toast.success("Tarefa excluída"); } : undefined}
       />
@@ -186,7 +236,6 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-// Non-sortable variant for overdue list (drag would conflict with day context)
 function TaskCardStatic(props: React.ComponentProps<typeof TaskCard>) {
   return (
     <DndContext>

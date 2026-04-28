@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task } from "@/hooks/useTasks";
+import { useRoles, type Role } from "@/hooks/useRoles";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ function WeekInner({ userId }: { userId: string }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(todayISO()));
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const tasksApi = useTasks(userId);
+  const { roles } = useRoles(userId);
+  const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [defaultDate, setDefaultDate] = useState(todayISO());
@@ -131,6 +134,7 @@ function WeekInner({ userId }: { userId: string }) {
                 key={d}
                 day={d}
                 tasks={list}
+                rolesById={rolesById}
                 isToday={isToday}
                 totalMinutes={total}
                 onAdd={() => openNew(d)}
@@ -147,6 +151,7 @@ function WeekInner({ userId }: { userId: string }) {
         onOpenChange={setDialogOpen}
         defaultDate={defaultDate}
         task={editing}
+        roles={roles}
         onSave={handleSave}
         onDelete={editing ? async () => { await tasksApi.deleteTask(editing.id); toast.success("Tarefa excluída"); } : undefined}
       />
@@ -155,10 +160,11 @@ function WeekInner({ userId }: { userId: string }) {
 }
 
 function DayColumn({
-  day, tasks, isToday, totalMinutes, onAdd, onToggle, onEdit,
+  day, tasks, rolesById, isToday, totalMinutes, onAdd, onToggle, onEdit,
 }: {
   day: string;
   tasks: Task[];
+  rolesById: Map<string, Role>;
   isToday: boolean;
   totalMinutes: number;
   onAdd: () => void;
@@ -186,7 +192,14 @@ function DayColumn({
             <DropZone day={day} />
           ) : (
             tasks.map((t) => (
-              <TaskCard key={t.id} task={t} onToggle={() => onToggle(t)} onEdit={() => onEdit(t)} compact />
+              <TaskCard
+                key={t.id}
+                task={t}
+                role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                onToggle={() => onToggle(t)}
+                onEdit={() => onEdit(t)}
+                compact
+              />
             ))
           )}
         </div>
