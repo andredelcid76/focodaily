@@ -246,6 +246,7 @@ async function syncOutlookCalendar(userId: string) {
 
   const events = (jsonResponse.value ?? []) as GraphEvent[];
   let imported = 0;
+  const errors: string[] = [];
 
   for (const ev of events) {
     const startsAt = new Date(ev.start.dateTime + "Z").toISOString();
@@ -272,9 +273,18 @@ async function syncOutlookCalendar(userId: string) {
         { onConflict: "user_id,external_id" }
       );
 
-    if (!error) {
+    if (error) {
+      errors.push(`${ev.subject || ev.id}: ${error.message}`);
+      console.error("[outlook sync] upsert failed", ev.id, error);
+    } else {
       imported += 1;
     }
+  }
+
+  console.log("[outlook sync]", { userId, totalFromGraph: events.length, imported, errors: errors.length });
+
+  if (events.length > 0 && imported === 0 && errors.length > 0) {
+    throw new Error(`Falha ao salvar reuniões: ${errors[0]}`);
   }
 
   const { error: syncError } = await supabaseAdmin
@@ -286,7 +296,7 @@ async function syncOutlookCalendar(userId: string) {
     throw new Error(syncError.message);
   }
 
-  return { imported, total: events.length };
+  return { imported, total: events.length, errors };
 }
 
 function json(payload: unknown, status = 200) {
