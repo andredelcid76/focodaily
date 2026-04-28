@@ -133,7 +133,10 @@ export function TaskCard({
       />
 
 
-      <button onClick={onEdit} className="flex-1 text-left min-w-0">
+      <button
+        onClick={selectionMode ? (e) => { e.stopPropagation(); onSelectToggle?.(); } : onEdit}
+        className="flex-1 text-left min-w-0"
+      >
         <div className="flex items-center gap-1.5 flex-wrap">
           <CategoryIcon category={task.category} className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
           <span
@@ -182,7 +185,7 @@ export function TaskCard({
         </div>
       </button>
 
-      {!compact && !task.completed && (
+      {!compact && !task.completed && !selectionMode && (
         <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
           {(onStart || onPause || onStop) && (
             <>
