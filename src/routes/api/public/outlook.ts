@@ -38,13 +38,14 @@ export const Route = createFileRoute("/api/public/outlook")({
         try {
           const { supabase, userId } = await authenticateRequest(request);
           const { data, error } = await supabase
-            .from("outlook_connections")
+            .from("outlook_connections_safe")
             .select("email, display_name, last_sync_at, expires_at")
             .eq("user_id", userId)
             .maybeSingle();
 
           if (error) {
-            return json({ error: error.message }, 500);
+            console.error("[outlook GET] db error", error);
+            return json({ error: "Erro ao consultar conexão" }, 500);
           }
 
           return json({ connected: !!data, connection: data ?? null });
@@ -61,11 +62,26 @@ export const Route = createFileRoute("/api/public/outlook")({
           if (payload.action === "connect") {
             const clientId = process.env.MS_CLIENT_ID;
             if (!clientId) {
-              return json({ error: "MS_CLIENT_ID is not configured" }, 500);
+              console.error("[outlook connect] MS_CLIENT_ID not configured");
+              return json({ error: "Configuração do servidor incompleta" }, 500);
             }
 
             if (!payload.origin) {
               return json({ error: "Origin is required" }, 400);
+            }
+
+            // Generate cryptographically random state token (CSRF protection)
+            const stateToken = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
+            const { error: stateErr } = await supabaseAdmin
+              .from("oauth_pending_states")
+              .insert({
+                state_token: stateToken,
+                user_id: userId,
+                provider: "outlook",
+              });
+            if (stateErr) {
+              console.error("[outlook connect] failed to store state", stateErr);
+              return json({ error: "Não foi possível iniciar a conexão" }, 500);
             }
 
             const redirectOrigin = getPreferredCallbackOrigin(payload.origin);
@@ -76,7 +92,7 @@ export const Route = createFileRoute("/api/public/outlook")({
               redirect_uri: redirectUri,
               response_mode: "query",
               scope: SCOPES,
-              state: userId,
+              state: stateToken,
               prompt: "select_account",
             });
 
@@ -315,6 +331,7 @@ function handleRouteError(error: unknown) {
     return json({ error: "Requisição inválida" }, 400);
   }
 
-  const message = error instanceof Error ? error.message : "Erro interno";
-  return json({ error: message }, 500);
+  // Log full details server-side, return generic message to client
+  console.error("[outlook route] internal error", error);
+  return json({ error: "Erro interno" }, 500);
 }

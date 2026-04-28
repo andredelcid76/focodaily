@@ -59,7 +59,7 @@ export const getOutlookStatus = createServerFn({ method: "POST" })
   .inputValidator((data: Record<string, never> | undefined) => data ?? {})
   .handler(async ({ context }) => {
     const { data } = await context.supabase
-      .from("outlook_connections")
+      .from("outlook_connections_safe")
       .select("email, display_name, last_sync_at, expires_at")
       .eq("user_id", context.userId)
       .maybeSingle();
