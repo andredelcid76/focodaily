@@ -14,7 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tasks: {
+        Row: {
+          category: Database["public"]["Enums"]["task_category"]
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          original_date: string
+          position: number
+          recurrence: Database["public"]["Enums"]["task_recurrence"]
+          recurrence_parent_id: string | null
+          scheduled_date: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["task_category"]
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          original_date?: string
+          position?: number
+          recurrence?: Database["public"]["Enums"]["task_recurrence"]
+          recurrence_parent_id?: string | null
+          scheduled_date?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["task_category"]
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          original_date?: string
+          position?: number
+          recurrence?: Database["public"]["Enums"]["task_recurrence"]
+          recurrence_parent_id?: string | null
+          scheduled_date?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +84,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      task_category: "urgent" | "important" | "circumstantial"
+      task_recurrence: "none" | "daily" | "weekly" | "monthly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +212,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      task_category: ["urgent", "important", "circumstantial"],
+      task_recurrence: ["none", "daily", "weekly", "monthly"],
+    },
   },
 } as const
