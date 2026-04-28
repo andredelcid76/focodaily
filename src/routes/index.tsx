@@ -156,11 +156,9 @@ function TodayInner({ userId }: { userId: string }) {
     await handleBulkMove(iso, formatHuman(iso));
   };
 
-  const selectAllVisible = () => {
-    const ids = new Set(selectedIds);
-    dayTasks.forEach((t) => ids.add(t.id));
-    if (isViewingToday) tasksApi.overdueTasks.forEach((t) => ids.add(t.id));
-    setSelectedIds(ids);
+  const enterSelectionMode = () => {
+    setSelectedIds(new Set());
+    setSelectionActive(true);
   };
 
   const openNew = () => {
