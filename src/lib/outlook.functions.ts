@@ -39,7 +39,7 @@ export const getOutlookAuthUrl = createServerFn({ method: "POST" })
   });
 
 /** Returns connection status for the current user. */
-export const getOutlookStatus = createServerFn({ method: "GET" })
+export const getOutlookStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data } = await context.supabase
