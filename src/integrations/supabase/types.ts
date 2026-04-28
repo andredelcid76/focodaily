@@ -61,6 +61,7 @@ export type Database = {
           recurrence_weekdays: number[] | null
           role_id: string | null
           scheduled_date: string
+          status: Database["public"]["Enums"]["task_status"]
           time_spent_seconds: number
           title: string
           updated_at: string
@@ -82,6 +83,7 @@ export type Database = {
           recurrence_weekdays?: number[] | null
           role_id?: string | null
           scheduled_date?: string
+          status?: Database["public"]["Enums"]["task_status"]
           time_spent_seconds?: number
           title: string
           updated_at?: string
@@ -103,6 +105,7 @@ export type Database = {
           recurrence_weekdays?: number[] | null
           role_id?: string | null
           scheduled_date?: string
+          status?: Database["public"]["Enums"]["task_status"]
           time_spent_seconds?: number
           title?: string
           updated_at?: string
@@ -135,6 +138,7 @@ export type Database = {
     Enums: {
       task_category: "urgent" | "important" | "circumstantial"
       task_recurrence: "none" | "daily" | "weekly" | "monthly" | "custom"
+      task_status: "todo" | "doing" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -264,6 +268,7 @@ export const Constants = {
     Enums: {
       task_category: ["urgent", "important", "circumstantial"],
       task_recurrence: ["none", "daily", "weekly", "monthly", "custom"],
+      task_status: ["todo", "doing", "done"],
     },
   },
 } as const

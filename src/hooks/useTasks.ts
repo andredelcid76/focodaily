@@ -6,9 +6,13 @@ import { todayISO, addDays } from "@/lib/date";
 export type Task = Tables<"tasks">;
 export type TaskCategory = Task["category"];
 export type TaskRecurrence = Task["recurrence"];
+export type TaskStatus = Task["status"];
 
 // How many days ahead we materialize recurring task instances
 const FUTURE_DAYS = 14;
+
+// Module-level guard prevents concurrent ensureRecurring runs (StrictMode, multi-mount, multi-tab races)
+const ensureLocks = new Map<string, Promise<void>>();
 
 export function useTasks(userId: string | undefined) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -28,79 +32,97 @@ export function useTasks(userId: string | undefined) {
   // Generate recurring task instances from today through FUTURE_DAYS ahead
   const ensureRecurring = useCallback(async () => {
     if (!userId) return;
-    const today = todayISO();
-    const { data: parents } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("user_id", userId)
-      .neq("recurrence", "none")
-      .is("recurrence_parent_id", null);
+    // Reuse in-flight promise if any (prevents duplicate inserts from StrictMode/multi-mount)
+    const existingLock = ensureLocks.get(userId);
+    if (existingLock) return existingLock;
 
-    if (!parents || parents.length === 0) return;
+    const run = (async () => {
+      const today = todayISO();
+      const { data: parents } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", userId)
+        .neq("recurrence", "none")
+        .is("recurrence_parent_id", null);
 
-    // Pre-fetch all already-existing children for these parents in the window
-    const parentIds = parents.map((p) => p.id);
-    const windowEnd = addDays(today, FUTURE_DAYS);
-    const { data: existing } = await supabase
-      .from("tasks")
-      .select("recurrence_parent_id, scheduled_date")
-      .in("recurrence_parent_id", parentIds)
-      .gte("scheduled_date", today)
-      .lte("scheduled_date", windowEnd);
-    const existingSet = new Set(
-      (existing ?? []).map((e) => `${e.recurrence_parent_id}__${e.scheduled_date}`)
-    );
+      if (!parents || parents.length === 0) return;
 
-    const inserts: TablesInsert<"tasks">[] = [];
+      const parentIds = parents.map((p) => p.id);
+      const windowEnd = addDays(today, FUTURE_DAYS);
+      const { data: existing } = await supabase
+        .from("tasks")
+        .select("recurrence_parent_id, scheduled_date")
+        .in("recurrence_parent_id", parentIds)
+        .gte("scheduled_date", today)
+        .lte("scheduled_date", windowEnd);
+      const existingSet = new Set(
+        (existing ?? []).map((e) => `${e.recurrence_parent_id}__${e.scheduled_date}`)
+      );
 
-    for (const p of parents) {
-      const [sy, sm, sd] = p.original_date.split("-").map(Number);
-      const startD = new Date(sy, sm - 1, sd);
+      const inserts: TablesInsert<"tasks">[] = [];
 
-      for (let i = 0; i <= FUTURE_DAYS; i++) {
-        const dayISO = addDays(today, i);
-        // Skip if same as parent's own date (parent is the seed)
-        if (dayISO === p.original_date) continue;
-        if (existingSet.has(`${p.id}__${dayISO}`)) continue;
+      for (const p of parents) {
+        const [sy, sm, sd] = p.original_date.split("-").map(Number);
+        const startD = new Date(sy, sm - 1, sd);
 
-        const [ty, tm, td] = dayISO.split("-").map(Number);
-        const dayD = new Date(ty, tm - 1, td);
-        if (dayD < startD) continue;
-        const diffDays = Math.floor((dayD.getTime() - startD.getTime()) / 86400000);
-        if (diffDays === 0) continue;
+        for (let i = 0; i <= FUTURE_DAYS; i++) {
+          const dayISO = addDays(today, i);
+          if (dayISO === p.original_date) continue;
+          if (existingSet.has(`${p.id}__${dayISO}`)) continue;
 
-        let matches = false;
-        if (p.recurrence === "daily") matches = true;
-        else if (p.recurrence === "weekly") matches = diffDays % 7 === 0;
-        else if (p.recurrence === "monthly") matches = startD.getDate() === dayD.getDate();
-        else if (p.recurrence === "custom") {
-          const interval = p.recurrence_interval ?? 0;
-          const weekdays = p.recurrence_weekdays ?? [];
-          if (weekdays.length > 0) matches = weekdays.includes(dayD.getDay());
-          else if (interval > 0) matches = diffDays % interval === 0;
+          const [ty, tm, td] = dayISO.split("-").map(Number);
+          const dayD = new Date(ty, tm - 1, td);
+          if (dayD < startD) continue;
+          const diffDays = Math.floor((dayD.getTime() - startD.getTime()) / 86400000);
+          if (diffDays === 0) continue;
+
+          let matches = false;
+          if (p.recurrence === "daily") matches = true;
+          else if (p.recurrence === "weekly") matches = diffDays % 7 === 0;
+          else if (p.recurrence === "monthly") matches = startD.getDate() === dayD.getDate();
+          else if (p.recurrence === "custom") {
+            const interval = p.recurrence_interval ?? 0;
+            const weekdays = p.recurrence_weekdays ?? [];
+            if (weekdays.length > 0) matches = weekdays.includes(dayD.getDay());
+            else if (interval > 0) matches = diffDays % interval === 0;
+          }
+
+          if (!matches) continue;
+
+          inserts.push({
+            user_id: userId,
+            title: p.title,
+            description: p.description,
+            category: p.category,
+            role_id: p.role_id,
+            scheduled_date: dayISO,
+            original_date: dayISO,
+            duration_minutes: p.duration_minutes,
+            recurrence: "none",
+            recurrence_parent_id: p.id,
+            position: 999,
+          });
+          // Track locally so duplicates within this batch are also prevented
+          existingSet.add(`${p.id}__${dayISO}`);
         }
-
-        if (!matches) continue;
-
-        inserts.push({
-          user_id: userId,
-          title: p.title,
-          description: p.description,
-          category: p.category,
-          role_id: p.role_id,
-          scheduled_date: dayISO,
-          original_date: dayISO,
-          duration_minutes: p.duration_minutes,
-          recurrence: "none",
-          recurrence_parent_id: p.id,
-          position: 999,
-        });
       }
-    }
 
-    if (inserts.length > 0) {
-      await supabase.from("tasks").insert(inserts);
-    }
+      if (inserts.length > 0) {
+        // Upsert with onConflict — if another process inserted concurrently, the unique
+        // constraint (recurrence_parent_id, scheduled_date) makes this a no-op for that row.
+        await supabase
+          .from("tasks")
+          .upsert(inserts, {
+            onConflict: "recurrence_parent_id,scheduled_date",
+            ignoreDuplicates: true,
+          });
+      }
+    })().finally(() => {
+      ensureLocks.delete(userId);
+    });
+
+    ensureLocks.set(userId, run);
+    return run;
   }, [userId]);
 
   useEffect(() => {
@@ -171,10 +193,24 @@ export function useTasks(userId: string | undefined) {
   };
 
   const toggleComplete = async (t: Task) => {
+    const next = !t.completed;
     await updateTask(t.id, {
-      completed: !t.completed,
-      completed_at: !t.completed ? new Date().toISOString() : null,
+      completed: next,
+      completed_at: next ? new Date().toISOString() : null,
+      status: next ? "done" : "todo",
     });
+  };
+
+  const setStatus = async (id: string, status: TaskStatus) => {
+    const patch: Partial<Task> = { status };
+    if (status === "done") {
+      patch.completed = true;
+      patch.completed_at = new Date().toISOString();
+    } else {
+      patch.completed = false;
+      patch.completed_at = null;
+    }
+    await updateTask(id, patch);
   };
 
   const reorderInDay = async (date: string, orderedIds: string[]) => {
@@ -225,6 +261,7 @@ export function useTasks(userId: string | undefined) {
     updateTask,
     deleteTask,
     toggleComplete,
+    setStatus,
     reorderInDay,
     moveTaskToDay,
     addTimeSpent,

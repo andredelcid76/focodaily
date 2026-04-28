@@ -2,7 +2,7 @@ import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
+import { CalendarDays, KanbanSquare, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
 
 function Shell({ children }: { children: ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -25,7 +25,11 @@ function Shell({ children }: { children: ReactNode }) {
 
   if (!user) return <>{children}</>;
 
-  const navItem = (to: "/" | "/semana" | "/papeis", label: string, Icon: typeof ListTodo) => {
+  const navItem = (
+    to: "/" | "/semana" | "/kanban" | "/papeis",
+    label: string,
+    Icon: typeof ListTodo
+  ) => {
     const active = location.pathname === to;
     return (
       <Link
@@ -52,6 +56,7 @@ function Shell({ children }: { children: ReactNode }) {
           </Link>
           <nav className="flex items-center gap-1">
             {navItem("/", "Hoje", ListTodo)}
+            {navItem("/kanban", "Kanban", KanbanSquare)}
             {navItem("/semana", "Semana", CalendarDays)}
             {navItem("/papeis", "Papéis", Users)}
           </nav>
