@@ -459,6 +459,32 @@ export function useTasks(userId: string | undefined) {
     await supabase.from("tasks").update({ scheduled_date: date, position }).eq("id", taskId);
   };
 
+  // Move several tasks to a target date in one batch.
+  // Each task gets a unique position so the relative order is preserved.
+  const bulkMoveToDay = async (taskIds: string[], date: string) => {
+    if (taskIds.length === 0) return;
+    const basePos = topPositionForDay(date);
+    // Assign descending positions starting from basePos so the first selected ends up on top
+    const updates = taskIds.map((id, idx) => ({ id, position: basePos - idx }));
+    setTasks((prev) =>
+      prev.map((t) => {
+        const u = updates.find((x) => x.id === t.id);
+        return u ? { ...t, scheduled_date: date, position: u.position } : t;
+      })
+    );
+    await Promise.all(
+      updates.map((u) =>
+        supabase.from("tasks").update({ scheduled_date: date, position: u.position }).eq("id", u.id)
+      )
+    );
+  };
+
+  const bulkDelete = async (taskIds: string[]) => {
+    if (taskIds.length === 0) return;
+    setTasks((prev) => prev.filter((t) => !taskIds.includes(t.id)));
+    await supabase.from("tasks").delete().in("id", taskIds);
+  };
+
   const addTimeSpent = async (id: string, secondsToAdd: number) => {
     if (secondsToAdd <= 0) return;
     const current = tasks.find((t) => t.id === id);
@@ -574,6 +600,8 @@ export function useTasks(userId: string | undefined) {
     setStatus,
     reorderInDay,
     moveTaskToDay,
+    bulkMoveToDay,
+    bulkDelete,
     addTimeSpent,
     duplicateTask,
     createFollowUp,
