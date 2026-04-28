@@ -135,7 +135,7 @@ function TodayInner({ userId }: { userId: string }) {
   };
 
   const moveOverdueToToday = async (t: Task) => {
-    await tasksApi.moveTaskToDay(t.id, today, dayTasks.length);
+    await tasksApi.moveTaskToDay(t.id, today, tasksApi.topPositionForDay(today));
   };
 
   // Quick actions for today's task list
