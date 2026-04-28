@@ -12,7 +12,7 @@ const actionSchema = z.object({
   origin: z.string().url().optional(),
 });
 
-export const Route = createFileRoute("/api/outlook")({
+export const Route = createFileRoute("/api/public/outlook")({
   server: {
     handlers: {
       GET: async ({ request }) => {
