@@ -394,16 +394,18 @@ export function useTasks(userId: string | undefined) {
   const createFollowUp = async (task: Task, targetDate: string) => {
     if (!userId) return;
     const chainId = task.followup_chain_id ?? task.id;
-    // Compute next index by looking at existing chain members
+    // Find max followup_count across the chain (including the originating task)
     const chainMembers = tasks.filter(
       (t) => t.followup_chain_id === chainId || t.id === chainId
     );
     const maxCount = chainMembers.reduce((m, t) => Math.max(m, t.followup_count ?? 0), 0);
-    const nextCount = Math.max(maxCount, task.followup_count ?? 0) + 1;
+    // The original (root) is #1; each follow-up increments
+    const originalCount = maxCount === 0 ? 1 : maxCount;
+    const nextCount = originalCount + 1;
 
-    // Backfill chain_id on the original if it wasn't set yet
+    // Backfill chain on the original if it wasn't part of one yet
     if (!task.followup_chain_id) {
-      await updateTask(task.id, { followup_chain_id: chainId, followup_count: task.followup_count || 1 });
+      await updateTask(task.id, { followup_chain_id: chainId, followup_count: 1 });
     }
 
     const payload: TablesInsert<"tasks"> = {
@@ -417,13 +419,9 @@ export function useTasks(userId: string | undefined) {
       duration_minutes: task.duration_minutes,
       recurrence: "none",
       followup_chain_id: chainId,
-      followup_count: nextCount + (task.followup_chain_id ? 0 : 1) === nextCount ? nextCount : nextCount,
+      followup_count: nextCount,
       position: 999,
     };
-    // Simplify: nextCount is already correct
-    payload.followup_count = nextCount + (task.followup_chain_id ? 0 : 0);
-    payload.followup_count = (task.followup_chain_id ? maxCount : 1) + 1;
-
     const { data, error } = await supabase.from("tasks").insert(payload).select().single();
     if (error) throw error;
     if (data) setTasks((prev) => (prev.some((t) => t.id === data.id) ? prev : [...prev, data]));
