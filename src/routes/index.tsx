@@ -31,8 +31,11 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   CalendarDays,
   CalendarClock,
+  MapPin,
+  ExternalLink,
   X,
 } from "lucide-react";
 import {
