@@ -171,8 +171,14 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
     }
     setSyncing(true);
     try {
-      const res = await outlookRequest<{ imported: number }>("POST", { action: "sync" });
-      toast.success(`${res.imported} reuniões sincronizadas do Outlook`);
+      const res = await outlookRequest<{ imported: number; total: number; errors?: string[] }>("POST", { action: "sync" });
+      if (res.total === 0) {
+        toast.info("Nenhum compromisso encontrado no Outlook (janela: -7d a +60d)");
+      } else if (res.imported === 0) {
+        toast.error(`Outlook retornou ${res.total} eventos, mas nenhum foi salvo. ${res.errors?.[0] ?? ""}`);
+      } else {
+        toast.success(`${res.imported}/${res.total} reuniões sincronizadas`);
+      }
       await meetingsApi.refresh();
       await refreshOutlookStatus();
     } catch (e: any) {
