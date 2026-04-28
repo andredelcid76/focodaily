@@ -40,7 +40,7 @@ type Props = {
 
 export type RecurrenceScope = "this" | "future" | "all";
 
-const PRESET_DURATIONS = [15, 30, 45, 60, 90, 120, 180];
+const PRESET_DURATIONS = [5, 15, 30, 45, 60, 90, 120];
 const WEEKDAYS = [
   { v: 1, l: "S" },
   { v: 2, l: "T" },
