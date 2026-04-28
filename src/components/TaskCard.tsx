@@ -35,6 +35,10 @@ type Props = {
   onPostpone?: (date: string) => void;
   onDuplicate?: (date: string) => void;
   onFollowUp?: (date: string) => void;
+  // Bulk selection
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelectToggle?: () => void;
 };
 
 export function TaskCard({
@@ -55,10 +59,14 @@ export function TaskCard({
   onPostpone,
   onDuplicate,
   onFollowUp,
+  selectionMode,
+  selected,
+  onSelectToggle,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
+    disabled: selectionMode,
   });
 
   const style = {
@@ -79,7 +87,10 @@ export function TaskCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex items-start gap-2 rounded-xl border backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-all hover:border-primary/40 ${
+      onClick={selectionMode ? (e) => { e.stopPropagation(); onSelectToggle?.(); } : undefined}
+      className={`group relative flex items-start gap-2 rounded-xl border backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-all ${
+        selectionMode ? "cursor-pointer" : "hover:border-primary/40"
+      } ${
         task.completed
           ? "bg-muted/30 border-border/40 opacity-70"
           : "bg-card/80"
@@ -89,16 +100,18 @@ export function TaskCard({
             ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
             : "border-circumstantial/60 ring-1 ring-circumstantial/30"
           : ""
-      }`}
+      } ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}`}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="mt-1 cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
-        aria-label="Arrastar"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {!selectionMode && (
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-1 cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
+          aria-label="Arrastar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
 
       {typeof index === "number" && (
         <span
@@ -111,9 +124,19 @@ export function TaskCard({
         </span>
       )}
 
-      <Checkbox checked={task.completed} onCheckedChange={onToggle} className="mt-1" />
+      <Checkbox
+        checked={selectionMode ? !!selected : task.completed}
+        onCheckedChange={() => (selectionMode ? onSelectToggle?.() : onToggle())}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-1"
+        aria-label={selectionMode ? "Selecionar tarefa" : "Concluir tarefa"}
+      />
 
-      <button onClick={onEdit} className="flex-1 text-left min-w-0">
+
+      <button
+        onClick={selectionMode ? (e) => { e.stopPropagation(); onSelectToggle?.(); } : onEdit}
+        className="flex-1 text-left min-w-0"
+      >
         <div className="flex items-center gap-1.5 flex-wrap">
           <CategoryIcon category={task.category} className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
           <span
@@ -162,7 +185,7 @@ export function TaskCard({
         </div>
       </button>
 
-      {!compact && !task.completed && (
+      {!compact && !task.completed && !selectionMode && (
         <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
           {(onStart || onPause || onStop) && (
             <>
