@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/public/outlook")({
               return json({ error: "Origin is required" }, 400);
             }
 
-            const redirectUri = `${payload.origin}/api/outlook/callback`;
+            const redirectUri = `${payload.origin}/api/public/outlook/callback`;
             const params = new URLSearchParams({
               client_id: clientId,
               response_type: "code",
