@@ -119,7 +119,7 @@ function TodayInner({ userId }: { userId: string }) {
       }
       toast.success("Tarefa atualizada");
     } else {
-      await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: dayTasks.length });
+      await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: tasksApi.topPositionForDay(data.scheduled_date) });
       toast.success("Tarefa criada");
     }
   };
