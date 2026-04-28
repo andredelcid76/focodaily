@@ -61,8 +61,10 @@ function TodayPage() {
 function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
+  const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
   const { roles } = useRoles(userId);
+  const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -76,9 +78,14 @@ function TodayInner({ userId }: { userId: string }) {
     () => tasksApi.tasksByDay(viewDate).slice().sort((a, b) => a.position - b.position),
     [tasksApi, viewDate]
   );
+  const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
-  const totalMinutes = dayTasks.reduce((s, t) => s + t.duration_minutes, 0);
-  const remainingMinutes = dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0);
+  const tasksMinutes = dayTasks.reduce((s, t) => s + t.duration_minutes, 0);
+  const meetingsMinutes = dayMeetings.reduce((s, m) => s + meetingDurationMinutes(m), 0);
+  const totalMinutes = tasksMinutes + (includeMeetings ? meetingsMinutes : 0);
+  const remainingMinutes =
+    dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
+    (includeMeetings ? meetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
 
   const handleDragEnd = async (e: DragEndEvent) => {
