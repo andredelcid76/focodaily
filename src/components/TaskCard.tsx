@@ -56,6 +56,9 @@ export function TaskCard({
   onPause,
   onResume,
   onStop,
+  onPostpone,
+  onDuplicate,
+  onFollowUp,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -70,6 +73,11 @@ export function TaskCard({
 
   const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
   const running = isActive && !isPaused;
+
+  const today = todayISO();
+  const tomorrow = addDays(today, 1);
+  const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
+  const followupNumber = task.followup_count ?? 0;
 
   return (
     <div
