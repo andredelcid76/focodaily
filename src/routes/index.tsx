@@ -78,9 +78,10 @@ function TodayInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionActive, setSelectionActive] = useState(false);
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
-  const selectionMode = selectedIds.size > 0;
+  const selectionMode = selectionActive || selectedIds.size > 0;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -90,7 +91,10 @@ function TodayInner({ userId }: { userId: string }) {
       return next;
     });
   };
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionActive(false);
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
