@@ -130,16 +130,20 @@ function WeekInner({ userId }: { userId: string }) {
           <div className="flex gap-3 min-w-max">
             {days.map((d) => {
               const list = tasksByDay.get(d) ?? [];
-              const total = list.reduce((s, t) => s + t.duration_minutes, 0);
+              const dayMeetings = meetingsApi.meetingsByDay(d);
+              const tasksMinutes = list.reduce((s, t) => s + t.duration_minutes, 0);
+              const meetingsMinutes = dayMeetings.reduce((s, m) => s + meetingDurationMinutes(m), 0);
               const isToday = d === today;
               return (
                 <div key={d} className="w-[260px] shrink-0">
                   <DayColumn
                     day={d}
                     tasks={list}
+                    meetings={dayMeetings}
                     rolesById={rolesById}
                     isToday={isToday}
-                    totalMinutes={total}
+                    tasksMinutes={tasksMinutes}
+                    meetingsMinutes={meetingsMinutes}
                     onAdd={() => openNew(d)}
                     onToggle={(t) => tasksApi.toggleComplete(t)}
                     onEdit={(t) => openEdit(t)}
