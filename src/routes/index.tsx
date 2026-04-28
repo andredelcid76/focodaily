@@ -78,9 +78,10 @@ function TodayInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionActive, setSelectionActive] = useState(false);
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
-  const selectionMode = selectedIds.size > 0;
+  const selectionMode = selectionActive || selectedIds.size > 0;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -90,7 +91,10 @@ function TodayInner({ userId }: { userId: string }) {
       return next;
     });
   };
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionActive(false);
+  };
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -152,11 +156,9 @@ function TodayInner({ userId }: { userId: string }) {
     await handleBulkMove(iso, formatHuman(iso));
   };
 
-  const selectAllVisible = () => {
-    const ids = new Set(selectedIds);
-    dayTasks.forEach((t) => ids.add(t.id));
-    if (isViewingToday) tasksApi.overdueTasks.forEach((t) => ids.add(t.id));
-    setSelectedIds(ids);
+  const enterSelectionMode = () => {
+    setSelectedIds(new Set());
+    setSelectionActive(true);
   };
 
   const openNew = () => {
@@ -392,7 +394,7 @@ function TodayInner({ userId }: { userId: string }) {
           {dayTasks.length > 0 && (
             <button
               type="button"
-              onClick={selectionMode ? clearSelection : selectAllVisible}
+              onClick={selectionMode ? clearSelection : enterSelectionMode}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {selectionMode ? "Cancelar seleção" : "Selecionar"}
