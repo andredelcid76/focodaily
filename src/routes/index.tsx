@@ -264,16 +264,12 @@ function TodayInner({ userId }: { userId: string }) {
       </div>
 
       {dayMeetings.length > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/40 px-4 py-2.5 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CalendarClock className="h-4 w-4" />
-            {dayMeetings.length} reuni{dayMeetings.length === 1 ? "ão" : "ões"} no dia · {formatMinutes(meetingsMinutes)}
-          </div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            Incluir nas somas
-            <Switch checked={includeMeetings} onCheckedChange={setIncludeMeetings} />
-          </label>
-        </div>
+        <MeetingsSection
+          meetings={dayMeetings}
+          totalMinutes={meetingsMinutes}
+          includeMeetings={includeMeetings}
+          onToggleInclude={setIncludeMeetings}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
