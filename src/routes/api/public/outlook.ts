@@ -6,6 +6,25 @@ import type { Database } from "@/integrations/supabase/types";
 
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read Calendars.ReadWrite";
+const LOVABLE_PROJECT_ID = "0f679b02-63a6-46ee-ae66-8b953bfe9f15";
+
+function getPreferredCallbackOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return url.origin;
+    }
+
+    if (url.hostname.endsWith(".lovableproject.com")) {
+      return `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app`;
+    }
+
+    return url.origin;
+  } catch {
+    return `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app`;
+  }
+}
 
 const actionSchema = z.object({
   action: z.enum(["connect", "disconnect", "sync"]),
@@ -49,7 +68,8 @@ export const Route = createFileRoute("/api/public/outlook")({
               return json({ error: "Origin is required" }, 400);
             }
 
-            const redirectUri = `${payload.origin}/api/public/outlook/callback`;
+            const redirectOrigin = getPreferredCallbackOrigin(payload.origin);
+            const redirectUri = `${redirectOrigin}/api/public/outlook/callback`;
             const params = new URLSearchParams({
               client_id: clientId,
               response_type: "code",
