@@ -121,6 +121,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
           scheduled_date: date,
           recurrence,
           role_id: roleId,
+          project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           recurrence_interval:
             recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
           recurrence_weekdays:
