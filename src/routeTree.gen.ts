@@ -17,6 +17,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
+import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
@@ -61,6 +62,11 @@ const ProjetosIdRoute = ProjetosIdRouteImport.update({
   path: '/projetos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPlannerRoute = ApiPublicPlannerRouteImport.update({
+  id: '/api/public/planner',
+  path: '/api/public/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
   id: '/api/public/outlook',
   path: '/api/public/outlook',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
+  '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/projetos': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
+  '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesById {
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
+  '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRouteTypes {
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/projetos/'
     | '/api/public/maya'
     | '/api/public/outlook'
+    | '/api/public/planner'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/api/public/maya'
     | '/api/public/outlook'
+    | '/api/public/planner'
     | '/api/public/outlook/callback'
   id:
     | '__root__'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/projetos/'
     | '/api/public/maya'
     | '/api/public/outlook'
+    | '/api/public/planner'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
 }
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   ProjetosIndexRoute: typeof ProjetosIndexRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
+  ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjetosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/planner': {
+      id: '/api/public/planner'
+      path: '/api/public/planner'
+      fullPath: '/api/public/planner'
+      preLoaderRoute: typeof ApiPublicPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/outlook': {
       id: '/api/public/outlook'
       path: '/api/public/outlook'
@@ -277,6 +297,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjetosIndexRoute: ProjetosIndexRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
+  ApiPublicPlannerRoute: ApiPublicPlannerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
