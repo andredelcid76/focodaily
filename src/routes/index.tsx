@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
 import { useRoles } from "@/hooks/useRoles";
+import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
@@ -74,6 +75,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
   const { roles } = useRoles(userId);
+  const { projects } = useProjects(userId);
   const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -114,6 +116,7 @@ function TodayInner({ userId }: { userId: string }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
+  const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
   const isViewingToday = viewDate === today;
   const dayTasks = useMemo(
@@ -397,6 +400,7 @@ function TodayInner({ userId }: { userId: string }) {
                   <TaskCardStatic
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                    project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                     onToggle={() => tasksApi.toggleComplete(t)}
                     onEdit={() => openEdit(t)}
                     isOverdue
@@ -500,6 +504,7 @@ function TodayInner({ userId }: { userId: string }) {
                     key={t.id}
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                    project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                     onToggle={() => tasksApi.toggleComplete(t)}
                     onEdit={() => openEdit(t)}
                     index={i + 1}

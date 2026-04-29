@@ -2,7 +2,7 @@ import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarClock, CalendarDays, KanbanSquare, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, FolderKanban, KanbanSquare, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
 import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 
 function Shell({ children }: { children: ReactNode }) {
@@ -27,11 +27,11 @@ function Shell({ children }: { children: ReactNode }) {
   if (!user) return <>{children}</>;
 
   const navItem = (
-    to: "/" | "/semana" | "/kanban" | "/agenda" | "/papeis",
+    to: "/" | "/semana" | "/kanban" | "/agenda" | "/papeis" | "/projetos",
     label: string,
     Icon: typeof ListTodo
   ) => {
-    const active = location.pathname === to;
+    const active = to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
     return (
       <Link
         to={to}
@@ -60,6 +60,7 @@ function Shell({ children }: { children: ReactNode }) {
             {navItem("/kanban", "Kanban", KanbanSquare)}
             {navItem("/semana", "Semana", CalendarDays)}
             {navItem("/agenda", "Agenda", CalendarClock)}
+            {navItem("/projetos", "Projetos", FolderKanban)}
             {navItem("/papeis", "Papéis", Users)}
           </nav>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
