@@ -160,6 +160,13 @@ function TodayInner({ userId }: { userId: string }) {
         .filter(matchesQuery),
     [dayTasks, showCompleted, normalizedQuery]
   );
+  const nonNegotiablePending = useMemo(
+    () => visibleDayTasks.filter((t) => (t as any).non_negotiable && !t.completed),
+    [visibleDayTasks]
+  );
+  const isLateAfternoon = new Date().getHours() >= 17;
+  const showNonNegotiableBanner =
+    isViewingToday && isLateAfternoon && nonNegotiablePending.length > 0;
   const visibleOverdue = useMemo(
     () =>
       tasksApi.overdueTasks
