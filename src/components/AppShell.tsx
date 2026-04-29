@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { CalendarClock, CalendarDays, FolderKanban, KanbanSquare, ListTodo, LogOut, Sparkles, Users } from "lucide-react";
 import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
+import { MayaChat } from "@/components/MayaChat";
 
 function Shell({ children }: { children: ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -70,6 +71,7 @@ function Shell({ children }: { children: ReactNode }) {
       </header>
       <ActiveTaskBanner />
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      <MayaChat />
     </div>
   );
 }
