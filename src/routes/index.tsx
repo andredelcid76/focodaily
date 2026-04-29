@@ -40,6 +40,7 @@ import {
   X,
   Trash2,
   CalendarPlus,
+  Search,
 } from "lucide-react";
 import {
   DndContext,
