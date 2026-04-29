@@ -34,6 +34,7 @@ type Props = {
       recurrence: TaskRecurrence;
       role_id: string | null;
       project_id: string | null;
+      non_negotiable: boolean;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
       recurrence_week_interval: number | null;
