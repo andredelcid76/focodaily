@@ -57,9 +57,9 @@ const ProjetosIndexRoute = ProjetosIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjetosIdRoute = ProjetosIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ProjetosRoute,
+  id: '/projetos/$id',
+  path: '/projetos/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
   id: '/api/public/outlook',
@@ -167,6 +167,7 @@ export interface RootRouteChildren {
   KanbanRoute: typeof KanbanRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
+  ProjetosIdRoute: typeof ProjetosIdRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
@@ -225,10 +226,10 @@ declare module '@tanstack/react-router' {
     }
     '/projetos/$id': {
       id: '/projetos/$id'
-      path: '/$id'
+      path: '/projetos/$id'
       fullPath: '/projetos/$id'
       preLoaderRoute: typeof ProjetosIdRouteImport
-      parentRoute: typeof ProjetosRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/outlook': {
       id: '/api/public/outlook'
@@ -272,6 +273,7 @@ const rootRouteChildren: RootRouteChildren = {
   KanbanRoute: KanbanRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
+  ProjetosIdRoute: ProjetosIdRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
@@ -279,12 +281,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
