@@ -10,12 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
-import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as PapeisRouteImport } from './routes/papeis'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
@@ -24,11 +24,6 @@ import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/publi
 const SemanaRoute = SemanaRouteImport.update({
   id: '/semana',
   path: '/semana',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProjetosRoute = ProjetosRouteImport.update({
-  id: '/projetos',
-  path: '/projetos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PapeisRoute = PapeisRouteImport.update({
@@ -54,6 +49,11 @@ const AgendaRoute = AgendaRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjetosIndexRoute = ProjetosIndexRouteImport.update({
+  id: '/projetos/',
+  path: '/projetos/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjetosIdRoute = ProjetosIdRouteImport.update({
@@ -84,9 +84,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
-  '/projetos': typeof ProjetosRouteWithChildren
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
@@ -97,9 +97,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
-  '/projetos': typeof ProjetosRouteWithChildren
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/projetos': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
@@ -111,9 +111,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
-  '/projetos': typeof ProjetosRouteWithChildren
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
@@ -126,9 +126,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/kanban'
     | '/papeis'
-    | '/projetos'
     | '/semana'
     | '/projetos/$id'
+    | '/projetos/'
     | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/outlook/callback'
@@ -139,9 +139,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/kanban'
     | '/papeis'
-    | '/projetos'
     | '/semana'
     | '/projetos/$id'
+    | '/projetos'
     | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/outlook/callback'
@@ -152,9 +152,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/kanban'
     | '/papeis'
-    | '/projetos'
     | '/semana'
     | '/projetos/$id'
+    | '/projetos/'
     | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/outlook/callback'
@@ -166,8 +166,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   KanbanRoute: typeof KanbanRoute
   PapeisRoute: typeof PapeisRoute
-  ProjetosRoute: typeof ProjetosRouteWithChildren
   SemanaRoute: typeof SemanaRoute
+  ProjetosIndexRoute: typeof ProjetosIndexRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
 }
@@ -179,13 +179,6 @@ declare module '@tanstack/react-router' {
       path: '/semana'
       fullPath: '/semana'
       preLoaderRoute: typeof SemanaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/projetos': {
-      id: '/projetos'
-      path: '/projetos'
-      fullPath: '/projetos'
-      preLoaderRoute: typeof ProjetosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/papeis': {
@@ -223,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projetos/': {
+      id: '/projetos/'
+      path: '/projetos'
+      fullPath: '/projetos/'
+      preLoaderRoute: typeof ProjetosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projetos/$id': {
       id: '/projetos/$id'
       path: '/$id'
@@ -254,18 +254,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ProjetosRouteChildren {
-  ProjetosIdRoute: typeof ProjetosIdRoute
-}
-
-const ProjetosRouteChildren: ProjetosRouteChildren = {
-  ProjetosIdRoute: ProjetosIdRoute,
-}
-
-const ProjetosRouteWithChildren = ProjetosRoute._addFileChildren(
-  ProjetosRouteChildren,
-)
-
 interface ApiPublicOutlookRouteChildren {
   ApiPublicOutlookCallbackRoute: typeof ApiPublicOutlookCallbackRoute
 }
@@ -283,11 +271,20 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   KanbanRoute: KanbanRoute,
   PapeisRoute: PapeisRoute,
-  ProjetosRoute: ProjetosRouteWithChildren,
   SemanaRoute: SemanaRoute,
+  ProjetosIndexRoute: ProjetosIndexRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

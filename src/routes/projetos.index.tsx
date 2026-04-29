@@ -12,7 +12,7 @@ import { FolderKanban, Plus, Calendar, Clock, AlertTriangle, CheckCircle2 } from
 import { todayISO, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/projetos")({
+export const Route = createFileRoute("/projetos/")({
   component: () => (
     <AppShell>
       <ProjectsPage />
