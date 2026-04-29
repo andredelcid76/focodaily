@@ -14,10 +14,13 @@ import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
 import { formatTimer } from "@/hooks/useActiveTimer";
 import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
+import type { Project } from "@/hooks/useProjects";
+import { ProjectChip } from "./ProjectChip";
 
 type Props = {
   task: Task;
   role?: Role | null;
+  project?: Project | null;
   onToggle: () => void;
   onEdit: () => void;
   isOverdue?: boolean;
@@ -44,6 +47,7 @@ type Props = {
 export function TaskCard({
   task,
   role,
+  project,
   onToggle,
   onEdit,
   isOverdue,
