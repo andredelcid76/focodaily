@@ -70,26 +70,69 @@ async function graph(token: string, path: string, init?: RequestInit) {
   return json;
 }
 
-/** Lista todos os Plans acessíveis ao usuário (via grupos). */
+/** Lista todos os Plans acessíveis ao usuário. */
 export const listPlannerPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const token = await getAccessToken(context.userId);
-    // Pega grupos do usuário e seus plans
-    const groupsRes = await graph(token, "/me/memberOf?$select=id,displayName&$top=100");
-    const groups = (groupsRes.value ?? []).filter((g: any) => g["@odata.type"]?.includes("group") || g.displayName);
-
     const allPlans: { id: string; title: string; groupName: string; groupId: string }[] = [];
-    for (const g of groups) {
-      try {
-        const plans = await graph(token, `/groups/${g.id}/planner/plans`);
-        for (const p of plans.value ?? []) {
-          allPlans.push({ id: p.id, title: p.title, groupName: g.displayName ?? "Grupo", groupId: g.id });
-        }
-      } catch {
-        // grupo sem planner — ignora
+    const seen = new Set<string>();
+    const errors: string[] = [];
+
+    // 1) Plans diretamente acessíveis ao usuário (não precisa de Group.Read.All com consent)
+    try {
+      const mine = await graph(token, "/me/planner/plans");
+      for (const p of mine.value ?? []) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        allPlans.push({
+          id: p.id,
+          title: p.title ?? "(sem título)",
+          groupName: "Meus planos",
+          groupId: p.container?.containerId ?? "",
+        });
       }
+    } catch (e) {
+      const msg = (e as Error).message;
+      console.error("[planner] /me/planner/plans falhou:", msg);
+      errors.push(`me/planner/plans: ${msg}`);
     }
+
+    // 2) Também tenta via grupos (Plans em que o usuário é membro do grupo)
+    try {
+      const groupsRes = await graph(
+        token,
+        "/me/memberOf/microsoft.graph.group?$select=id,displayName&$top=100",
+      );
+      const groups = (groupsRes.value ?? []) as Array<{ id: string; displayName?: string }>;
+      for (const g of groups) {
+        try {
+          const plans = await graph(token, `/groups/${g.id}/planner/plans`);
+          for (const p of plans.value ?? []) {
+            if (seen.has(p.id)) continue;
+            seen.add(p.id);
+            allPlans.push({
+              id: p.id,
+              title: p.title ?? "(sem título)",
+              groupName: g.displayName ?? "Grupo",
+              groupId: g.id,
+            });
+          }
+        } catch {
+          // grupo sem planner ou sem permissão — ignora
+        }
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      console.error("[planner] /me/memberOf falhou:", msg);
+      errors.push(`me/memberOf: ${msg}`);
+    }
+
+    // Se nada funcionou, propaga o erro pra UI mostrar mensagem útil
+    if (allPlans.length === 0 && errors.length > 0) {
+      throw new Error(`Não foi possível listar Plans. ${errors.join(" | ")}`);
+    }
+
     return { plans: allPlans };
   });
 
