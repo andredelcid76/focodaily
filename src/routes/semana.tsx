@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
 import { useRoles, type Role } from "@/hooks/useRoles";
+import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,9 @@ function WeekInner({ userId }: { userId: string }) {
   const tasksApi = useTasks(userId);
   const meetingsApi = useMeetings(userId);
   const { roles } = useRoles(userId);
+  const { projects } = useProjects(userId);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
+  const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [defaultDate, setDefaultDate] = useState(todayISO());
@@ -141,6 +144,7 @@ function WeekInner({ userId }: { userId: string }) {
                     tasks={list}
                     meetings={dayMeetings}
                     rolesById={rolesById}
+                    projectsById={projectsById}
                     isToday={isToday}
                     tasksMinutes={tasksMinutes}
                     meetingsMinutes={meetingsMinutes}
@@ -169,12 +173,13 @@ function WeekInner({ userId }: { userId: string }) {
 }
 
 function DayColumn({
-  day, tasks, meetings, rolesById, isToday, tasksMinutes, meetingsMinutes, onAdd, onToggle, onEdit,
+  day, tasks, meetings, rolesById, projectsById, isToday, tasksMinutes, meetingsMinutes, onAdd, onToggle, onEdit,
 }: {
   day: string;
   tasks: Task[];
   meetings: Meeting[];
   rolesById: Map<string, Role>;
+  projectsById: Map<string, Project>;
   isToday: boolean;
   tasksMinutes: number;
   meetingsMinutes: number;
@@ -237,6 +242,7 @@ function DayColumn({
                 key={t.id}
                 task={t}
                 role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                 onToggle={() => onToggle(t)}
                 onEdit={() => onEdit(t)}
                 compact
