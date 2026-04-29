@@ -83,7 +83,7 @@ const tools = [
           description: { type: "string" },
           scheduled_date: { type: "string", description: "YYYY-MM-DD" },
           duration_minutes: { type: "number", description: "5,15,30,60,90,120" },
-          category: { type: "string", enum: ["important", "circumstantial", "delegable"] },
+          category: { type: "string", enum: ["urgent", "important", "circumstantial"] },
           project_id: { type: "string", description: "Opcional" },
           role_id: { type: "string", description: "Opcional" },
         },
@@ -104,7 +104,7 @@ const tools = [
           title: { type: "string" },
           scheduled_date: { type: "string" },
           duration_minutes: { type: "number" },
-          category: { type: "string", enum: ["important", "circumstantial", "delegable"] },
+          category: { type: "string", enum: ["urgent", "important", "circumstantial"] },
           completed: { type: "boolean" },
           project_id: { type: "string" },
         },
@@ -197,11 +197,11 @@ async function execTool(
       scheduled_date: String(args.scheduled_date),
       original_date: String(args.scheduled_date),
       duration_minutes: Number(args.duration_minutes ?? 30),
-      category: (args.category as "important" | "circumstantial" | "delegable") ?? "important",
+      category: (args.category as "urgent" | "important" | "circumstantial") ?? "important",
       project_id: args.project_id ? String(args.project_id) : null,
       role_id: args.role_id ? String(args.role_id) : null,
     };
-    const { data, error } = await supabase.from("tasks").insert(insert).select().single();
+    const { data, error } = await supabase.from("tasks").insert(insert as never).select().single();
     if (error) throw new Error(error.message);
     return { ok: true, task: data };
   }
@@ -219,7 +219,7 @@ async function execTool(
       patch.status = args.completed ? "done" : "todo";
       patch.completed_at = args.completed ? new Date().toISOString() : null;
     }
-    const { data, error } = await supabase.from("tasks").update(patch).eq("id", id).eq("user_id", userId).select().single();
+    const { data, error } = await supabase.from("tasks").update(patch as never).eq("id", id).eq("user_id", userId).select().single();
     if (error) throw new Error(error.message);
     return { ok: true, task: data };
   }
