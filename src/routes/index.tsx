@@ -282,6 +282,12 @@ function TodayInner({ userId }: { userId: string }) {
 
   // Quick actions for today's task list
   const handlePostpone = async (t: Task, date: string) => {
+    if (date !== today && (t as any).non_negotiable && !t.completed && t.scheduled_date === today) {
+      const ok = window.confirm(
+        `"${t.title}" está marcada como inegociável hoje. Adiar mesmo assim?`
+      );
+      if (!ok) return;
+    }
     await tasksApi.moveTaskToDay(t.id, date, 999);
     toast.success(date === today ? "Movida para hoje" : `Movida para ${formatHuman(date)}`);
   };
