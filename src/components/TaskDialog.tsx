@@ -254,6 +254,41 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
             </div>
           </div>
 
+          {lockedProjectId === undefined && projects.length > 0 && (
+            <div>
+              <Label>Projeto</Label>
+              <Select
+                value={projectId ?? "__none"}
+                onValueChange={(v) => setProjectId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem projeto</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <FolderKanban className="h-3 w-3" style={{ color: p.color }} />
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {lockedProjectId && projects.length > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <FolderKanban className="h-3.5 w-3.5" />
+              Vinculada ao projeto{" "}
+              <span className="font-medium text-foreground">
+                {projects.find((p) => p.id === lockedProjectId)?.name ?? "(projeto)"}
+              </span>
+            </div>
+          )}
+
           <div>
             <Label>Duração</Label>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
