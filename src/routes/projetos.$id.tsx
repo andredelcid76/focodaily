@@ -2,7 +2,21 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
-import { useProjects, useProjectHistory, computeProjectStats, PROJECT_STATUS_LABEL, type ProjectStatus } from "@/hooks/useProjects";
+import {
+  useProjects,
+  useProjectHistory,
+  computeProjectStats,
+  PROJECT_STATUS_LABEL,
+  type ProjectStatus,
+} from "@/hooks/useProjects";
+import {
+  useProjectComments,
+  useProjectLinks,
+  useProjectMilestones,
+  detectLinkKind,
+  MILESTONE_STATUS_LABEL,
+  type MilestoneStatus,
+} from "@/hooks/useProjectExtras";
 import { useRoles } from "@/hooks/useRoles";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
@@ -12,10 +26,20 @@ import { ProjectDialog } from "@/components/ProjectDialog";
 import { ProjectStatusBadge } from "@/components/ProjectChip";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Calendar, CheckCircle2, Clock, AlertTriangle, Plus, Pencil, FileText, ListTodo, CalendarClock, History, Link2, Link2Off } from "lucide-react";
+import {
+  ArrowLeft, Calendar, CheckCircle2, Clock, AlertTriangle, Plus, Pencil, FileText, ListTodo,
+  CalendarClock, History, Link2, Link2Off, MessageSquare, Flag, ExternalLink, Trash2, RefreshCw,
+  Sparkles, Loader2,
+} from "lucide-react";
 import { todayISO, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
+import {
+  listPlannerPlans,
+  linkPlannerPlan,
+  importPlannerTasks,
+} from "@/lib/planner.functions";
 
 export const Route = createFileRoute("/projetos/$id")({
   component: () => (
@@ -32,7 +56,7 @@ function ProjectDetailPage() {
   return <ProjectDetailInner userId={user.id} projectId={id} />;
 }
 
-type Tab = "tasks" | "meetings" | "history";
+type Tab = "tasks" | "milestones" | "meetings" | "comments" | "history";
 
 function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: string }) {
   const navigate = useNavigate();
@@ -41,6 +65,9 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
   const tasksApi = useTasks(userId);
   const meetingsApi = useMeetings(userId);
   const history = useProjectHistory(projectId);
+  const comments = useProjectComments(projectId, userId);
+  const linksApi = useProjectLinks(projectId, userId);
+  const milestonesApi = useProjectMilestones(projectId, userId);
   const today = todayISO();
 
   const project = projectsApi.projectById(projectId);
@@ -52,9 +79,7 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
   const [contextSaving, setContextSaving] = useState(false);
 
   useEffect(() => {
-    if (project && contextDraft === null) {
-      setContextDraft(project.description ?? "");
-    }
+    if (project && contextDraft === null) setContextDraft(project.description ?? "");
   }, [project, contextDraft]);
 
   const projectTasks = useMemo(
@@ -67,17 +92,10 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
   );
 
   const role = roles.find((r) => r.id === project?.role_id) ?? null;
-  const stats = project
-    ? computeProjectStats(project, projectTasks, today)
-    : null;
+  const stats = project ? computeProjectStats(project, projectTasks, today) : null;
 
-  // Group tasks
   const grouped = useMemo(() => {
-    const overdue: Task[] = [];
-    const todayList: Task[] = [];
-    const upcoming: Task[] = [];
-    const later: Task[] = [];
-    const done: Task[] = [];
+    const overdue: Task[] = [], todayList: Task[] = [], upcoming: Task[] = [], later: Task[] = [], done: Task[] = [];
     const sevenDays = addDays(today, 7);
     for (const t of projectTasks) {
       if (t.completed) { done.push(t); continue; }
@@ -120,11 +138,8 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
     try {
       await projectsApi.updateProject(project.id, { description: contextDraft || null });
       toast.success("Contexto salvo");
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao salvar");
-    } finally {
-      setContextSaving(false);
-    }
+    } catch (e: any) { toast.error(e.message ?? "Erro ao salvar"); }
+    finally { setContextSaving(false); }
   };
 
   const changeStatus = async (s: ProjectStatus) => {
@@ -132,14 +147,8 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
     toast.success("Status atualizado");
   };
 
-  const addSubtask = () => {
-    setEditingTask(null);
-    setTaskDialogOpen(true);
-  };
-  const openEditTask = (t: Task) => {
-    setEditingTask(t);
-    setTaskDialogOpen(true);
-  };
+  const addSubtask = () => { setEditingTask(null); setTaskDialogOpen(true); };
+  const openEditTask = (t: Task) => { setEditingTask(t); setTaskDialogOpen(true); };
 
   const linkMeeting = async (meetingId: string) => {
     await meetingsApi.updateMeeting(meetingId, { project_id: project.id } as any);
@@ -213,21 +222,16 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
           </Button>
         </div>
 
-        {/* Progress */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Progresso</span>
             <span className="tabular-nums font-medium">{pct}% · {stats?.done}/{stats?.total}</span>
           </div>
           <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${pct}%`, backgroundColor: project.color }}
-            />
+            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: project.color }} />
           </div>
         </div>
 
-        {/* KPIs */}
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Kpi icon={<ListTodo className="h-3.5 w-3.5" />} label="Abertas" value={String(stats?.open ?? 0)} />
           <Kpi icon={<Clock className="h-3.5 w-3.5" />} label="Restante" value={formatMinutes(stats?.estimatedMinutes ?? 0)} />
@@ -247,16 +251,21 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
         )}
       </div>
 
-      {/* Two columns */}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main */}
         <div className="space-y-4">
-          <div className="flex items-center gap-1 border-b border-border/60">
+          <div className="flex items-center gap-1 border-b border-border/60 overflow-x-auto">
             <TabBtn active={tab === "tasks"} onClick={() => setTab("tasks")} icon={<ListTodo className="h-3.5 w-3.5" />}>
               Subtarefas ({projectTasks.length})
             </TabBtn>
+            <TabBtn active={tab === "milestones"} onClick={() => setTab("milestones")} icon={<Flag className="h-3.5 w-3.5" />}>
+              Marcos ({milestonesApi.milestones.length})
+            </TabBtn>
             <TabBtn active={tab === "meetings"} onClick={() => setTab("meetings")} icon={<CalendarClock className="h-3.5 w-3.5" />}>
               Reuniões ({projectMeetings.length})
+            </TabBtn>
+            <TabBtn active={tab === "comments"} onClick={() => setTab("comments")} icon={<MessageSquare className="h-3.5 w-3.5" />}>
+              Comentários ({comments.comments.length})
             </TabBtn>
             <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
               Atividade
@@ -284,49 +293,41 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
             </div>
           )}
 
+          {tab === "milestones" && (
+            <MilestonesPanel api={milestonesApi} today={today} color={project.color} />
+          )}
+
           {tab === "meetings" && (
             <div className="space-y-3">
               {projectMeetings.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma reunião vinculada.</p>
               ) : (
                 <ul className="space-y-2">
-                  {projectMeetings
-                    .slice()
-                    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-                    .map((m) => (
-                      <li key={m.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/60 p-3">
-                        <div className="min-w-0">
-                          <div className="font-medium leading-tight truncate">{m.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(m.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} ·{" "}
-                            {formatMinutes(meetingDurationMinutes(m))}
-                          </div>
+                  {projectMeetings.slice().sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map((m) => (
+                    <li key={m.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/60 p-3">
+                      <div className="min-w-0">
+                        <div className="font-medium leading-tight truncate">{m.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(m.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · {formatMinutes(meetingDurationMinutes(m))}
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => unlinkMeeting(m.id)}>
-                          <Link2Off className="h-3.5 w-3.5 mr-1" /> Desvincular
-                        </Button>
-                      </li>
-                    ))}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => unlinkMeeting(m.id)}>
+                        <Link2Off className="h-3.5 w-3.5 mr-1" /> Desvincular
+                      </Button>
+                    </li>
+                  ))}
                 </ul>
               )}
 
               {otherMeetings.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Vincular reunião existente
-                  </h3>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vincular reunião existente</h3>
                   <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-border/60 bg-card/40 p-2">
                     {otherMeetings.slice(0, 30).map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => linkMeeting(m.id)}
-                        className="flex w-full items-center justify-between gap-2 rounded-lg p-2 text-left text-xs hover:bg-accent/40"
-                      >
+                      <button key={m.id} onClick={() => linkMeeting(m.id)} className="flex w-full items-center justify-between gap-2 rounded-lg p-2 text-left text-xs hover:bg-accent/40">
                         <span className="truncate">
                           <span className="font-medium">{m.title}</span>{" "}
-                          <span className="text-muted-foreground">
-                            · {new Date(m.starts_at).toLocaleDateString("pt-BR")}
-                          </span>
+                          <span className="text-muted-foreground">· {new Date(m.starts_at).toLocaleDateString("pt-BR")}</span>
                         </span>
                         <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       </button>
@@ -335,6 +336,10 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
                 </div>
               )}
             </div>
+          )}
+
+          {tab === "comments" && (
+            <CommentsPanel api={comments} />
           )}
 
           {tab === "history" && (
@@ -363,7 +368,7 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
           )}
         </div>
 
-        {/* Sidebar — Context */}
+        {/* Sidebar */}
         <aside className="space-y-3">
           <div className="rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm">
             <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -373,14 +378,23 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
               value={contextDraft ?? ""}
               onChange={(e) => setContextDraft(e.target.value)}
               onBlur={saveContext}
-              rows={12}
-              placeholder="Objetivos, escopo, decisões importantes, links de referência…"
+              rows={8}
+              placeholder="Objetivos, escopo, decisões importantes…"
               className="resize-none text-sm"
             />
             <p className="mt-1 text-[10px] text-muted-foreground">
               {contextSaving ? "Salvando…" : "Salvo automaticamente ao sair do campo"}
             </p>
           </div>
+
+          <LinksPanel api={linksApi} />
+
+          <PlannerPanel
+            projectId={project.id}
+            planId={(project as any).planner_plan_id ?? null}
+            syncedAt={(project as any).planner_synced_at ?? null}
+            onChanged={projectsApi.refresh}
+          />
         </aside>
       </div>
 
@@ -409,18 +423,14 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
             toast.success("Subtarefa criada");
           }
         }}
-        onDelete={
-          editingTask
-            ? async (scope?: RecurrenceScope) => {
-                if (scope && (editingTask.recurrence_parent_id || editingTask.recurrence !== "none")) {
-                  await tasksApi.deleteTaskWithScope(editingTask, scope);
-                } else {
-                  await tasksApi.deleteTask(editingTask.id);
-                }
-                toast.success("Subtarefa excluída");
-              }
-            : undefined
-        }
+        onDelete={editingTask ? async (scope?: RecurrenceScope) => {
+          if (scope && (editingTask.recurrence_parent_id || editingTask.recurrence !== "none")) {
+            await tasksApi.deleteTaskWithScope(editingTask, scope);
+          } else {
+            await tasksApi.deleteTask(editingTask.id);
+          }
+          toast.success("Subtarefa excluída");
+        } : undefined}
       />
 
       <ProjectDialog
@@ -455,33 +465,18 @@ function Kpi({ icon, label, value, danger }: { icon: React.ReactNode; label: str
 
 function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "text-primary border-b-2 border-primary -mb-px" : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
+    <button onClick={onClick} className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap ${active ? "text-primary border-b-2 border-primary -mb-px" : "text-muted-foreground hover:text-foreground"}`}>
       {icon} {children}
     </button>
   );
 }
 
 function TaskGroup({
-  title,
-  tasks,
-  tasksApi,
-  roles,
-  onEdit,
-  overdue,
-  muted,
+  title, tasks, tasksApi, roles, onEdit, overdue, muted,
 }: {
-  title: string;
-  tasks: Task[];
-  tasksApi: ReturnType<typeof useTasks>;
-  roles: ReturnType<typeof useRoles>["roles"];
-  onEdit: (t: Task) => void;
-  overdue?: boolean;
-  muted?: boolean;
+  title: string; tasks: Task[]; tasksApi: ReturnType<typeof useTasks>;
+  roles: ReturnType<typeof useRoles>["roles"]; onEdit: (t: Task) => void;
+  overdue?: boolean; muted?: boolean;
 }) {
   if (tasks.length === 0) return null;
   const rolesById = new Map(roles.map((r) => [r.id, r]));
@@ -503,5 +498,328 @@ function TaskGroup({
         ))}
       </div>
     </section>
+  );
+}
+
+// ---------------- Comments Panel ----------------
+function CommentsPanel({ api }: { api: ReturnType<typeof useProjectComments> }) {
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  const submit = async () => {
+    if (!draft.trim()) return;
+    setPosting(true);
+    try { await api.add(draft); setDraft(""); }
+    catch (e: any) { toast.error(e.message ?? "Erro ao comentar"); }
+    finally { setPosting(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-border/60 bg-card/40 p-3">
+        <Textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={3}
+          placeholder="Registrar uma decisão, dúvida ou evolução…"
+          className="resize-none text-sm border-0 bg-transparent focus-visible:ring-0 p-0"
+        />
+        <div className="mt-2 flex justify-end">
+          <Button size="sm" onClick={submit} disabled={posting || !draft.trim()}>
+            <MessageSquare className="mr-1 h-3.5 w-3.5" /> Comentar
+          </Button>
+        </div>
+      </div>
+
+      {api.comments.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-6">Nenhum comentário ainda. Use este espaço para registrar evoluções, decisões e contexto.</p>
+      ) : (
+        <ul className="space-y-2">
+          {api.comments.slice().reverse().map((c) => (
+            <li key={c.id} className="rounded-xl border border-border/60 bg-card/60 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm whitespace-pre-wrap break-words flex-1">{c.content}</p>
+                <button
+                  onClick={() => { if (window.confirm("Excluir comentário?")) api.remove(c.id); }}
+                  className="text-muted-foreground hover:text-destructive shrink-0"
+                  title="Excluir"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                {new Date(c.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                {c.edited_at && " · editado"}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ---------------- Milestones Panel ----------------
+function MilestonesPanel({
+  api, today, color,
+}: {
+  api: ReturnType<typeof useProjectMilestones>; today: string; color: string;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  const [due, setDue] = useState("");
+
+  const submit = async () => {
+    if (!title.trim()) return;
+    await api.add({ title: title.trim(), due_date: due || null, status: "pending" });
+    setTitle(""); setDue(""); setAdding(false);
+    toast.success("Marco criado");
+  };
+
+  return (
+    <div className="space-y-3">
+      {api.milestones.length === 0 && !adding && (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
+          <Flag className="mx-auto h-8 w-8 text-muted-foreground/40" />
+          <p className="mt-2 text-sm text-muted-foreground">Nenhum marco. Marcos ajudam a quebrar o projeto em entregas concretas (ex.: Kickoff, MVP, Go-live).</p>
+          <Button variant="outline" className="mt-3" onClick={() => setAdding(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar marco
+          </Button>
+        </div>
+      )}
+
+      {api.milestones.length > 0 && (
+        <ul className="space-y-2">
+          {api.milestones.map((m) => {
+            const isOverdue = m.due_date && m.due_date < today && m.status !== "done";
+            return (
+              <li key={m.id} className="rounded-xl border border-border/60 bg-card/60 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 h-8 w-8 rounded-full grid place-items-center shrink-0" style={{ backgroundColor: `${color}25`, color }}>
+                    {m.status === "done" ? <CheckCircle2 className="h-4 w-4" /> : <Flag className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className={`font-medium ${m.status === "done" ? "line-through text-muted-foreground" : ""}`}>{m.title}</h4>
+                      <Select value={m.status} onValueChange={(v) => api.update(m.id, { status: v as MilestoneStatus })}>
+                        <SelectTrigger className="h-6 w-auto gap-1 text-[10px] py-0 px-2"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(MILESTONE_STATUS_LABEL) as MilestoneStatus[]).map((s) => (
+                            <SelectItem key={s} value={s}>{MILESTONE_STATUS_LABEL[s]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {m.due_date && (
+                      <p className={`mt-1 text-xs ${isOverdue ? "text-overdue font-medium" : "text-muted-foreground"}`}>
+                        <Calendar className="inline h-3 w-3 mr-1" />
+                        <span className="capitalize">{formatHuman(m.due_date)}</span>
+                        {isOverdue && " · atrasado"}
+                      </p>
+                    )}
+                  </div>
+                  <button onClick={() => { if (window.confirm("Excluir marco?")) api.remove(m.id); }} className="text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {adding ? (
+        <div className="rounded-xl border border-border/60 bg-card/60 p-3 space-y-2">
+          <Input autoFocus placeholder="Título do marco" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setTitle(""); setDue(""); }}>Cancelar</Button>
+            <Button size="sm" onClick={submit}>Adicionar</Button>
+          </div>
+        </div>
+      ) : api.milestones.length > 0 && (
+        <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+          <Plus className="mr-1 h-3.5 w-3.5" /> Novo marco
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ---------------- Links Panel ----------------
+function LinksPanel({ api }: { api: ReturnType<typeof useProjectLinks> }) {
+  const [adding, setAdding] = useState(false);
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("");
+
+  useEffect(() => {
+    if (url && !label) {
+      const d = detectLinkKind(url);
+      setLabel(d.suggestedLabel);
+    }
+  }, [url]); // eslint-disable-line
+
+  const submit = async () => {
+    if (!url.trim()) return;
+    try { await api.add({ url: url.trim(), label: label.trim() || undefined }); setUrl(""); setLabel(""); setAdding(false); }
+    catch (e: any) { toast.error(e.message ?? "Erro"); }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/60 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Link2 className="h-3.5 w-3.5" /> Links
+        </div>
+        {!adding && (
+          <button onClick={() => setAdding(true)} className="text-xs text-primary hover:underline">+ Adicionar</button>
+        )}
+      </div>
+
+      {api.links.length === 0 && !adding && (
+        <p className="text-xs text-muted-foreground">Cole links do Loop, SharePoint, Figma, Drive…</p>
+      )}
+
+      <ul className="space-y-1.5">
+        {api.links.map((l) => (
+          <li key={l.id} className="flex items-center gap-2 group rounded-lg p-1.5 hover:bg-accent/30">
+            <a href={l.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 min-w-0 flex-1 text-sm hover:text-primary">
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{l.label}</span>
+            </a>
+            <button
+              onClick={() => api.remove(l.id)}
+              className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+              title="Remover"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {adding && (
+        <div className="mt-2 space-y-1.5">
+          <Input autoFocus placeholder="Cole o URL" value={url} onChange={(e) => setUrl(e.target.value)} className="h-8 text-xs" />
+          <Input placeholder="Rótulo (opcional)" value={label} onChange={(e) => setLabel(e.target.value)} className="h-8 text-xs" />
+          <div className="flex justify-end gap-1">
+            <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setUrl(""); setLabel(""); }} className="h-7 text-xs">Cancelar</Button>
+            <Button size="sm" onClick={submit} className="h-7 text-xs">Salvar</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------- Planner Panel ----------------
+function PlannerPanel({
+  projectId, planId, syncedAt, onChanged,
+}: {
+  projectId: string; planId: string | null; syncedAt: string | null; onChanged: () => void;
+}) {
+  const [plans, setPlans] = useState<{ id: string; title: string; groupName: string }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [needsReauth, setNeedsReauth] = useState(false);
+
+  const fetchPlans = async () => {
+    setLoading(true); setNeedsReauth(false);
+    try {
+      const res = await listPlannerPlans();
+      setPlans(res.plans);
+      setPicking(true);
+    } catch (e: any) {
+      if (String(e.message).includes("PLANNER_REAUTH_REQUIRED")) {
+        setNeedsReauth(true);
+      } else {
+        toast.error(e.message ?? "Erro ao carregar Plans");
+      }
+    } finally { setLoading(false); }
+  };
+
+  const link = async (planIdToLink: string | null) => {
+    try {
+      await linkPlannerPlan({ data: { projectId, planId: planIdToLink } });
+      toast.success(planIdToLink ? "Plano vinculado" : "Plano desvinculado");
+      setPicking(false);
+      onChanged();
+    } catch (e: any) { toast.error(e.message ?? "Erro"); }
+  };
+
+  const sync = async () => {
+    setSyncing(true);
+    try {
+      const r = await importPlannerTasks({ data: { projectId } });
+      toast.success(`Sincronizado: ${r.created} novas, ${r.updated} atualizadas`);
+      onChanged();
+    } catch (e: any) { toast.error(e.message ?? "Erro ao sincronizar"); }
+    finally { setSyncing(false); }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/60 p-4">
+      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Sparkles className="h-3.5 w-3.5" /> Microsoft Planner
+      </div>
+
+      {needsReauth ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Para acessar o Planner, é necessário reconectar a conta Microsoft com novos escopos (Tasks).
+          </p>
+          <Link to="/agenda" className="text-xs text-primary hover:underline">Ir para Agenda → Reconectar Outlook</Link>
+        </div>
+      ) : planId ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Vinculado a um Plan.
+            {syncedAt && <> Última sync: {new Date(syncedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}.</>}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <Button size="sm" onClick={sync} disabled={syncing} className="h-7 text-xs">
+              {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+              Sincronizar tarefas
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => link(null)} className="h-7 text-xs">
+              <Link2Off className="h-3 w-3 mr-1" /> Desvincular
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Importa tarefas do Plan como subtarefas. Concluir aqui não envia ao Planner ainda — em breve.
+          </p>
+        </div>
+      ) : picking && plans ? (
+        <div className="space-y-2">
+          {plans.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum Plan encontrado nos seus grupos.</p>
+          ) : (
+            <div className="max-h-48 overflow-y-auto space-y-1">
+              {plans.map((p) => (
+                <button key={p.id} onClick={() => link(p.id)} className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/60 p-2 text-left text-xs hover:bg-accent/40">
+                  <span className="truncate">
+                    <span className="font-medium">{p.title}</span>
+                    <span className="text-muted-foreground"> · {p.groupName}</span>
+                  </span>
+                  <Link2 className="h-3 w-3 shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => setPicking(false)} className="h-6 text-xs">Cancelar</Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Vincule este projeto a um Plan do Microsoft Planner para importar tarefas existentes.
+          </p>
+          <Button size="sm" variant="outline" onClick={fetchPlans} disabled={loading} className="h-7 text-xs">
+            {loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Link2 className="h-3 w-3 mr-1" />}
+            Vincular a um Plan
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
