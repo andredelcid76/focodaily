@@ -197,6 +197,26 @@ function TodayInner({ userId }: { userId: string }) {
     setBulkPickerOpen(false);
     await handleBulkMove(iso, formatHuman(iso));
   };
+  const handleBulkAssignProject = async (projectId: string | null, label: string) => {
+    const ids = Array.from(selectedIds);
+    await tasksApi.bulkAssignProject(ids, projectId);
+    toast.success(
+      projectId
+        ? `${ids.length} tarefa${ids.length === 1 ? "" : "s"} vinculada${ids.length === 1 ? "" : "s"} a ${label}`
+        : `Projeto removido de ${ids.length} tarefa${ids.length === 1 ? "" : "s"}`
+    );
+    clearSelection();
+  };
+  const handleBulkAssignRole = async (roleId: string | null, label: string) => {
+    const ids = Array.from(selectedIds);
+    await tasksApi.bulkAssignRole(ids, roleId);
+    toast.success(
+      roleId
+        ? `${ids.length} tarefa${ids.length === 1 ? "" : "s"} atribuída${ids.length === 1 ? "" : "s"} a ${label}`
+        : `Papel removido de ${ids.length} tarefa${ids.length === 1 ? "" : "s"}`
+    );
+    clearSelection();
+  };
 
   const enterSelectionMode = () => {
     setSelectedIds(new Set());
