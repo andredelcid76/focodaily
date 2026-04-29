@@ -400,6 +400,7 @@ function TodayInner({ userId }: { userId: string }) {
                   <TaskCardStatic
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                    project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                     onToggle={() => tasksApi.toggleComplete(t)}
                     onEdit={() => openEdit(t)}
                     isOverdue
@@ -503,6 +504,7 @@ function TodayInner({ userId }: { userId: string }) {
                     key={t.id}
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                    project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                     onToggle={() => tasksApi.toggleComplete(t)}
                     onEdit={() => openEdit(t)}
                     index={i + 1}
