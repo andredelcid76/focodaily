@@ -293,6 +293,39 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
             </div>
           )}
 
+          <button
+            type="button"
+            onClick={() => setNonNegotiable((v) => !v)}
+            className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+              nonNegotiable
+                ? "border-overdue/60 bg-overdue/10"
+                : "border-border/60 bg-card/40 hover:border-overdue/40"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Lock className={`h-4 w-4 ${nonNegotiable ? "text-overdue" : "text-muted-foreground"}`} />
+              <div>
+                <div className={`text-sm font-medium ${nonNegotiable ? "text-overdue" : ""}`}>
+                  Inegociável neste dia
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Não pode ser adiada sem confirmação. Ideal para prazos e contas.
+                </div>
+              </div>
+            </div>
+            <span
+              className={`inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors ${
+                nonNegotiable ? "border-overdue bg-overdue" : "border-border bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                  nonNegotiable ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+          </button>
+
           <div>
             <Label>Duração</Label>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
