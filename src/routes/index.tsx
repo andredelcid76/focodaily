@@ -190,6 +190,17 @@ function TodayInner({ userId }: { userId: string }) {
   // Bulk actions
   const handleBulkMove = async (date: string, label: string) => {
     const ids = Array.from(selectedIds);
+    if (date !== today) {
+      const lockedCount = dayTasks.filter(
+        (t) => ids.includes(t.id) && (t as any).non_negotiable && !t.completed
+      ).length;
+      if (lockedCount > 0) {
+        const ok = window.confirm(
+          `${lockedCount} tarefa${lockedCount === 1 ? "" : "s"} marcada${lockedCount === 1 ? "" : "s"} como inegociável hoje. Adiar mesmo assim?`
+        );
+        if (!ok) return;
+      }
+    }
     await tasksApi.bulkMoveToDay(ids, date);
     toast.success(`${ids.length} tarefa${ids.length === 1 ? "" : "s"} movida${ids.length === 1 ? "" : "s"} para ${label}`);
     clearSelection();
