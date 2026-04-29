@@ -6,7 +6,7 @@ import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  CalendarClock, Copy, Repeat2, ArrowRight,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -99,6 +99,10 @@ export function TaskCard({
           ? "bg-muted/30 border-border/40 opacity-70"
           : "bg-card/80"
       } ${isOverdue && !task.completed ? "border-overdue/40" : ""} ${
+        (task as any).non_negotiable && !task.completed
+          ? "border-l-4 border-l-overdue"
+          : ""
+      } ${
         isActive && !task.completed
           ? running
             ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
@@ -143,6 +147,9 @@ export function TaskCard({
       >
         <div className="flex items-center gap-1.5 flex-wrap">
           <CategoryIcon category={task.category} className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+          {(task as any).non_negotiable && !task.completed && (
+            <Lock className="h-3 w-3 text-overdue" aria-label="Inegociável hoje" />
+          )}
           <span
             className={`font-medium leading-tight ${task.completed ? "line-through" : ""} ${
               compact ? "text-xs" : "text-sm"

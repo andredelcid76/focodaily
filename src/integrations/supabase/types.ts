@@ -484,6 +484,7 @@ export type Database = {
           followup_chain_id: string | null
           followup_count: number
           id: string
+          non_negotiable: boolean
           original_date: string
           planner_etag: string | null
           planner_task_id: string | null
@@ -513,6 +514,7 @@ export type Database = {
           followup_chain_id?: string | null
           followup_count?: number
           id?: string
+          non_negotiable?: boolean
           original_date?: string
           planner_etag?: string | null
           planner_task_id?: string | null
@@ -542,6 +544,7 @@ export type Database = {
           followup_chain_id?: string | null
           followup_count?: number
           id?: string
+          non_negotiable?: boolean
           original_date?: string
           planner_etag?: string | null
           planner_task_id?: string | null

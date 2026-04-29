@@ -13,7 +13,7 @@ import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
-import { FolderKanban } from "lucide-react";
+import { FolderKanban, Lock } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -34,6 +34,7 @@ type Props = {
       recurrence: TaskRecurrence;
       role_id: string | null;
       project_id: string | null;
+      non_negotiable: boolean;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
       recurrence_week_interval: number | null;
@@ -66,6 +67,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [roleId, setRoleId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [nonNegotiable, setNonNegotiable] = useState(false);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekInterval, setWeekInterval] = useState(1);
@@ -84,6 +86,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
       setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
       setProjectId(((task as any)?.project_id ?? defaultProjectId ?? null) as string | null);
+      setNonNegotiable(!!(task as any)?.non_negotiable);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
       const t: any = task;
@@ -122,6 +125,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
           recurrence,
           role_id: roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
+          non_negotiable: nonNegotiable,
           recurrence_interval:
             recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
           recurrence_weekdays:
@@ -288,6 +292,39 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
               </span>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => setNonNegotiable((v) => !v)}
+            className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+              nonNegotiable
+                ? "border-overdue/60 bg-overdue/10"
+                : "border-border/60 bg-card/40 hover:border-overdue/40"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Lock className={`h-4 w-4 ${nonNegotiable ? "text-overdue" : "text-muted-foreground"}`} />
+              <div>
+                <div className={`text-sm font-medium ${nonNegotiable ? "text-overdue" : ""}`}>
+                  Inegociável neste dia
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Não pode ser adiada sem confirmação. Ideal para prazos e contas.
+                </div>
+              </div>
+            </div>
+            <span
+              className={`inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors ${
+                nonNegotiable ? "border-overdue bg-overdue" : "border-border bg-muted"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                  nonNegotiable ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </span>
+          </button>
 
           <div>
             <Label>Duração</Label>

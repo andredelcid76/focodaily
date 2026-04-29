@@ -1,0 +1,2 @@
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS non_negotiable boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS idx_tasks_non_negotiable ON public.tasks (user_id, scheduled_date) WHERE non_negotiable = true;
