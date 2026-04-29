@@ -165,6 +165,7 @@ function WeekInner({ userId }: { userId: string }) {
         defaultDate={defaultDate}
         task={editing}
         roles={roles}
+        projects={projects}
         onSave={handleSave}
         onDelete={editing ? async () => { await tasksApi.deleteTask(editing.id); toast.success("Tarefa excluída"); } : undefined}
       />

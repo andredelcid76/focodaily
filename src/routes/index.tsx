@@ -537,6 +537,7 @@ function TodayInner({ userId }: { userId: string }) {
         defaultDate={viewDate}
         task={editing}
         roles={roles}
+        projects={projects}
         onSave={handleSave}
         onDelete={editing ? handleDelete : undefined}
       />
