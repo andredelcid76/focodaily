@@ -40,6 +40,7 @@ import {
   X,
   Trash2,
   CalendarPlus,
+  Search,
 } from "lucide-react";
 import {
   DndContext,
@@ -81,6 +82,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [selectionActive, setSelectionActive] = useState(false);
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
+  const [searchQuery, setSearchQuery] = useState("");
   const [showCompleted, setShowCompleted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("focodaily.showCompleted") === "1";
@@ -137,13 +139,27 @@ function TodayInner({ userId }: { userId: string }) {
     dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
     (includeMeetings ? upcomingMeetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (t: Task) => {
+    if (!normalizedQuery) return true;
+    return (
+      t.title.toLowerCase().includes(normalizedQuery) ||
+      (t.description ?? "").toLowerCase().includes(normalizedQuery)
+    );
+  };
   const visibleDayTasks = useMemo(
-    () => (showCompleted ? dayTasks : dayTasks.filter((t) => !t.completed)),
-    [dayTasks, showCompleted]
+    () =>
+      dayTasks
+        .filter((t) => (showCompleted ? true : !t.completed))
+        .filter(matchesQuery),
+    [dayTasks, showCompleted, normalizedQuery]
   );
   const visibleOverdue = useMemo(
-    () => (showCompleted ? tasksApi.overdueTasks : tasksApi.overdueTasks.filter((t) => !t.completed)),
-    [tasksApi.overdueTasks, showCompleted]
+    () =>
+      tasksApi.overdueTasks
+        .filter((t) => (showCompleted ? true : !t.completed))
+        .filter(matchesQuery),
+    [tasksApi.overdueTasks, showCompleted, normalizedQuery]
   );
   
 
@@ -409,7 +425,7 @@ function TodayInner({ userId }: { userId: string }) {
       )}
 
       <section>
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Tarefas {isViewingToday ? "de hoje" : "do dia"}
           </h2>
@@ -436,8 +452,34 @@ function TodayInner({ userId }: { userId: string }) {
             )}
           </div>
         </div>
+        <div className="mb-3 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar tarefas por título ou descrição…"
+            className="pl-9 pr-9 h-9 bg-card/60"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              aria-label="Limpar busca"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         {visibleDayTasks.length === 0 ? (
-          dayTasks.length > 0 && !showCompleted ? (
+          normalizedQuery ? (
+            <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Nenhuma tarefa encontrada para "{searchQuery}".
+              </p>
+            </div>
+          ) : dayTasks.length > 0 && !showCompleted ? (
             <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
               <p className="text-sm text-muted-foreground">
                 Tudo concluído por aqui! 🎉
