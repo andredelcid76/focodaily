@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Task, TaskCategory, TaskRecurrence } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
+import type { Project } from "@/hooks/useProjects";
 import { toast } from "sonner";
 import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
+import { FolderKanban } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -19,6 +21,9 @@ type Props = {
   defaultDate: string;
   task?: Task | null;
   roles: Role[];
+  projects?: Project[];
+  defaultProjectId?: string | null;
+  lockedProjectId?: string | null;
   onSave: (
     data: {
       title: string;
@@ -28,6 +33,7 @@ type Props = {
       scheduled_date: string;
       recurrence: TaskRecurrence;
       role_id: string | null;
+      project_id: string | null;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
       recurrence_week_interval: number | null;
@@ -51,7 +57,7 @@ const WEEKDAYS = [
   { v: 0, l: "D" },
 ];
 
-export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSave, onDelete }: Props) {
+export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TaskCategory>("important");
@@ -59,6 +65,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
   const [date, setDate] = useState(defaultDate);
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [roleId, setRoleId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekInterval, setWeekInterval] = useState(1);
@@ -76,6 +83,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
       setDate(task?.scheduled_date ?? defaultDate);
       setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
+      setProjectId(((task as any)?.project_id ?? defaultProjectId ?? null) as string | null);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
       const t: any = task;
@@ -113,6 +121,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
           scheduled_date: date,
           recurrence,
           role_id: roleId,
+          project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           recurrence_interval:
             recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
           recurrence_weekdays:
@@ -244,6 +253,41 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
               )}
             </div>
           </div>
+
+          {lockedProjectId === undefined && projects.length > 0 && (
+            <div>
+              <Label>Projeto</Label>
+              <Select
+                value={projectId ?? "__none"}
+                onValueChange={(v) => setProjectId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Sem projeto</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <FolderKanban className="h-3 w-3" style={{ color: p.color }} />
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {lockedProjectId && projects.length > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <FolderKanban className="h-3.5 w-3.5" />
+              Vinculada ao projeto{" "}
+              <span className="font-medium text-foreground">
+                {projects.find((p) => p.id === lockedProjectId)?.name ?? "(projeto)"}
+              </span>
+            </div>
+          )}
 
           <div>
             <Label>Duração</Label>

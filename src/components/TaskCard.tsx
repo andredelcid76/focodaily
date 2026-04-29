@@ -14,10 +14,13 @@ import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
 import { formatTimer } from "@/hooks/useActiveTimer";
 import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
+import type { Project } from "@/hooks/useProjects";
+import { ProjectChip } from "./ProjectChip";
 
 type Props = {
   task: Task;
   role?: Role | null;
+  project?: Project | null;
   onToggle: () => void;
   onEdit: () => void;
   isOverdue?: boolean;
@@ -44,6 +47,7 @@ type Props = {
 export function TaskCard({
   task,
   role,
+  project,
   onToggle,
   onEdit,
   isOverdue,
@@ -147,6 +151,7 @@ export function TaskCard({
             {task.title}
           </span>
           {role && <RoleBadge role={role} size="xs" />}
+          {project && <ProjectChip project={project} size="xs" />}
           {followupNumber > 1 && (
             <span
               className="inline-flex items-center gap-1 rounded-md border border-circumstantial/40 bg-circumstantial/10 px-1.5 py-0.5 text-[10px] font-semibold text-circumstantial"
