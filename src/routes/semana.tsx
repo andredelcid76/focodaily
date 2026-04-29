@@ -9,7 +9,9 @@ import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
 import {
   DndContext,
   PointerSensor,
@@ -48,20 +50,32 @@ function WeekInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [defaultDate, setDefaultDate] = useState(todayISO());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (t: Task) => {
+    if (!normalizedQuery) return true;
+    return (
+      t.title.toLowerCase().includes(normalizedQuery) ||
+      (t.description ?? "").toLowerCase().includes(normalizedQuery)
+    );
+  };
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>();
     days.forEach((d) => map.set(d, []));
-    for (const t of tasksApi.tasks) {
+    const filteredTasks = applyTaskFilters(tasksApi.tasks.filter(matchesQuery), filters);
+    for (const t of filteredTasks) {
       if (map.has(t.scheduled_date)) {
         map.get(t.scheduled_date)!.push(t);
       }
     }
     for (const arr of map.values()) arr.sort((a, b) => a.position - b.position);
     return map;
-  }, [tasksApi.tasks, days]);
+  }, [tasksApi.tasks, days, filters, normalizedQuery]);
 
   const handleDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
