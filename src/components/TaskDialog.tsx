@@ -86,6 +86,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
       setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
       setProjectId(((task as any)?.project_id ?? defaultProjectId ?? null) as string | null);
+      setNonNegotiable(!!(task as any)?.non_negotiable);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
       const t: any = task;
