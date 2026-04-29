@@ -151,6 +151,7 @@ export function TaskCard({
             {task.title}
           </span>
           {role && <RoleBadge role={role} size="xs" />}
+          {project && <ProjectChip project={project} size="xs" />}
           {followupNumber > 1 && (
             <span
               className="inline-flex items-center gap-1 rounded-md border border-circumstantial/40 bg-circumstantial/10 px-1.5 py-0.5 text-[10px] font-semibold text-circumstantial"
