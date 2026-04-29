@@ -710,9 +710,9 @@ function LinksPanel({ api }: { api: ReturnType<typeof useProjectLinks> }) {
 
 // ---------------- Planner Panel ----------------
 function PlannerPanel({
-  projectId, planId, syncedAt, onChanged,
+  projectId, planId, syncedAt, accessToken, onChanged,
 }: {
-  projectId: string; planId: string | null; syncedAt: string | null; onChanged: () => void;
+  projectId: string; planId: string | null; syncedAt: string | null; accessToken: string; onChanged: () => void;
 }) {
   const [plans, setPlans] = useState<{ id: string; title: string; groupName: string }[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -720,10 +720,25 @@ function PlannerPanel({
   const [picking, setPicking] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
 
+  const plannerRequest = async <T,>(body: Record<string, unknown>) => {
+    const response = await fetch("/api/public/planner", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error((payload as any).error ?? "Erro no Planner");
+    return payload as T;
+  };
+
   const fetchPlans = async () => {
     setLoading(true); setNeedsReauth(false);
     try {
-      const res = await listPlannerPlans();
+      const res = await plannerRequest<{ plans: { id: string; title: string; groupName: string }[] }>({ action: "listPlans" });
       setPlans(res.plans);
       setPicking(true);
     } catch (e: any) {
@@ -737,7 +752,7 @@ function PlannerPanel({
 
   const link = async (planIdToLink: string | null) => {
     try {
-      await linkPlannerPlan({ data: { projectId, planId: planIdToLink } });
+      await plannerRequest({ action: "linkPlan", projectId, planId: planIdToLink });
       toast.success(planIdToLink ? "Plano vinculado" : "Plano desvinculado");
       setPicking(false);
       onChanged();
@@ -747,7 +762,7 @@ function PlannerPanel({
   const sync = async () => {
     setSyncing(true);
     try {
-      const r = await importPlannerTasks({ data: { projectId } });
+      const r = await plannerRequest<{ created: number; updated: number }>({ action: "importTasks", projectId });
       toast.success(`Sincronizado: ${r.created} novas, ${r.updated} atualizadas`);
       onChanged();
     } catch (e: any) { toast.error(e.message ?? "Erro ao sincronizar"); }
