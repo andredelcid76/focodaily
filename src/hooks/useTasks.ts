@@ -489,6 +489,22 @@ export function useTasks(userId: string | undefined) {
     await supabase.from("tasks").delete().in("id", taskIds);
   };
 
+  const bulkAssignProject = async (taskIds: string[], projectId: string | null) => {
+    if (taskIds.length === 0) return;
+    setTasks((prev) =>
+      prev.map((t) => (taskIds.includes(t.id) ? { ...t, project_id: projectId } : t))
+    );
+    await supabase.from("tasks").update({ project_id: projectId }).in("id", taskIds);
+  };
+
+  const bulkAssignRole = async (taskIds: string[], roleId: string | null) => {
+    if (taskIds.length === 0) return;
+    setTasks((prev) =>
+      prev.map((t) => (taskIds.includes(t.id) ? { ...t, role_id: roleId } : t))
+    );
+    await supabase.from("tasks").update({ role_id: roleId }).in("id", taskIds);
+  };
+
   const addTimeSpent = async (id: string, secondsToAdd: number) => {
     if (secondsToAdd <= 0) return;
     const current = tasks.find((t) => t.id === id);
