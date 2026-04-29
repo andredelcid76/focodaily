@@ -57,7 +57,7 @@ const WEEKDAYS = [
   { v: 0, l: "D" },
 ];
 
-export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSave, onDelete }: Props) {
+export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TaskCategory>("important");
@@ -65,6 +65,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
   const [date, setDate] = useState(defaultDate);
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [roleId, setRoleId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekInterval, setWeekInterval] = useState(1);
@@ -82,6 +83,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, onSav
       setDate(task?.scheduled_date ?? defaultDate);
       setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
+      setProjectId(((task as any)?.project_id ?? defaultProjectId ?? null) as string | null);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
       const t: any = task;
