@@ -42,6 +42,8 @@ import {
   X,
   Trash2,
   CalendarPlus,
+  Folder,
+  UserSquare2,
   Search,
 } from "lucide-react";
 import {
