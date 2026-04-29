@@ -18,6 +18,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
+import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 
 const SemanaRoute = SemanaRouteImport.update({
@@ -65,6 +66,11 @@ const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
   path: '/api/public/outlook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
+  id: '/api/public/maya',
+  path: '/api/public/maya',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/callback',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/projetos': typeof ProjetosRouteWithChildren
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/projetos': typeof ProjetosRouteWithChildren
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/projetos': typeof ProjetosRouteWithChildren
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
+  '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/semana'
     | '/projetos/$id'
+    | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/semana'
     | '/projetos/$id'
+    | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/outlook/callback'
   id:
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/semana'
     | '/projetos/$id'
+    | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   PapeisRoute: typeof PapeisRoute
   ProjetosRoute: typeof ProjetosRouteWithChildren
   SemanaRoute: typeof SemanaRoute
+  ApiPublicMayaRoute: typeof ApiPublicMayaRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
 }
 
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOutlookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/maya': {
+      id: '/api/public/maya'
+      path: '/api/public/maya'
+      fullPath: '/api/public/maya'
+      preLoaderRoute: typeof ApiPublicMayaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/callback'
@@ -265,17 +285,9 @@ const rootRouteChildren: RootRouteChildren = {
   PapeisRoute: PapeisRoute,
   ProjetosRoute: ProjetosRouteWithChildren,
   SemanaRoute: SemanaRoute,
+  ApiPublicMayaRoute: ApiPublicMayaRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
