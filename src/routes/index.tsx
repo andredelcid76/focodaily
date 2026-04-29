@@ -44,6 +44,7 @@ import {
   CalendarPlus,
   Folder,
   UserSquare2,
+  Lock,
   Search,
 } from "lucide-react";
 import {
