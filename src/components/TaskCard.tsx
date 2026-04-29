@@ -99,6 +99,10 @@ export function TaskCard({
           ? "bg-muted/30 border-border/40 opacity-70"
           : "bg-card/80"
       } ${isOverdue && !task.completed ? "border-overdue/40" : ""} ${
+        (task as any).non_negotiable && !task.completed
+          ? "border-l-4 border-l-overdue"
+          : ""
+      } ${
         isActive && !task.completed
           ? running
             ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
