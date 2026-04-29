@@ -35,11 +35,6 @@ import {
 } from "lucide-react";
 import { todayISO, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
-import {
-  listPlannerPlans,
-  linkPlannerPlan,
-  importPlannerTasks,
-} from "@/lib/planner.functions";
 
 export const Route = createFileRoute("/projetos/$id")({
   component: () => (
@@ -50,15 +45,15 @@ export const Route = createFileRoute("/projetos/$id")({
 });
 
 function ProjectDetailPage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { id } = Route.useParams();
-  if (!user) return null;
-  return <ProjectDetailInner userId={user.id} projectId={id} />;
+  if (!user || !session) return null;
+  return <ProjectDetailInner userId={user.id} projectId={id} accessToken={session.access_token} />;
 }
 
 type Tab = "tasks" | "milestones" | "meetings" | "comments" | "history";
 
-function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: string }) {
+function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string; projectId: string; accessToken: string }) {
   const navigate = useNavigate();
   const projectsApi = useProjects(userId);
   const { roles } = useRoles(userId);
@@ -393,6 +388,7 @@ function ProjectDetailInner({ userId, projectId }: { userId: string; projectId: 
             projectId={project.id}
             planId={(project as any).planner_plan_id ?? null}
             syncedAt={(project as any).planner_synced_at ?? null}
+            accessToken={accessToken}
             onChanged={projectsApi.refresh}
           />
         </aside>
