@@ -139,13 +139,27 @@ function TodayInner({ userId }: { userId: string }) {
     dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
     (includeMeetings ? upcomingMeetingsMinutes : 0);
   const completedCount = dayTasks.filter((t) => t.completed).length;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (t: Task) => {
+    if (!normalizedQuery) return true;
+    return (
+      t.title.toLowerCase().includes(normalizedQuery) ||
+      (t.description ?? "").toLowerCase().includes(normalizedQuery)
+    );
+  };
   const visibleDayTasks = useMemo(
-    () => (showCompleted ? dayTasks : dayTasks.filter((t) => !t.completed)),
-    [dayTasks, showCompleted]
+    () =>
+      dayTasks
+        .filter((t) => (showCompleted ? true : !t.completed))
+        .filter(matchesQuery),
+    [dayTasks, showCompleted, normalizedQuery]
   );
   const visibleOverdue = useMemo(
-    () => (showCompleted ? tasksApi.overdueTasks : tasksApi.overdueTasks.filter((t) => !t.completed)),
-    [tasksApi.overdueTasks, showCompleted]
+    () =>
+      tasksApi.overdueTasks
+        .filter((t) => (showCompleted ? true : !t.completed))
+        .filter(matchesQuery),
+    [tasksApi.overdueTasks, showCompleted, normalizedQuery]
   );
   
 
