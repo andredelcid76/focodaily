@@ -590,6 +590,78 @@ function TodayInner({ userId }: { userId: string }) {
               <CalendarPlus className="h-3.5 w-3.5 sm:mr-1" />
               <span className="hidden sm:inline">Outra data…</span>
             </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Folder className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Projeto</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="center" className="w-60 p-1">
+                <div className="max-h-64 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAssignProject(null, "")}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="h-3.5 w-3.5" /> Sem projeto
+                  </button>
+                  {projects.length === 0 && (
+                    <div className="px-2 py-2 text-xs text-muted-foreground">Nenhum projeto criado.</div>
+                  )}
+                  {projects.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleBulkAssignProject(p.id, p.name)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    >
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: p.color || "#8b5cf6" }}
+                      />
+                      <span className="truncate">{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <UserSquare2 className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Papel</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="center" className="w-60 p-1">
+                <div className="max-h-64 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleBulkAssignRole(null, "")}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="h-3.5 w-3.5" /> Sem papel
+                  </button>
+                  {roles.length === 0 && (
+                    <div className="px-2 py-2 text-xs text-muted-foreground">Nenhum papel criado.</div>
+                  )}
+                  {roles.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => handleBulkAssignRole(r.id, r.name)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    >
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: r.color || "#8b5cf6" }}
+                      />
+                      <span className="truncate">{r.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button
               size="sm"
               variant="outline"
