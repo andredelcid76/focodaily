@@ -21,6 +21,9 @@ type Props = {
   defaultDate: string;
   task?: Task | null;
   roles: Role[];
+  projects?: Project[];
+  defaultProjectId?: string | null;
+  lockedProjectId?: string | null;
   onSave: (
     data: {
       title: string;
@@ -30,6 +33,7 @@ type Props = {
       scheduled_date: string;
       recurrence: TaskRecurrence;
       role_id: string | null;
+      project_id: string | null;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
       recurrence_week_interval: number | null;
