@@ -391,18 +391,23 @@ async function handleChat({
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Build OpenAI-compatible message list (collapse tool messages into text for simplicity)
-  const messages: Array<{ role: string; content: string }> = [
+  // Build OpenAI-compatible message list. Past tool runs are collapsed to system notes
+  // (we don't have stored tool_call_ids), but the CURRENT turn uses proper tool_calls/tool roles.
+  type ChatMsg =
+    | { role: "system" | "user" | "assistant"; content: string }
+    | { role: "assistant"; content: string | null; tool_calls: unknown[] }
+    | { role: "tool"; content: string; tool_call_id: string };
+  const messages: ChatMsg[] = [
     { role: "system", content: systemPrompt(today) },
-    ...(history ?? []).map((m) => {
+    ...((history ?? []).map((m) => {
       if (m.role === "tool") {
         return {
           role: "system" as const,
-          content: `[Resultado de ${m.tool_name}]: ${typeof m.tool_data === "string" ? m.tool_data : JSON.stringify(m.tool_data).slice(0, 4000)}`,
+          content: `[Resultado anterior de ${m.tool_name}]: ${typeof m.tool_data === "string" ? m.tool_data : JSON.stringify(m.tool_data).slice(0, 2000)}`,
         };
       }
-      return { role: m.role, content: m.content };
-    }),
+      return { role: m.role as "user" | "assistant", content: m.content };
+    })),
   ];
 
   // 4. Loop de tool-calling (máx 5 voltas)
@@ -447,10 +452,15 @@ async function handleChat({
     }
 
     // Echo assistant tool-call message into history for the next loop turn
-    messages.push({ role: "assistant", content: msg.content ?? "" });
+    messages.push({
+      role: "assistant",
+      content: msg.content ?? null,
+      tool_calls: toolCalls,
+    });
 
     for (const call of toolCalls) {
       const fnName = call.function?.name;
+      const callId = call.id ?? `call_${Math.random().toString(36).slice(2, 10)}`;
       let parsedArgs: Record<string, unknown> = {};
       try { parsedArgs = JSON.parse(call.function?.arguments ?? "{}"); } catch { /* ignore */ }
       let result: unknown;
@@ -470,8 +480,9 @@ async function handleChat({
         tool_data: result as never,
       });
       messages.push({
-        role: "system",
-        content: `[Resultado de ${fnName}]: ${JSON.stringify(result).slice(0, 6000)}`,
+        role: "tool",
+        tool_call_id: callId,
+        content: JSON.stringify(result).slice(0, 8000),
       });
     }
   }
