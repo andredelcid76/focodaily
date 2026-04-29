@@ -243,6 +243,114 @@ export type Database = {
         }
         Relationships: []
       }
+      project_comments: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_links: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          position: number
+          project_id: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label: string
+          position?: number
+          project_id: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          position?: number
+          project_id?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          position: number
+          project_id: string
+          status: Database["public"]["Enums"]["milestone_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          position?: number
+          project_id: string
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          position?: number
+          project_id?: string
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       project_status_history: {
         Row: {
           created_at: string
@@ -290,6 +398,8 @@ export type Database = {
           icon: string
           id: string
           name: string
+          planner_plan_id: string | null
+          planner_synced_at: string | null
           position: number
           role_id: string | null
           starts_on: string | null
@@ -305,6 +415,8 @@ export type Database = {
           icon?: string
           id?: string
           name: string
+          planner_plan_id?: string | null
+          planner_synced_at?: string | null
           position?: number
           role_id?: string | null
           starts_on?: string | null
@@ -320,6 +432,8 @@ export type Database = {
           icon?: string
           id?: string
           name?: string
+          planner_plan_id?: string | null
+          planner_synced_at?: string | null
           position?: number
           role_id?: string | null
           starts_on?: string | null
@@ -371,6 +485,8 @@ export type Database = {
           followup_count: number
           id: string
           original_date: string
+          planner_etag: string | null
+          planner_task_id: string | null
           position: number
           project_id: string | null
           recurrence: Database["public"]["Enums"]["task_recurrence"]
@@ -398,6 +514,8 @@ export type Database = {
           followup_count?: number
           id?: string
           original_date?: string
+          planner_etag?: string | null
+          planner_task_id?: string | null
           position?: number
           project_id?: string | null
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
@@ -425,6 +543,8 @@ export type Database = {
           followup_count?: number
           id?: string
           original_date?: string
+          planner_etag?: string | null
+          planner_task_id?: string | null
           position?: number
           project_id?: string | null
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
@@ -511,6 +631,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      milestone_status: "pending" | "in_progress" | "done"
       project_status: "draft" | "active" | "paused" | "done" | "archived"
       task_category: "urgent" | "important" | "circumstantial"
       task_recurrence:
@@ -649,6 +770,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      milestone_status: ["pending", "in_progress", "done"],
       project_status: ["draft", "active", "paused", "done", "archived"],
       task_category: ["urgent", "important", "circumstantial"],
       task_recurrence: [
