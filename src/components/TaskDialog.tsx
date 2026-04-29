@@ -13,7 +13,7 @@ import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
-import { FolderKanban } from "lucide-react";
+import { FolderKanban, Lock } from "lucide-react";
 
 type Props = {
   open: boolean;
