@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
+import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
 import { Switch } from "@/components/ui/switch";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -89,6 +90,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
   const [showCompleted, setShowCompleted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("focodaily.showCompleted") === "1";
@@ -156,10 +158,13 @@ function TodayInner({ userId }: { userId: string }) {
   };
   const visibleDayTasks = useMemo(
     () =>
-      dayTasks
-        .filter((t) => (showCompleted ? true : !t.completed))
-        .filter(matchesQuery),
-    [dayTasks, showCompleted, normalizedQuery]
+      applyTaskFilters(
+        dayTasks
+          .filter((t) => (showCompleted ? true : !t.completed))
+          .filter(matchesQuery),
+        filters
+      ),
+    [dayTasks, showCompleted, normalizedQuery, filters]
   );
   const nonNegotiablePending = useMemo(
     () => visibleDayTasks.filter((t) => (t as any).non_negotiable && !t.completed),
@@ -170,10 +175,13 @@ function TodayInner({ userId }: { userId: string }) {
     isViewingToday && isLateAfternoon && nonNegotiablePending.length > 0;
   const visibleOverdue = useMemo(
     () =>
-      tasksApi.overdueTasks
-        .filter((t) => (showCompleted ? true : !t.completed))
-        .filter(matchesQuery),
-    [tasksApi.overdueTasks, showCompleted, normalizedQuery]
+      applyTaskFilters(
+        tasksApi.overdueTasks
+          .filter((t) => (showCompleted ? true : !t.completed))
+          .filter(matchesQuery),
+        filters
+      ),
+    [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters]
   );
   
 
@@ -552,25 +560,33 @@ function TodayInner({ userId }: { userId: string }) {
             )}
           </div>
         </div>
-        <div className="mb-3 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar tarefas por título ou descrição…"
-            className="pl-9 pr-9 h-9 bg-card/60"
+        <div className="mb-3 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar tarefas por título ou descrição…"
+              className="pl-9 pr-9 h-9 bg-card/60"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                aria-label="Limpar busca"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <TaskFiltersBar
+            filters={filters}
+            onChange={setFilters}
+            roles={roles}
+            projects={projects}
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
-              aria-label="Limpar busca"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
         {visibleDayTasks.length === 0 ? (
           normalizedQuery ? (

@@ -9,7 +9,9 @@ import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
 import {
   DndContext,
   PointerSensor,
@@ -48,20 +50,32 @@ function WeekInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [defaultDate, setDefaultDate] = useState(todayISO());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (t: Task) => {
+    if (!normalizedQuery) return true;
+    return (
+      t.title.toLowerCase().includes(normalizedQuery) ||
+      (t.description ?? "").toLowerCase().includes(normalizedQuery)
+    );
+  };
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>();
     days.forEach((d) => map.set(d, []));
-    for (const t of tasksApi.tasks) {
+    const filteredTasks = applyTaskFilters(tasksApi.tasks.filter(matchesQuery), filters);
+    for (const t of filteredTasks) {
       if (map.has(t.scheduled_date)) {
         map.get(t.scheduled_date)!.push(t);
       }
     }
     for (const arr of map.values()) arr.sort((a, b) => a.position - b.position);
     return map;
-  }, [tasksApi.tasks, days]);
+  }, [tasksApi.tasks, days, filters, normalizedQuery]);
 
   const handleDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
@@ -126,6 +140,30 @@ function WeekInner({ userId }: { userId: string }) {
           <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(todayISO()))}>Esta semana</Button>
           <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight className="h-4 w-4" /></Button>
         </div>
+      </div>
+
+      <div className="flex gap-2">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar tarefas…"
+            className="pl-9 pr-9 h-9 bg-card/60"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              aria-label="Limpar busca"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <TaskFiltersBar filters={filters} onChange={setFilters} roles={roles} projects={projects} />
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
