@@ -4,6 +4,8 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskStatus } from "@/hooks/useTasks";
 import { useRoles } from "@/hooks/useRoles";
+import { useProjects, type Project } from "@/hooks/useProjects";
+import { ProjectChip } from "@/components/ProjectChip";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { RoleBadge } from "@/components/RoleBadge";
 import { todayISO, addDays, formatHuman, formatMinutes } from "@/lib/date";
@@ -45,7 +47,9 @@ function KanbanInner({ userId }: { userId: string }) {
   const [viewDate, setViewDate] = useState(today);
   const { tasksByDay, setStatus } = useTasks(userId);
   const { roles } = useRoles(userId);
+  const { projects } = useProjects(userId);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
+  const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const dayTasks = tasksByDay(viewDate);
@@ -112,6 +116,7 @@ function KanbanInner({ userId }: { userId: string }) {
               accent={col.accent}
               tasks={grouped[col.id]}
               rolesById={rolesById}
+              projectsById={projectsById}
             />
           ))}
         </div>
@@ -126,12 +131,14 @@ function Column({
   accent,
   tasks,
   rolesById,
+  projectsById,
 }: {
   id: TaskStatus;
   label: string;
   accent: string;
   tasks: Task[];
   rolesById: Map<string, ReturnType<typeof useRoles>["roles"][number]>;
+  projectsById: Map<string, Project>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
@@ -152,14 +159,14 @@ function Column({
           <p className="text-center text-xs text-muted-foreground/60 py-6">Arraste tarefas aqui</p>
         )}
         {tasks.map((t) => (
-          <KanbanCard key={t.id} task={t} role={t.role_id ? rolesById.get(t.role_id) ?? null : null} />
+          <KanbanCard key={t.id} task={t} role={t.role_id ? rolesById.get(t.role_id) ?? null : null} project={t.project_id ? projectsById.get(t.project_id) ?? null : null} />
         ))}
       </div>
     </div>
   );
 }
 
-function KanbanCard({ task, role }: { task: Task; role: ReturnType<typeof useRoles>["roles"][number] | null }) {
+function KanbanCard({ task, role, project }: { task: Task; role: ReturnType<typeof useRoles>["roles"][number] | null; project: Project | null }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -181,6 +188,7 @@ function KanbanCard({ task, role }: { task: Task; role: ReturnType<typeof useRol
           {task.title}
         </span>
         {role && <RoleBadge role={role} size="xs" />}
+        {project && <ProjectChip project={project} size="xs" />}
       </div>
       <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
