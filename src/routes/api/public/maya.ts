@@ -391,18 +391,23 @@ async function handleChat({
 
   const today = new Date().toISOString().slice(0, 10);
 
-  // Build OpenAI-compatible message list (collapse tool messages into text for simplicity)
-  const messages: Array<{ role: string; content: string }> = [
+  // Build OpenAI-compatible message list. Past tool runs are collapsed to system notes
+  // (we don't have stored tool_call_ids), but the CURRENT turn uses proper tool_calls/tool roles.
+  type ChatMsg =
+    | { role: "system" | "user" | "assistant"; content: string }
+    | { role: "assistant"; content: string | null; tool_calls: unknown[] }
+    | { role: "tool"; content: string; tool_call_id: string };
+  const messages: ChatMsg[] = [
     { role: "system", content: systemPrompt(today) },
-    ...(history ?? []).map((m) => {
+    ...((history ?? []).map((m) => {
       if (m.role === "tool") {
         return {
           role: "system" as const,
-          content: `[Resultado de ${m.tool_name}]: ${typeof m.tool_data === "string" ? m.tool_data : JSON.stringify(m.tool_data).slice(0, 4000)}`,
+          content: `[Resultado anterior de ${m.tool_name}]: ${typeof m.tool_data === "string" ? m.tool_data : JSON.stringify(m.tool_data).slice(0, 2000)}`,
         };
       }
-      return { role: m.role, content: m.content };
-    }),
+      return { role: m.role as "user" | "assistant", content: m.content };
+    })),
   ];
 
   // 4. Loop de tool-calling (máx 5 voltas)
