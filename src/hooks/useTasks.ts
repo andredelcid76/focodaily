@@ -622,6 +622,8 @@ export function useTasks(userId: string | undefined) {
     moveTaskToDay,
     bulkMoveToDay,
     bulkDelete,
+    bulkAssignProject,
+    bulkAssignRole,
     addTimeSpent,
     duplicateTask,
     createFollowUp,
