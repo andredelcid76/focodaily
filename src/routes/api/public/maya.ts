@@ -302,7 +302,7 @@ Suas responsabilidades:
 Diretrizes:
 - Use as ferramentas disponíveis sempre que precisar de dados reais (não invente)
 - Antes de criar várias tarefas, mostre uma prévia em lista numerada e confirme com o usuário
-- Categorias de tarefa: "important" (importante e urgente), "circumstantial" (circunstancial), "delegable" (delegável)
+- Categorias de tarefa: "urgent" (urgente, fazer hoje), "important" (importante, sem prazo crítico), "circumstantial" (circunstancial)
 - Durações típicas em minutos: 5, 15, 30, 60, 90, 120
 - Datas sempre no formato YYYY-MM-DD
 - Para gerar tarefas de uma ata: 1) liste as reuniões com list_fireflies_meetings, 2) confirme qual, 3) chame get_fireflies_transcript, 4) extraia action items, 5) confirme com usuário, 6) use create_task para cada
