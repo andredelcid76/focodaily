@@ -433,6 +433,53 @@ function TodayInner({ userId }: { userId: string }) {
         onOpenFull={openNew}
       />
 
+      {showNonNegotiableBanner && (
+        <div className="rounded-2xl border border-overdue/50 bg-overdue/10 p-4 flex items-start gap-3">
+          <Lock className="h-5 w-5 text-overdue mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <div className="font-display text-sm font-semibold text-overdue">
+              {nonNegotiablePending.length} tarefa{nonNegotiablePending.length === 1 ? "" : "s"} inegociável{nonNegotiablePending.length === 1 ? "" : "is"} pendente{nonNegotiablePending.length === 1 ? "" : "s"}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              O dia está acabando. Estas tarefas não podem ser adiadas sem confirmação.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isViewingToday && nonNegotiablePending.length > 0 && (
+        <section className="rounded-2xl border border-overdue/30 bg-overdue/5 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Lock className="h-4 w-4 text-overdue" />
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-overdue">
+              Hoje sem falta ({nonNegotiablePending.length})
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {nonNegotiablePending.map((t) => (
+              <TaskCardStatic
+                key={`nn-${t.id}`}
+                task={t}
+                role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
+                onToggle={() => tasksApi.toggleComplete(t)}
+                onEdit={() => openEdit(t)}
+                isActive={timer.activeTaskId === t.id}
+                isPaused={timer.activeTaskId === t.id && timer.isPaused}
+                liveSeconds={timer.elapsedSeconds}
+                onStart={() => handleStartTimer(t)}
+                onPause={handlePauseTimer}
+                onResume={handleResumeTimer}
+                onStop={handleStopTimer}
+                onPostpone={(date) => handlePostpone(t, date)}
+                onDuplicate={(date) => handleDuplicate(t, date)}
+                onFollowUp={(date) => handleFollowUp(t, date)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {isViewingToday && visibleOverdue.length > 0 && (
         <section className="rounded-2xl border border-overdue/30 bg-overdue/5 p-4">
           <div className="mb-3 flex items-center gap-2">
