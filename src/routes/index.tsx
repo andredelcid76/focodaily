@@ -82,6 +82,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [selectionActive, setSelectionActive] = useState(false);
   const [bulkPickerOpen, setBulkPickerOpen] = useState(false);
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
+  const [searchQuery, setSearchQuery] = useState("");
   const [showCompleted, setShowCompleted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("focodaily.showCompleted") === "1";
