@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Task, TaskCategory, TaskRecurrence } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
+import type { Project } from "@/hooks/useProjects";
 import { toast } from "sonner";
 import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
+import { FolderKanban } from "lucide-react";
 
 type Props = {
   open: boolean;
