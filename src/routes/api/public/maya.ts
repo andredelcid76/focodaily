@@ -452,10 +452,15 @@ async function handleChat({
     }
 
     // Echo assistant tool-call message into history for the next loop turn
-    messages.push({ role: "assistant", content: msg.content ?? "" });
+    messages.push({
+      role: "assistant",
+      content: msg.content ?? null,
+      tool_calls: toolCalls,
+    });
 
     for (const call of toolCalls) {
       const fnName = call.function?.name;
+      const callId = call.id ?? `call_${Math.random().toString(36).slice(2, 10)}`;
       let parsedArgs: Record<string, unknown> = {};
       try { parsedArgs = JSON.parse(call.function?.arguments ?? "{}"); } catch { /* ignore */ }
       let result: unknown;
@@ -475,8 +480,9 @@ async function handleChat({
         tool_data: result as never,
       });
       messages.push({
-        role: "system",
-        content: `[Resultado de ${fnName}]: ${JSON.stringify(result).slice(0, 6000)}`,
+        role: "tool",
+        tool_call_id: callId,
+        content: JSON.stringify(result).slice(0, 8000),
       });
     }
   }
