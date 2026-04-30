@@ -860,7 +860,6 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 // MeetingsSection foi substituído por <MeetingsRail /> (aba lateral colapsável).
 
-
 function TaskCardStatic(props: React.ComponentProps<typeof TaskCard>) {
   return (
     <DndContext>
@@ -870,6 +869,269 @@ function TaskCardStatic(props: React.ComponentProps<typeof TaskCard>) {
     </DndContext>
   );
 }
+
+// ===================== Visões de tarefas =====================
+
+function ViewBtn({
+  active, onClick, icon, label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+        active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+      }`}
+      title={label}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+}
+
+function TasksCardsView({
+  tasks, rolesById, projectsById, onEdit, onToggle,
+}: {
+  tasks: Task[];
+  rolesById: Map<string, { name: string; color: string }>;
+  projectsById: Map<string, { name: string; color: string }>;
+  onEdit: (t: Task) => void;
+  onToggle: (t: Task) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {tasks.map((t) => {
+        const role = t.role_id ? rolesById.get(t.role_id) ?? null : null;
+        const project = t.project_id ? projectsById.get(t.project_id) ?? null : null;
+        const isNN = (t as any).non_negotiable && !t.completed;
+        return (
+          <div
+            key={t.id}
+            className={`group relative rounded-2xl border bg-card/70 backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-colors hover:border-primary/40 cursor-pointer ${
+              t.completed ? "opacity-60" : ""
+            } ${isNN ? "border-l-4 border-l-overdue" : "border-border/60"}`}
+            onClick={() => onEdit(t)}
+          >
+            <div className="flex items-start gap-2">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onToggle(t); }}
+                className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                  t.completed ? "bg-primary border-primary" : "border-muted-foreground/40 hover:border-primary"
+                }`}
+                aria-label={t.completed ? "Desmarcar" : "Concluir"}
+              >
+                {t.completed && <CheckCircle2 className="h-3 w-3 text-primary-foreground" />}
+              </button>
+              {isNN && <Lock className="h-3 w-3 mt-1 text-overdue shrink-0" />}
+              <p className={`text-sm font-medium leading-tight flex-1 ${t.completed ? "line-through" : ""}`}>
+                {t.title}
+              </p>
+            </div>
+            {t.description && (
+              <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{t.description}</p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+              {project && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0 font-medium"
+                  style={{ backgroundColor: `${project.color}20`, borderColor: `${project.color}55`, color: project.color }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
+                  {project.name}
+                </span>
+              )}
+              {role && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0 font-medium"
+                  style={{ backgroundColor: `${role.color}20`, borderColor: `${role.color}55`, color: role.color }}
+                >
+                  {role.name}
+                </span>
+              )}
+              {t.duration_minutes > 0 && (
+                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <Clock className="h-2.5 w-2.5" /> {t.duration_minutes}m
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const KANBAN_COLS: { id: "todo" | "doing" | "done"; label: string; accent: string }[] = [
+  { id: "todo", label: "A fazer", accent: "from-muted/40 to-muted/10" },
+  { id: "doing", label: "Fazendo", accent: "from-primary/20 to-primary/5" },
+  { id: "done", label: "Feita", accent: "from-emerald-500/20 to-emerald-500/5" },
+];
+
+function TasksKanbanView({
+  tasks, rolesById, projectsById, onEdit, onSetStatus,
+}: {
+  tasks: Task[];
+  rolesById: Map<string, { name: string; color: string }>;
+  projectsById: Map<string, { name: string; color: string }>;
+  onEdit: (t: Task) => void;
+  onSetStatus: (id: string, status: "todo" | "doing" | "done") => Promise<void>;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const grouped = useMemo(() => {
+    const out: Record<"todo" | "doing" | "done", Task[]> = { todo: [], doing: [], done: [] };
+    for (const t of tasks) {
+      const s = (t.completed ? "done" : t.status) as "todo" | "doing" | "done";
+      if (out[s]) out[s].push(t);
+    }
+    return out;
+  }, [tasks]);
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over) return;
+    const id = String(active.id);
+    const newStatus = String(over.id) as "todo" | "doing" | "done";
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    const current = (t.completed ? "done" : t.status) as "todo" | "doing" | "done";
+    if (current === newStatus) return;
+    try {
+      await onSetStatus(id, newStatus);
+    } catch {
+      toast.error("Erro ao mover");
+    }
+  };
+
+  return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {KANBAN_COLS.map((col) => (
+          <KanbanCol
+            key={col.id}
+            id={col.id}
+            label={col.label}
+            accent={col.accent}
+            tasks={grouped[col.id]}
+            rolesById={rolesById}
+            projectsById={projectsById}
+            onEdit={onEdit}
+          />
+        ))}
+      </div>
+    </DndContext>
+  );
+}
+
+function KanbanCol({
+  id, label, accent, tasks, rolesById, projectsById, onEdit,
+}: {
+  id: "todo" | "doing" | "done";
+  label: string;
+  accent: string;
+  tasks: Task[];
+  rolesById: Map<string, { name: string; color: string }>;
+  projectsById: Map<string, { name: string; color: string }>;
+  onEdit: (t: Task) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-2xl border bg-gradient-to-b ${accent} backdrop-blur-sm p-3 transition-colors min-h-[200px] ${
+        isOver ? "border-primary/60 ring-1 ring-primary/30" : "border-border/60"
+      }`}
+    >
+      <div className="mb-3 flex items-center justify-between px-1">
+        <h3 className="text-xs font-semibold uppercase tracking-wider">{label}</h3>
+        <span className="rounded-full bg-background/60 px-2 py-0.5 text-xs text-muted-foreground tabular-nums">
+          {tasks.length}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {tasks.length === 0 && (
+          <p className="text-center text-xs text-muted-foreground/50 py-4">Arraste aqui</p>
+        )}
+        {tasks.map((t) => (
+          <KanbanTaskCard
+            key={t.id}
+            task={t}
+            role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+            project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
+            onEdit={() => onEdit(t)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KanbanTaskCard({
+  task, role, project, onEdit,
+}: {
+  task: Task;
+  role: { name: string; color: string } | null;
+  project: { name: string; color: string } | null;
+  onEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.4 : 1,
+  };
+  const isNN = (task as any).non_negotiable && !task.completed;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onDoubleClick={onEdit}
+      className={`cursor-grab active:cursor-grabbing rounded-xl border bg-card/80 backdrop-blur-sm p-3 shadow-[var(--shadow-card)] hover:border-primary/40 transition-colors touch-none ${
+        isNN ? "border-l-4 border-l-overdue border-border/60" : "border-border/60"
+      } ${task.completed ? "opacity-60" : ""}`}
+    >
+      <div className="flex items-start gap-1.5">
+        {isNN && <Lock className="h-3 w-3 mt-0.5 text-overdue shrink-0" />}
+        <p className={`text-sm font-medium leading-tight ${task.completed ? "line-through" : ""}`}>
+          {task.title}
+        </p>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+        {project && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0 font-medium"
+            style={{ backgroundColor: `${project.color}20`, borderColor: `${project.color}55`, color: project.color }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: project.color }} />
+            {project.name}
+          </span>
+        )}
+        {role && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0 font-medium"
+            style={{ backgroundColor: `${role.color}20`, borderColor: `${role.color}55`, color: role.color }}
+          >
+            {role.name}
+          </span>
+        )}
+        {task.duration_minutes > 0 && (
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
+            <Clock className="h-2.5 w-2.5" /> {task.duration_minutes}m
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 // ===================== Quick Add =====================
 
