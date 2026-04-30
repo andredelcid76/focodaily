@@ -54,8 +54,11 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  useDroppable,
+  useDraggable,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
