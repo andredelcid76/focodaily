@@ -35,11 +35,7 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   CalendarDays,
-  CalendarClock,
-  MapPin,
-  ExternalLink,
   X,
   Trash2,
   CalendarPlus,
@@ -47,7 +43,11 @@ import {
   UserSquare2,
   Lock,
   Search,
+  LayoutGrid,
+  List as ListIcon,
+  KanbanSquare,
 } from "lucide-react";
+import { MeetingsRail } from "@/components/MeetingsRail";
 import {
   DndContext,
   PointerSensor,
