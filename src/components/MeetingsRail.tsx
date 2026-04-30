@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarClock, ChevronRight, ChevronLeft, ExternalLink, MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { formatMinutes } from "@/lib/date";
-import type { Tables } from "@/integrations/supabase/types";
-
-type Meeting = Tables<"meetings">;
+import type { Meeting } from "@/hooks/useMeetings";
 
 const STORAGE_KEY = "focodaily.meetingsRailOpen";
 
