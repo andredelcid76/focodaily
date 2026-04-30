@@ -272,14 +272,35 @@ function TodayInner({ userId }: { userId: string }) {
     setSelectionActive(true);
   };
 
-  const openNew = () => {
+  // Optional seed for the dialog when opened from QuickAdd
+  const [dialogSeed, setDialogSeed] = useState<Partial<Task> | null>(null);
+
+  const openNew = (seed?: Partial<Task> | null) => {
     setEditing(null);
+    setDialogSeed(seed ?? null);
     setDialogOpen(true);
   };
   const openEdit = (t: Task) => {
     setEditing(t);
+    setDialogSeed(null);
     setDialogOpen(true);
   };
+
+  // Listen for "open task by id" events fired by the global search palette
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ taskId: string }>).detail;
+      if (!detail?.taskId) return;
+      const found = tasksApi.tasks.find((t) => t.id === detail.taskId);
+      if (found) {
+        // Switch the view date to the task's date for context
+        setViewDate(found.scheduled_date);
+        openEdit(found);
+      }
+    };
+    window.addEventListener("focodaily:open-task", handler);
+    return () => window.removeEventListener("focodaily:open-task", handler);
+  }, [tasksApi.tasks]);
 
   const handleSave = async (data: any, scope?: RecurrenceScope) => {
     if (editing) {
