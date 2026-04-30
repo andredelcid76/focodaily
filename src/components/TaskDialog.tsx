@@ -20,6 +20,7 @@ type Props = {
   onOpenChange: (v: boolean) => void;
   defaultDate: string;
   task?: Task | null;
+  isSeed?: boolean;
   roles: Role[];
   projects?: Project[];
   defaultProjectId?: string | null;
