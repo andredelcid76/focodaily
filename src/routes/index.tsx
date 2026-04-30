@@ -1335,7 +1335,13 @@ function QuickAdd({
               variant="ghost"
               size="sm"
               onClick={() => {
-                onOpenFull();
+                onOpenFull({
+                  title: title.trim() || undefined,
+                  category,
+                  scheduled_date: date,
+                  duration_minutes: duration,
+                  role_id: roleId,
+                } as Partial<Task>);
                 reset();
               }}
               className="text-xs text-muted-foreground"
