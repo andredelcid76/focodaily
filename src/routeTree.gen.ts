@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
-import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,11 +29,6 @@ const SemanaRoute = SemanaRouteImport.update({
 const PapeisRoute = PapeisRouteImport.update({
   id: '/papeis',
   path: '/papeis',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KanbanRoute = KanbanRouteImport.update({
-  id: '/kanban',
-  path: '/kanban',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -88,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
-  '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -102,7 +95,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
-  '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -117,7 +109,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
-  '/kanban': typeof KanbanRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -133,7 +124,6 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
-    | '/kanban'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -147,7 +137,6 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
-    | '/kanban'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -161,7 +150,6 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
-    | '/kanban'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -176,7 +164,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AuthRoute: typeof AuthRoute
-  KanbanRoute: typeof KanbanRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
@@ -200,13 +187,6 @@ declare module '@tanstack/react-router' {
       path: '/papeis'
       fullPath: '/papeis'
       preLoaderRoute: typeof PapeisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kanban': {
-      id: '/kanban'
-      path: '/kanban'
-      fullPath: '/kanban'
-      preLoaderRoute: typeof KanbanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -290,7 +270,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AuthRoute: AuthRoute,
-  KanbanRoute: KanbanRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
   ProjetosIdRoute: ProjetosIdRoute,
