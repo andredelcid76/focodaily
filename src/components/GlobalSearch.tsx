@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Circle,
   FolderKanban,
-  KanbanSquare,
   ListTodo,
   Lock,
   Search as SearchIcon,
