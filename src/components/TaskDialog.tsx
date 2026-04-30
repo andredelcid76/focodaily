@@ -59,7 +59,7 @@ const WEEKDAYS = [
   { v: 0, l: "D" },
 ];
 
-export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
+export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TaskCategory>("important");
