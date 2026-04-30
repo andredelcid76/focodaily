@@ -545,6 +545,11 @@ function TodayInner({ userId }: { userId: string }) {
             Tarefas {isViewingToday ? "de hoje" : "do dia"}
           </h2>
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-0.5">
+              <ViewBtn active={taskView === "list"} onClick={() => changeTaskView("list")} icon={<ListIcon className="h-3.5 w-3.5" />} label="Lista" />
+              <ViewBtn active={taskView === "cards"} onClick={() => changeTaskView("cards")} icon={<LayoutGrid className="h-3.5 w-3.5" />} label="Cards" />
+              <ViewBtn active={taskView === "kanban"} onClick={() => changeTaskView("kanban")} icon={<KanbanSquare className="h-3.5 w-3.5" />} label="Kanban" />
+            </div>
             {completedCount > 0 && (
               <button
                 type="button"
@@ -556,7 +561,7 @@ function TodayInner({ userId }: { userId: string }) {
                   : `Mostrar concluídas (${completedCount})`}
               </button>
             )}
-            {visibleDayTasks.length > 0 && (
+            {visibleDayTasks.length > 0 && taskView === "list" && (
               <button
                 type="button"
                 onClick={selectionMode ? clearSelection : enterSelectionMode}
@@ -614,7 +619,7 @@ function TodayInner({ userId }: { userId: string }) {
           ) : (
             <EmptyState onAdd={openNew} />
           )
-        ) : (
+        ) : taskView === "list" ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={visibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
@@ -645,6 +650,22 @@ function TodayInner({ userId }: { userId: string }) {
               </div>
             </SortableContext>
           </DndContext>
+        ) : taskView === "cards" ? (
+          <TasksCardsView
+            tasks={visibleDayTasks}
+            rolesById={rolesById}
+            projectsById={projectsById}
+            onEdit={openEdit}
+            onToggle={(t) => tasksApi.toggleComplete(t)}
+          />
+        ) : (
+          <TasksKanbanView
+            tasks={visibleDayTasks}
+            rolesById={rolesById}
+            projectsById={projectsById}
+            onEdit={openEdit}
+            onSetStatus={(id, status) => tasksApi.setStatus(id, status)}
+          />
         )}
       </section>
 
