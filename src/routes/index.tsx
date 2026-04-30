@@ -137,15 +137,23 @@ function TodayInner({ userId }: { userId: string }) {
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
   const isViewingToday = viewDate === today;
-  const dayTasks = useMemo(
-    () =>
-      tasksApi.tasksByDay(viewDate).slice().sort((a, b) => {
-        // Completed tasks always go to the bottom
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        return a.position - b.position;
-      }),
-    [tasksApi, viewDate]
-  );
+  const dayTasks = useMemo(() => {
+    const base = tasksApi.tasksByDay(viewDate).slice();
+    // When viewing today, also include tasks scheduled for the future that were COMPLETED today.
+    if (isViewingToday) {
+      const completedTodayFromFuture = tasksApi.tasks.filter((t) => {
+        if (!t.completed || !t.completed_at) return false;
+        if (t.scheduled_date <= today) return false; // already in base or in past
+        return t.completed_at.slice(0, 10) === today;
+      });
+      base.push(...completedTodayFromFuture);
+    }
+    return base.sort((a, b) => {
+      // Completed tasks always go to the bottom
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return a.position - b.position;
+    });
+  }, [tasksApi, viewDate, isViewingToday, today]);
   const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
   const nowMs = Date.now();
