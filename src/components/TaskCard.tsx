@@ -235,8 +235,12 @@ export function TaskCard({
         </button>
       </div>
 
-      {!compact && !task.completed && !selectionMode && (
-        <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+      {!compact && !task.completed && (
+        <div
+          className="flex items-center gap-1 mt-0.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
           {(onStart || onPause || onStop) && (
             <>
               {!isActive ? (
