@@ -83,7 +83,6 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
   const navItems = useMemo(
     () => [
       { label: "Hoje", to: "/", icon: ListTodo },
-      { label: "Kanban de projetos", to: "/kanban", icon: KanbanSquare },
       { label: "Semana", to: "/semana", icon: CalendarDays },
       { label: "Agenda", to: "/agenda", icon: CalendarDays },
       { label: "Projetos", to: "/projetos", icon: FolderKanban },
