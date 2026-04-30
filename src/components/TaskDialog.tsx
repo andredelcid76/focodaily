@@ -194,7 +194,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
+          <DialogTitle>{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
