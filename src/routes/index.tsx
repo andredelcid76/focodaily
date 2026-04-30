@@ -417,14 +417,12 @@ function TodayInner({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {dayMeetings.length > 0 && (
-        <MeetingsSection
-          meetings={dayMeetings}
-          totalMinutes={meetingsMinutes}
-          includeMeetings={includeMeetings}
-          onToggleInclude={setIncludeMeetings}
-        />
-      )}
+      <MeetingsRail
+        meetings={dayMeetings}
+        totalMinutes={meetingsMinutes}
+        includeMeetings={includeMeetings}
+        onToggleInclude={setIncludeMeetings}
+      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard icon={<Clock className="h-4 w-4" />} label="Total programado" value={formatMinutes(totalMinutes)} />
