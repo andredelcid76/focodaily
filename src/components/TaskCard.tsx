@@ -91,9 +91,11 @@ export function TaskCard({
     <div
       ref={setNodeRef}
       style={style}
+      {...(!selectionMode ? attributes : {})}
+      {...(!selectionMode ? listeners : {})}
       onClick={selectionMode ? (e) => { e.stopPropagation(); onSelectToggle?.(); } : undefined}
-      className={`group relative flex items-start gap-2 rounded-xl border backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-all ${
-        selectionMode ? "cursor-pointer" : "hover:border-primary/40"
+      className={`group relative flex items-start gap-2 rounded-xl border backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-all touch-none ${
+        selectionMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing hover:border-primary/40"
       } ${
         task.completed
           ? "bg-muted/30 border-border/40 opacity-70"
@@ -111,14 +113,12 @@ export function TaskCard({
       } ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}`}
     >
       {!selectionMode && (
-        <button
-          {...attributes}
-          {...listeners}
-          className="mt-1 cursor-grab text-muted-foreground/50 hover:text-foreground active:cursor-grabbing"
-          aria-label="Arrastar"
+        <span
+          className="mt-1 text-muted-foreground/40 group-hover:text-muted-foreground/70 pointer-events-none"
+          aria-hidden="true"
         >
           <GripVertical className="h-4 w-4" />
-        </button>
+        </span>
       )}
 
       {typeof index === "number" && (
