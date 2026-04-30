@@ -36,8 +36,8 @@ export const Route = createFileRoute("/api/public/outlook")({
     handlers: {
       GET: async ({ request }) => {
         try {
-          const { supabase, userId } = await authenticateRequest(request);
-          const { data, error } = await supabase
+          const { userId } = await authenticateRequest(request);
+          const { data, error } = await supabaseAdmin
             .from("outlook_connections_safe")
             .select("email, display_name, last_sync_at, expires_at")
             .eq("user_id", userId)
