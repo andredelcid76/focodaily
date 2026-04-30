@@ -91,6 +91,15 @@ function TodayInner({ userId }: { userId: string }) {
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
+  const [taskView, setTaskView] = useState<"list" | "cards" | "kanban">(() => {
+    if (typeof window === "undefined") return "list";
+    const v = window.localStorage.getItem("focodaily.taskView");
+    return v === "cards" || v === "kanban" ? v : "list";
+  });
+  const changeTaskView = (v: "list" | "cards" | "kanban") => {
+    setTaskView(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("focodaily.taskView", v);
+  };
   const [showCompleted, setShowCompleted] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("focodaily.showCompleted") === "1";
