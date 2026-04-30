@@ -8,8 +8,8 @@ export type TaskCategory = Task["category"];
 export type TaskRecurrence = Task["recurrence"];
 export type TaskStatus = Task["status"];
 
-// How many days ahead we materialize recurring task instances
-const FUTURE_DAYS = 14;
+// How many days ahead we materialize recurring task instances (4 weeks)
+const FUTURE_DAYS = 28;
 
 // Module-level guard prevents concurrent ensureRecurring runs (StrictMode, multi-mount, multi-tab races)
 const ensureLocks = new Map<string, Promise<void>>();

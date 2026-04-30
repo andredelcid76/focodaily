@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
@@ -137,15 +137,23 @@ function TodayInner({ userId }: { userId: string }) {
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
 
   const isViewingToday = viewDate === today;
-  const dayTasks = useMemo(
-    () =>
-      tasksApi.tasksByDay(viewDate).slice().sort((a, b) => {
-        // Completed tasks always go to the bottom
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        return a.position - b.position;
-      }),
-    [tasksApi, viewDate]
-  );
+  const dayTasks = useMemo(() => {
+    const base = tasksApi.tasksByDay(viewDate).slice();
+    // When viewing today, also include tasks scheduled for the future that were COMPLETED today.
+    if (isViewingToday) {
+      const completedTodayFromFuture = tasksApi.tasks.filter((t) => {
+        if (!t.completed || !t.completed_at) return false;
+        if (t.scheduled_date <= today) return false; // already in base or in past
+        return t.completed_at.slice(0, 10) === today;
+      });
+      base.push(...completedTodayFromFuture);
+    }
+    return base.sort((a, b) => {
+      // Completed tasks always go to the bottom
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return a.position - b.position;
+    });
+  }, [tasksApi, viewDate, isViewingToday, today]);
   const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
   const nowMs = Date.now();
@@ -264,14 +272,35 @@ function TodayInner({ userId }: { userId: string }) {
     setSelectionActive(true);
   };
 
-  const openNew = () => {
+  // Optional seed for the dialog when opened from QuickAdd
+  const [dialogSeed, setDialogSeed] = useState<Partial<Task> | null>(null);
+
+  const openNew = (seed?: Partial<Task> | null) => {
     setEditing(null);
+    setDialogSeed(seed ?? null);
     setDialogOpen(true);
   };
   const openEdit = (t: Task) => {
     setEditing(t);
+    setDialogSeed(null);
     setDialogOpen(true);
   };
+
+  // Listen for "open task by id" events fired by the global search palette
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ taskId: string }>).detail;
+      if (!detail?.taskId) return;
+      const found = tasksApi.tasks.find((t) => t.id === detail.taskId);
+      if (found) {
+        // Switch the view date to the task's date for context
+        setViewDate(found.scheduled_date);
+        openEdit(found);
+      }
+    };
+    window.addEventListener("focodaily:open-task", handler);
+    return () => window.removeEventListener("focodaily:open-task", handler);
+  }, [tasksApi.tasks]);
 
   const handleSave = async (data: any, scope?: RecurrenceScope) => {
     if (editing) {
@@ -412,7 +441,7 @@ function TodayInner({ userId }: { userId: string }) {
             </Button>
           </div>
           <Button
-            onClick={openNew}
+            onClick={() => openNew()}
             className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90"
           >
             <Plus className="mr-1 h-4 w-4" /> Nova tarefa
@@ -676,7 +705,8 @@ function TodayInner({ userId }: { userId: string }) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultDate={viewDate}
-        task={editing}
+        task={editing ?? (dialogSeed as Task | null)}
+        isSeed={!editing && !!dialogSeed}
         roles={roles}
         projects={projects}
         onSave={handleSave}
@@ -1155,7 +1185,7 @@ function QuickAdd({
     duration_minutes: number;
     role_id: string | null;
   }) => Promise<void>;
-  onOpenFull: () => void;
+  onOpenFull: (seed?: Partial<Task> | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("");
@@ -1306,7 +1336,13 @@ function QuickAdd({
               variant="ghost"
               size="sm"
               onClick={() => {
-                onOpenFull();
+                onOpenFull({
+                  title: title.trim() || undefined,
+                  category,
+                  scheduled_date: date,
+                  duration_minutes: duration,
+                  role_id: roleId,
+                } as Partial<Task>);
                 reset();
               }}
               className="text-xs text-muted-foreground"

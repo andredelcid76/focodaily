@@ -20,6 +20,7 @@ type Props = {
   onOpenChange: (v: boolean) => void;
   defaultDate: string;
   task?: Task | null;
+  isSeed?: boolean;
   roles: Role[];
   projects?: Project[];
   defaultProjectId?: string | null;
@@ -58,7 +59,7 @@ const WEEKDAYS = [
   { v: 0, l: "D" },
 ];
 
-export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
+export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TaskCategory>("important");
@@ -108,7 +109,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
   };
 
-  const isRecurringInstance = !!(task && (task.recurrence_parent_id || task.recurrence !== "none"));
+  const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
 
@@ -193,7 +194,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, roles, proje
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{task ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
+          <DialogTitle>{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
