@@ -1184,7 +1184,7 @@ function QuickAdd({
     duration_minutes: number;
     role_id: string | null;
   }) => Promise<void>;
-  onOpenFull: () => void;
+  onOpenFull: (seed?: Partial<Task> | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState("");
