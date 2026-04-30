@@ -109,7 +109,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
   };
 
-  const isRecurringInstance = !!(task && (task.recurrence_parent_id || task.recurrence !== "none"));
+  const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
 
