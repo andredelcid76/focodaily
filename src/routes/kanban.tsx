@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskStatus } from "@/hooks/useTasks";
 import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
-import { TaskFiltersBar, applyTaskFilters, type TaskFilters } from "@/components/TaskFiltersBar";
+import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
 import { todayISO } from "@/lib/date";
 import { KanbanSquare, Search, Lock, Clock } from "lucide-react";
 import {
@@ -47,7 +47,7 @@ function KanbanInner({ userId }: { userId: string }) {
   const { roles } = useRoles(userId);
   const projectsApi = useProjects(userId);
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<TaskFilters>({});
+  const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
   const [scope, setScope] = useState<"today" | "week" | "all">("today");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
