@@ -705,7 +705,8 @@ function TodayInner({ userId }: { userId: string }) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         defaultDate={viewDate}
-        task={editing}
+        task={editing ?? (dialogSeed as Task | null)}
+        isSeed={!editing && !!dialogSeed}
         roles={roles}
         projects={projects}
         onSave={handleSave}
