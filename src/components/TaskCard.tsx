@@ -70,7 +70,6 @@ export function TaskCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
-    disabled: selectionMode,
   });
 
   const style = {
