@@ -6,7 +6,7 @@ import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  CalendarClock, Copy, Repeat2, ArrowRight, Lock,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -136,14 +136,42 @@ export function TaskCard({
         </span>
       )}
 
-      <Checkbox
-        checked={selectionMode ? !!selected : task.completed}
-        onPointerDown={(e) => e.stopPropagation()}
-        onCheckedChange={() => (selectionMode ? onSelectToggle?.() : onToggle())}
-        onClick={(e) => e.stopPropagation()}
-        className="mt-1"
-        aria-label={selectionMode ? "Selecionar tarefa" : "Concluir tarefa"}
-      />
+      {/* Selection checkbox – only visible in selection mode */}
+      {selectionMode && (
+        <Checkbox
+          checked={!!selected}
+          onPointerDown={(e) => e.stopPropagation()}
+          onCheckedChange={() => onSelectToggle?.()}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-1"
+          aria-label="Selecionar tarefa"
+        />
+      )}
+
+      {/* Complete button – always visible, distinct green circle-check */}
+      {!selectionMode && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          className={`mt-0.5 flex-shrink-0 rounded-full transition-colors ${
+            task.completed
+              ? "text-green-500 hover:text-green-400"
+              : "text-muted-foreground/40 hover:text-green-500"
+          }`}
+          aria-label="Concluir tarefa"
+          title={task.completed ? "Desmarcar conclusão" : "Concluir tarefa"}
+        >
+          {task.completed ? (
+            <CheckCircle2 className="h-5 w-5 fill-green-500/20" />
+          ) : (
+            <Circle className="h-5 w-5" />
+          )}
+        </button>
+      )}
 
 
       <div className="flex-1 text-left min-w-0">
