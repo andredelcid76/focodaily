@@ -131,7 +131,7 @@ function TodayInner({ userId }: { userId: string }) {
     setSelectionActive(false);
   };
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 180, tolerance: 6 } }));
 
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
@@ -1016,7 +1016,7 @@ function TasksKanbanView({
   onEdit: (t: Task) => void;
   onSetStatus: (id: string, status: "todo" | "doing" | "done") => Promise<void>;
 }) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 180, tolerance: 6 } }));
 
   const grouped = useMemo(() => {
     const out: Record<"todo" | "doing" | "done", Task[]> = { todo: [], doing: [], done: [] };

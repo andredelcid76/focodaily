@@ -174,29 +174,25 @@ export function TaskCard({
       )}
 
 
-      <div className="flex-1 text-left min-w-0">
-        {/* The title is the ONLY clickable area to open the task. Drag is disabled here. */}
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="text-left w-full"
-        >
-          <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex-1 min-w-0 text-left">
+        <div className="flex items-center gap-1.5 flex-wrap">
             <CategoryIcon category={task.category} className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             {(task as any).non_negotiable && !task.completed && (
               <Lock className="h-3 w-3 text-overdue" aria-label="Inegociável hoje" />
             )}
-            <span
-              className={`font-medium leading-tight hover:underline ${task.completed ? "line-through" : ""} ${
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className={`max-w-full text-left font-medium leading-tight hover:underline ${task.completed ? "line-through" : ""} ${
                 compact ? "text-xs" : "text-sm"
               }`}
             >
-              {task.title}
-            </span>
+              <span className="block truncate">{task.title}</span>
+            </button>
             {role && <RoleBadge role={role} size="xs" />}
             {project && <ProjectChip project={project} size="xs" />}
             {followupNumber > 1 && (
@@ -232,35 +228,34 @@ export function TaskCard({
               }
               return null;
             })()}
-          </div>
-          {!compact && task.description && (
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-          )}
-          <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}
+        </div>
+        {!compact && task.description && (
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
+        )}
+        <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}
+          </span>
+          {totalSpent > 0 && (
+            <span
+              className={`inline-flex items-center gap-1 ${
+                running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
+              }`}
+            >
+              <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
             </span>
-            {totalSpent > 0 && (
-              <span
-                className={`inline-flex items-center gap-1 ${
-                  running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
-                }`}
-              >
-                <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
-              </span>
-            )}
-            {(task.recurrence !== "none" || task.recurrence_parent_id) && (
-              <span className="inline-flex items-center gap-1">
-                <Repeat className="h-3 w-3" />
-              </span>
-            )}
-            {isOverdue && (
-              <span className="inline-flex items-center gap-1 text-overdue font-medium">
-                <AlertCircle className="h-3 w-3" /> Atrasada
-              </span>
-            )}
-          </div>
-        </button>
+          )}
+          {(task.recurrence !== "none" || task.recurrence_parent_id) && (
+            <span className="inline-flex items-center gap-1">
+              <Repeat className="h-3 w-3" />
+            </span>
+          )}
+          {isOverdue && (
+            <span className="inline-flex items-center gap-1 text-overdue font-medium">
+              <AlertCircle className="h-3 w-3" /> Atrasada
+            </span>
+          )}
+        </div>
       </div>
 
       {!compact && !task.completed && (
