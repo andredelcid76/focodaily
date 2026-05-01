@@ -288,6 +288,17 @@ function TodayInner({ userId }: { userId: string }) {
     setSelectionActive(true);
   };
 
+  // ESC to deselect
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedIds.size > 0) {
+        clearSelection();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedIds.size]);
+
   // Optional seed for the dialog when opened from QuickAdd
   const [dialogSeed, setDialogSeed] = useState<Partial<Task> | null>(null);
 
