@@ -206,9 +206,25 @@ function TodayInner({ userId }: { userId: string }) {
   
 
   const handleDragEnd = async (e: DragEndEvent) => {
-    if (selectionMode) return;
     const { active, over } = e;
     if (!over || active.id === over.id) return;
+
+    // Multi-drag: if items are selected and the dragged item is one of them,
+    // move the whole selection block to the drop position.
+    if (selectedIds.size > 1 && selectedIds.has(active.id as string)) {
+      const remaining = dayTasks.filter((t) => !selectedIds.has(t.id));
+      const selected = dayTasks.filter((t) => selectedIds.has(t.id));
+      const dropIdx = remaining.findIndex((t) => t.id === over.id);
+      if (dropIdx < 0) return;
+      const reordered = [
+        ...remaining.slice(0, dropIdx + 1),
+        ...selected,
+        ...remaining.slice(dropIdx + 1),
+      ];
+      await tasksApi.reorderInDay(viewDate, reordered.map((t) => t.id));
+      return;
+    }
+
     const oldIdx = dayTasks.findIndex((t) => t.id === active.id);
     const newIdx = dayTasks.findIndex((t) => t.id === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
