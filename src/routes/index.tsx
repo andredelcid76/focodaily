@@ -565,8 +565,8 @@ function TodayInner({ userId }: { userId: string }) {
           </div>
           <div className="space-y-2">
             {visibleOverdue.map((t) => (
-              <div key={t.id} className="flex items-center gap-2">
-                <div className="flex-1">
+              <div key={t.id} className="flex items-center gap-2 min-w-0">
+                <div className="flex-1 min-w-0">
                   <TaskCardStatic
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
