@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,6 +31,11 @@ const SemanaRoute = SemanaRouteImport.update({
 const PapeisRoute = PapeisRouteImport.update({
   id: '/papeis',
   path: '/papeis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/inbox'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/inbox'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/inbox'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AuthRoute: typeof AuthRoute
+  InboxRoute: typeof InboxRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/papeis'
       fullPath: '/papeis'
       preLoaderRoute: typeof PapeisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -290,6 +310,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AuthRoute: AuthRoute,
+  InboxRoute: InboxRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
   ProjetosIdRoute: ProjetosIdRoute,
@@ -302,3 +323,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
