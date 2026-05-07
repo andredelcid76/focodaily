@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { CalendarClock, CalendarDays, FolderKanban, Inbox, ListTodo, LogOut, Search, Sparkles, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,21 +14,51 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const items = [
   { title: "Hoje", url: "/", icon: ListTodo },
-  { title: "Caixa de entrada", url: "/inbox", icon: Inbox },
+  { title: "Caixa de entrada", url: "/inbox", icon: Inbox, badgeKey: "inbox" as const },
   { title: "Semana", url: "/semana", icon: CalendarDays },
   { title: "Agenda", url: "/agenda", icon: CalendarClock },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
   { title: "Papéis", url: "/papeis", icon: Users },
 ] as const;
 
+function useInboxCount(userId: string | undefined) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    const load = async () => {
+      const { count: c } = await supabase
+        .from("inbox_suggestions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending");
+      if (active) setCount(c ?? 0);
+    };
+    load();
+    const channel = supabase
+      .channel("inbox-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inbox_suggestions", filter: `user_id=eq.${userId}` }, load)
+      .subscribe();
+    const interval = setInterval(load, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+  return count;
+}
+
 export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const inboxCount = useInboxCount(user?.id);
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
@@ -49,20 +80,33 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const showBadge = "badgeKey" in item && item.badgeKey === "inbox" && inboxCount > 0;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={item.title}
+                    >
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <span className="relative shrink-0">
+                          <item.icon className="h-4 w-4" />
+                          {showBadge && collapsed && (
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+                          )}
+                        </span>
+                        <span className="flex-1">{item.title}</span>
+                        {showBadge && !collapsed && (
+                          <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                            {inboxCount > 99 ? "99+" : inboxCount}
+                          </span>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

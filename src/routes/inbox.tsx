@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Inbox, Mail, Users, Briefcase, Check, X, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
@@ -16,7 +17,11 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/inbox")({
-  component: InboxPage,
+  component: () => (
+    <AppShell>
+      <InboxPage />
+    </AppShell>
+  ),
 });
 
 const SOURCE_META = {
