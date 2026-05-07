@@ -6,8 +6,11 @@ import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
 import { useRoles, type Role } from "@/hooks/useRoles";
 import { useProjects, type Project } from "@/hooks/useProjects";
-import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog } from "@/components/TaskDialog";
+import { CategoryIcon } from "@/components/CategoryBadge";
+import { Lock, Repeat } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
@@ -277,19 +280,98 @@ function DayColumn({
             <DropZone day={day} />
           ) : (
             tasks.map((t) => (
-              <TaskCard
+              <MiniTaskRow
                 key={t.id}
                 task={t}
                 role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                 project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                 onToggle={() => onToggle(t)}
                 onEdit={() => onEdit(t)}
-                compact
               />
             ))
           )}
         </div>
       </SortableContext>
+    </div>
+  );
+}
+
+function MiniTaskRow({
+  task,
+  role,
+  project,
+  onToggle,
+  onEdit,
+}: {
+  task: Task;
+  role: Role | null;
+  project: Project | null;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { task },
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  const nonNeg = (task as any).non_negotiable && !task.completed;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEdit();
+      }}
+      title={task.title}
+      className={`group flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] backdrop-blur-sm transition-colors cursor-pointer touch-none ${
+        task.completed
+          ? "border-border/40 bg-muted/20 opacity-60"
+          : "border-border/50 bg-card/70 hover:border-primary/40"
+      } ${nonNeg ? "border-l-2 border-l-overdue" : ""}`}
+    >
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full border ${
+          task.completed
+            ? "border-green-500 bg-green-500/30"
+            : "border-muted-foreground/40 hover:border-green-500"
+        }`}
+        aria-label="Concluir"
+      />
+      <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+      {nonNeg && <Lock className="h-2.5 w-2.5 text-overdue shrink-0" aria-label="Inegociável" />}
+      {(task.recurrence !== "none" || task.recurrence_parent_id) && (
+        <Repeat className="h-2.5 w-2.5 text-muted-foreground/60 shrink-0" />
+      )}
+      <span
+        className={`flex-1 min-w-0 truncate leading-tight ${task.completed ? "line-through" : ""}`}
+        style={
+          project?.color || role?.color
+            ? { borderLeft: undefined }
+            : undefined
+        }
+      >
+        {task.title}
+      </span>
+      {(role?.color || project?.color) && (
+        <span
+          className="h-2 w-2 rounded-full shrink-0"
+          style={{ backgroundColor: project?.color ?? role?.color }}
+          title={project?.name ?? role?.name}
+        />
+      )}
     </div>
   );
 }
