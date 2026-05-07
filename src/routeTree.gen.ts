@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -20,6 +21,7 @@ import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planne
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
+import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
 
 const SemanaRoute = SemanaRouteImport.update({
   id: '/semana',
@@ -29,6 +31,11 @@ const SemanaRoute = SemanaRouteImport.update({
 const PapeisRoute = PapeisRouteImport.update({
   id: '/papeis',
   path: '/papeis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -77,11 +84,17 @@ const ApiPublicOutlookCallbackRoute =
     path: '/callback',
     getParentRoute: () => ApiPublicOutlookRoute,
   } as any)
+const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
+  id: '/api/public/inbox/scan',
+  path: '/api/public/inbox/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -89,12 +102,14 @@ export interface FileRoutesByFullPath {
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
+  '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -102,6 +117,7 @@ export interface FileRoutesByTo {
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
+  '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesById {
@@ -109,6 +125,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -116,6 +133,7 @@ export interface FileRoutesById {
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
+  '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRouteTypes {
@@ -124,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/inbox'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -131,12 +150,14 @@ export interface FileRouteTypes {
     | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/planner'
+    | '/api/public/inbox/scan'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/agenda'
     | '/auth'
+    | '/inbox'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -144,12 +165,14 @@ export interface FileRouteTypes {
     | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/planner'
+    | '/api/public/inbox/scan'
     | '/api/public/outlook/callback'
   id:
     | '__root__'
     | '/'
     | '/agenda'
     | '/auth'
+    | '/inbox'
     | '/papeis'
     | '/semana'
     | '/projetos/$id'
@@ -157,6 +180,7 @@ export interface FileRouteTypes {
     | '/api/public/maya'
     | '/api/public/outlook'
     | '/api/public/planner'
+    | '/api/public/inbox/scan'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
 }
@@ -164,6 +188,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AuthRoute: typeof AuthRoute
+  InboxRoute: typeof InboxRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
@@ -171,6 +196,7 @@ export interface RootRouteChildren {
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
+  ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -187,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/papeis'
       fullPath: '/papeis'
       preLoaderRoute: typeof PapeisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -252,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
       parentRoute: typeof ApiPublicOutlookRoute
     }
+    '/api/public/inbox/scan': {
+      id: '/api/public/inbox/scan'
+      path: '/api/public/inbox/scan'
+      fullPath: '/api/public/inbox/scan'
+      preLoaderRoute: typeof ApiPublicInboxScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -270,6 +310,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AuthRoute: AuthRoute,
+  InboxRoute: InboxRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
   ProjetosIdRoute: ProjetosIdRoute,
@@ -277,6 +318,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMayaRoute: ApiPublicMayaRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
+  ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

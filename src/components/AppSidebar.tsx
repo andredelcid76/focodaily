@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { CalendarClock, CalendarDays, FolderKanban, ListTodo, LogOut, Search, Sparkles, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, FolderKanban, Inbox, ListTodo, LogOut, Search, Sparkles, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 
 const items = [
   { title: "Hoje", url: "/", icon: ListTodo },
+  { title: "Caixa de entrada", url: "/inbox", icon: Inbox },
   { title: "Semana", url: "/semana", icon: CalendarDays },
   { title: "Agenda", url: "/agenda", icon: CalendarClock },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
