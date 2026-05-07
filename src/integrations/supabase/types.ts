@@ -659,6 +659,9 @@ export type Database = {
           followup_count: number
           id: string
           non_negotiable: boolean
+          origin_source: string | null
+          origin_source_label: string | null
+          origin_source_url: string | null
           original_date: string
           planned_date: string
           planner_etag: string | null
@@ -691,6 +694,9 @@ export type Database = {
           followup_count?: number
           id?: string
           non_negotiable?: boolean
+          origin_source?: string | null
+          origin_source_label?: string | null
+          origin_source_url?: string | null
           original_date?: string
           planned_date?: string
           planner_etag?: string | null
@@ -723,6 +729,9 @@ export type Database = {
           followup_count?: number
           id?: string
           non_negotiable?: boolean
+          origin_source?: string | null
+          origin_source_label?: string | null
+          origin_source_url?: string | null
           original_date?: string
           planned_date?: string
           planner_etag?: string | null
