@@ -7,7 +7,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
-import { BriefingCard } from "@/components/BriefingCard";
+
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -411,7 +411,7 @@ function TodayInner({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      {isViewingToday && <BriefingCard scope="day" />}
+      
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
