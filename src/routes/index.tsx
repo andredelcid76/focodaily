@@ -7,6 +7,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
+import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
 
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
   const { roles } = useRoles(userId);
+  const subtaskCounts = useSubtaskCounts(userId);
   const { projects } = useProjects(userId);
   const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
