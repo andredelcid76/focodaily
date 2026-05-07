@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan } from "@/lib/inbox.client";
+import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan } from "@/lib/inboxClient";
 import { useAuth } from "@/lib/auth";
 import { useProjects } from "@/hooks/useProjects";
 import { formatDistanceToNow } from "date-fns";
