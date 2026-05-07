@@ -47,7 +47,9 @@ import {
   LayoutGrid,
   List as ListIcon,
   KanbanSquare,
+  ListPlus,
 } from "lucide-react";
+import { BulkTaskDialog } from "@/components/BulkTaskDialog";
 import { MeetingsRail } from "@/components/MeetingsRail";
 import {
   DndContext,
@@ -89,6 +91,7 @@ function TodayInner({ userId }: { userId: string }) {
   const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionActive, setSelectionActive] = useState(false);
@@ -470,6 +473,13 @@ function TodayInner({ userId }: { userId: string }) {
             </Button>
           </div>
           <Button
+            variant="outline"
+            onClick={() => setBulkDialogOpen(true)}
+            title="Criar várias tarefas de uma vez"
+          >
+            <ListPlus className="mr-1 h-4 w-4" /> Em lote
+          </Button>
+          <Button
             onClick={() => openNew()}
             className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90"
           >
@@ -743,6 +753,24 @@ function TodayInner({ userId }: { userId: string }) {
         projects={projects}
         onSave={handleSave}
         onDelete={editing ? handleDelete : undefined}
+      />
+
+      <BulkTaskDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        defaultDate={viewDate}
+        roles={roles}
+        projects={projects}
+        onCreate={async (rows) => {
+          for (const r of rows) {
+            await tasksApi.createTask({
+              ...r,
+              original_date: r.scheduled_date,
+              position: tasksApi.topPositionForDay(r.scheduled_date),
+              recurrence: "none",
+            });
+          }
+        }}
       />
 
       {/* Floating bulk-action bar */}
