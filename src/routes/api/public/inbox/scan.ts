@@ -168,7 +168,9 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
       update_time?: string;
       add_time?: string;
     };
-    const acts = (json?.data ?? []) as Activity[];
+    const allActs = (json?.data ?? []) as Activity[];
+    // Only activities of type "task" that are linked to a deal.
+    const acts = allActs.filter((a) => !!a.deal_id && (a.type ?? "").toLowerCase() === "task");
     return acts.slice(0, 20).map((a) => ({
       source: "pipedrive" as const,
       source_id: `activity_${a.id}`,
