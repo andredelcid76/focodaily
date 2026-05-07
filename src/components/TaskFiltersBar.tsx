@@ -1,16 +1,19 @@
 import { useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Filter, Lock, X } from "lucide-react";
+import { CheckCircle2, Filter, Lock, X, Mail, Video, Briefcase, Pencil } from "lucide-react";
 import type { TaskCategory, TaskStatus } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
+
+export type TaskOrigin = "manual" | "pipedrive" | "email" | "meeting";
 
 export type TaskFilters = {
   roleIds: Set<string | "none">; // "none" = sem papel
   projectIds: Set<string | "none">;
   categories: Set<TaskCategory>;
   statuses: Set<TaskStatus>;
+  origins: Set<TaskOrigin>;
   nonNegotiableOnly: boolean;
 };
 
@@ -19,6 +22,7 @@ export const emptyFilters = (): TaskFilters => ({
   projectIds: new Set(),
   categories: new Set(),
   statuses: new Set(),
+  origins: new Set(),
   nonNegotiableOnly: false,
 });
 
@@ -28,6 +32,7 @@ export function countActiveFilters(f: TaskFilters): number {
     f.projectIds.size +
     f.categories.size +
     f.statuses.size +
+    f.origins.size +
     (f.nonNegotiableOnly ? 1 : 0)
   );
 }
@@ -38,6 +43,7 @@ export function applyTaskFilters<T extends {
   category: TaskCategory;
   status: TaskStatus;
   non_negotiable: boolean;
+  origin_source?: string | null;
 }>(tasks: T[], f: TaskFilters): T[] {
   if (countActiveFilters(f) === 0) return tasks;
   return tasks.filter((t) => {
@@ -51,10 +57,28 @@ export function applyTaskFilters<T extends {
     }
     if (f.categories.size > 0 && !f.categories.has(t.category)) return false;
     if (f.statuses.size > 0 && !f.statuses.has(t.status)) return false;
+    if (f.origins.size > 0) {
+      const src = (t.origin_source ?? null) as TaskOrigin | null;
+      const origin: TaskOrigin = src === "pipedrive" || src === "email" || src === "meeting" ? src : "manual";
+      if (!f.origins.has(origin)) return false;
+    }
     if (f.nonNegotiableOnly && !t.non_negotiable) return false;
     return true;
   });
 }
+
+const ORIGIN_LABEL: Record<TaskOrigin, string> = {
+  manual: "Manual",
+  pipedrive: "Pipedrive",
+  email: "Outlook",
+  meeting: "Fireflies",
+};
+const ORIGIN_ICON: Record<TaskOrigin, React.ReactNode> = {
+  manual: <Pencil className="h-3 w-3" />,
+  pipedrive: <Briefcase className="h-3 w-3" />,
+  email: <Mail className="h-3 w-3" />,
+  meeting: <Video className="h-3 w-3" />,
+};
 
 const CATEGORY_LABEL: Record<TaskCategory, string> = {
   urgent: "Urgente",
