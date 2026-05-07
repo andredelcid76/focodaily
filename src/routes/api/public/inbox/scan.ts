@@ -138,9 +138,14 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
       return [];
     }
 
-    // Activities assigned to that specific user, not done, recent.
+    // Activities assigned to that specific user, not done, in a window
+    // around today (yesterday → +21 days). The API sorts by due_date asc,
+    // so without a date filter the oldest pending items fill the page and
+    // upcoming activities never show up.
+    const startDate = new Date(Date.now() - 1 * 86400_000).toISOString().slice(0, 10);
+    const endDate = new Date(Date.now() + 21 * 86400_000).toISOString().slice(0, 10);
     const r = await fetch(
-      `${base}/activities?user_id=${pdUserId}&done=0&start=0&limit=50&api_token=${token}`,
+      `${base}/activities?user_id=${pdUserId}&done=0&start_date=${startDate}&end_date=${endDate}&start=0&limit=100&api_token=${token}`,
     );
     if (!r.ok) {
       console.error("pipedrive activities failed", r.status);
