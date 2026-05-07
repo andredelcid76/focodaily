@@ -101,7 +101,7 @@ function InboxPage() {
           {suggestions.map((s) => (
             <SuggestionCard
               key={s.id}
-              suggestion={s}
+              suggestion={s as unknown as SuggestionRow}
               projects={projects}
               onDismiss={() => dismissMut.mutate(s.id)}
               onAccept={(input) => acceptMut.mutate({ id: s.id, ...input })}
