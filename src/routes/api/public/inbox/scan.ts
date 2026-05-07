@@ -64,23 +64,61 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     }
   }
 
-  const since = new Date(Date.now() - 3 * 24 * 3600_000).toISOString();
-  const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=25&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink`;
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!r.ok) {
-    console.error("outlook fetch failed", r.status);
+  // Look back 60 days so older unanswered emails (e.g. weeks-old questions) still surface.
+  const since = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
+  const userEmail = (conn.email as string | null)?.toLowerCase() ?? null;
+
+  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft`;
+  const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!inboxR.ok) {
+    console.error("outlook inbox fetch failed", inboxR.status);
     return [];
   }
-  const json = await r.json();
-  type Msg = { id: string; subject?: string; bodyPreview?: string; from?: { emailAddress?: { address?: string; name?: string } }; receivedDateTime?: string; webLink?: string };
-  const msgs = (json.value ?? []) as Msg[];
-  return msgs.map((m) => ({
+  const inboxJson = await inboxR.json();
+  type Msg = {
+    id: string;
+    subject?: string;
+    bodyPreview?: string;
+    from?: { emailAddress?: { address?: string; name?: string } };
+    receivedDateTime?: string;
+    webLink?: string;
+    conversationId?: string;
+    isDraft?: boolean;
+  };
+  const inboxMsgs = (inboxJson.value ?? []) as Msg[];
+
+  // Pull sent items in the same window to detect replies by conversation.
+  const sentUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=200&$orderby=sentDateTime desc&$filter=sentDateTime ge ${since}&$select=conversationId,sentDateTime`;
+  const sentR = await fetch(sentUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  type SentMsg = { conversationId?: string; sentDateTime?: string };
+  const sentMsgs = sentR.ok ? (((await sentR.json()).value ?? []) as SentMsg[]) : [];
+  const lastSentByConv = new Map<string, number>();
+  for (const s of sentMsgs) {
+    if (!s.conversationId || !s.sentDateTime) continue;
+    const t = new Date(s.sentDateTime).getTime();
+    const prev = lastSentByConv.get(s.conversationId) ?? 0;
+    if (t > prev) lastSentByConv.set(s.conversationId, t);
+  }
+
+  // Keep only emails NOT sent by me, NOT replied to yet.
+  const pending = inboxMsgs.filter((m) => {
+    if (m.isDraft) return false;
+    const fromAddr = m.from?.emailAddress?.address?.toLowerCase() ?? "";
+    if (userEmail && fromAddr === userEmail) return false; // self / sent-as
+    if (!fromAddr) return false;
+    const received = m.receivedDateTime ? new Date(m.receivedDateTime).getTime() : 0;
+    const lastSent = m.conversationId ? lastSentByConv.get(m.conversationId) ?? 0 : 0;
+    if (lastSent > received) return false; // already replied after this email
+    return true;
+  });
+
+  return pending.map((m) => ({
     source: "email" as const,
     source_id: m.id,
     source_label: `${m.from?.emailAddress?.name ?? m.from?.emailAddress?.address ?? "Email"}: ${m.subject ?? "(sem assunto)"}`,
     source_url: m.webLink ?? null,
     source_date: m.receivedDateTime ?? null,
-    text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>\nAssunto: ${m.subject ?? ""}\n\n${m.bodyPreview ?? ""}`,
+    text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>\nAssunto: ${m.subject ?? ""}\nRecebido em: ${m.receivedDateTime ?? ""}\nStatus: pendente de resposta\n\n${m.bodyPreview ?? ""}`,
   }));
 }
 
