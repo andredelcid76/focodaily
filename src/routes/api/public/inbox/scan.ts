@@ -241,13 +241,14 @@ async function aiExtractTasks(items: SourceItem[]): Promise<Array<{ source_index
           content: `Você analisa e-mails, atas de reunião e deals do CRM e extrai tarefas concretas que o USUÁRIO precisa fazer. Hoje é ${today}.
 
 Regras estritas:
-- SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
-- IGNORE newsletters, notificações automáticas, FYI, e ações de outras pessoas.
+- Para E-MAILS marcados como "pendente de resposta": se o e-mail contém uma pergunta direta, um pedido, uma solicitação de retorno, ou claramente espera uma resposta do usuário, gere UMA sugestão "Responder a <Nome>: <assunto curto>" mesmo que não haja prazo explícito. Use a data de recebimento para calibrar urgência (>7 dias atrasada = urgent).
+- Para reuniões e CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
+- IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
 - Para cada item de entrada, retorne 0 ou mais sugestões.
-- Categoria: "urgent" (prazo <= 2 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
-- Duração em minutos: 15, 30, 60, 90 ou 120.
+- Categoria: "urgent" (prazo <= 2 dias OU e-mail pendente há > 7 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
+- Duração em minutos: 15, 30, 60, 90 ou 120 (responder e-mail = 15 ou 30).
 - Data sugerida (YYYY-MM-DD): hoje ou próxima data útil razoável.
-- Título curto e acionável (verbo no infinitivo).
+- Título curto e acionável (verbo no infinitivo). Para e-mails: "Responder <Nome>: <tema>".
 
 Retorne JSON válido:
 {"results":[{"source_index":0,"suggestions":[{"title":"...","description":"...","suggested_category":"important","suggested_duration_minutes":30,"suggested_date":"${today}","reasoning":"..."}]}]}`,
