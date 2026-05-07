@@ -5,7 +5,7 @@ import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -41,6 +41,7 @@ type Props = {
   selectionMode?: boolean;
   selected?: boolean;
   onSelectToggle?: () => void;
+  subtaskCount?: { total: number; completed: number };
 };
 
 export function TaskCard({
@@ -65,6 +66,7 @@ export function TaskCard({
   selectionMode,
   selected,
   onSelectToggle,
+  subtaskCount,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -227,6 +229,16 @@ export function TaskCard({
               }`}
             >
               <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
+            </span>
+          )}
+          {subtaskCount && subtaskCount.total > 0 && (
+            <span
+              className={`inline-flex items-center gap-1 ${
+                subtaskCount.completed === subtaskCount.total ? "text-green-500" : ""
+              }`}
+              title={`${subtaskCount.completed} de ${subtaskCount.total} subtarefas concluídas`}
+            >
+              <ListChecks className="h-3 w-3" /> {subtaskCount.completed}/{subtaskCount.total}
             </span>
           )}
           {(task.recurrence !== "none" || task.recurrence_parent_id) && (

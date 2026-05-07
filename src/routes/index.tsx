@@ -7,7 +7,8 @@ import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
-import { BriefingCard } from "@/components/BriefingCard";
+import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
+
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +84,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
   const { roles } = useRoles(userId);
+  const subtaskCounts = useSubtaskCounts(userId);
   const { projects } = useProjects(userId);
   const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
@@ -411,7 +413,7 @@ function TodayInner({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      {isViewingToday && <BriefingCard scope="day" />}
+      
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -549,6 +551,7 @@ function TodayInner({ userId }: { userId: string }) {
                 onPostpone={(date) => handlePostpone(t, date)}
                 onDuplicate={(date) => handleDuplicate(t, date)}
                 onFollowUp={(date) => handleFollowUp(t, date)}
+                subtaskCount={subtaskCounts[t.id]}
               />
             ))}
           </div>
@@ -587,6 +590,7 @@ function TodayInner({ userId }: { userId: string }) {
                     selectionMode={selectionMode}
                     selected={selectedIds.has(t.id)}
                     onSelectToggle={() => toggleSelect(t.id)}
+                    subtaskCount={subtaskCounts[t.id]}
                   />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => moveOverdueToToday(t)}>
@@ -704,6 +708,7 @@ function TodayInner({ userId }: { userId: string }) {
                     selectionMode={selectionMode}
                     selected={selectedIds.has(t.id)}
                     onSelectToggle={() => toggleSelect(t.id)}
+                    subtaskCount={subtaskCounts[t.id]}
                   />
                 ))}
               </div>
