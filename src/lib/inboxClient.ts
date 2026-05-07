@@ -49,33 +49,44 @@ export async function dismissSuggestion(id: string, userId: string) {
 export async function acceptSuggestion(input: {
   id: string;
   userId: string;
-  scheduled_date: string;
-  project_id: string | null;
-  title: string;
+  task: {
+    title: string;
+    description: string | null;
+    scheduled_date: string;
+    duration_minutes: number;
+    category: "urgent" | "important" | "circumstantial";
+    project_id: string | null;
+    role_id: string | null;
+    non_negotiable: boolean;
+  };
 }) {
   const { data: sug, error: sErr } = await supabase
     .from("inbox_suggestions")
-    .select("*")
+    .select("source,source_label,source_url")
     .eq("id", input.id)
     .eq("user_id", input.userId)
     .maybeSingle();
   if (sErr) throw new Error(sErr.message);
-  if (!sug) throw new Error("Sugestão não encontrada");
 
   const insert = {
     user_id: input.userId,
-    title: input.title,
-    description: sug.description ?? null,
-    scheduled_date: input.scheduled_date,
-    original_date: input.scheduled_date,
-    planned_date: input.scheduled_date,
-    duration_minutes: sug.suggested_duration_minutes ?? 30,
-    category: (sug.suggested_category ?? "important") as "urgent" | "important" | "circumstantial",
-    project_id: input.project_id,
+    title: input.task.title,
+    description: input.task.description,
+    scheduled_date: input.task.scheduled_date,
+    original_date: input.task.scheduled_date,
+    planned_date: input.task.scheduled_date,
+    duration_minutes: input.task.duration_minutes,
+    category: input.task.category,
+    project_id: input.task.project_id,
+    role_id: input.task.role_id,
+    non_negotiable: input.task.non_negotiable,
+    origin_source: sug?.source ?? null,
+    origin_source_label: sug?.source_label ?? null,
+    origin_source_url: sug?.source_url ?? null,
   };
   const { data: task, error: tErr } = await supabase
     .from("tasks")
-    .insert(insert)
+    .insert(insert as never)
     .select("id")
     .single();
   if (tErr) throw new Error(tErr.message);

@@ -2,16 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Inbox, Mail, Users, Briefcase, Check, X, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
+import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan } from "@/lib/inboxClient";
+import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan, type InboxSuggestion } from "@/lib/inboxClient";
 import { useAuth } from "@/lib/auth";
 import { useProjects } from "@/hooks/useProjects";
+import { useRoles } from "@/hooks/useRoles";
+import { TaskDialog } from "@/components/TaskDialog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -24,8 +24,8 @@ export const Route = createFileRoute("/inbox")({
 });
 
 const SOURCE_META = {
-  email: { icon: Mail, label: "E-mail", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-  meeting: { icon: Users, label: "Reunião", color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+  email: { icon: Mail, label: "Outlook", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+  meeting: { icon: Users, label: "Fireflies", color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
   pipedrive: { icon: Briefcase, label: "Pipedrive", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
 } as const;
 
@@ -35,6 +35,9 @@ function InboxPage() {
   const userId = user?.id;
 
   const { projects } = useProjects(userId);
+  const { roles } = useRoles(userId);
+
+  const [editing, setEditing] = useState<InboxSuggestion | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["inbox-suggestions", userId],
@@ -45,16 +48,6 @@ function InboxPage() {
   const dismissMut = useMutation({
     mutationFn: (id: string) => dismissSuggestion(id, userId!),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox-suggestions"] }),
-  });
-
-  const acceptMut = useMutation({
-    mutationFn: (input: { id: string; scheduled_date: string; project_id: string | null; title: string }) =>
-      acceptSuggestion({ ...input, userId: userId! }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["inbox-suggestions"] });
-      toast.success("Tarefa adicionada");
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
   const scanMut = useMutation({
@@ -78,7 +71,7 @@ function InboxPage() {
             <Inbox className="h-6 w-6" /> Caixa de entrada
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sugestões automáticas vindas de e-mails, reuniões e Pipedrive.
+            Sugestões automáticas vindas do Outlook, Fireflies e Pipedrive.
             {lastScan && (
               <> Última varredura {formatDistanceToNow(new Date(lastScan), { addSuffix: true, locale: ptBR })}.</>
             )}
@@ -100,133 +93,100 @@ function InboxPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {suggestions.map((s) => (
-            <SuggestionCard
-              key={s.id}
-              suggestion={s as unknown as SuggestionRow}
-              projects={projects}
-              onDismiss={() => dismissMut.mutate(s.id)}
-              onAccept={(input) => acceptMut.mutate({ id: s.id, ...input })}
-              isAccepting={acceptMut.isPending}
-              isDismissing={dismissMut.isPending}
-            />
-          ))}
+          {suggestions.map((s) => {
+            const meta = SOURCE_META[s.source];
+            const Icon = meta.icon;
+            return (
+              <Card key={s.id} className="p-4 space-y-2 hover:border-border transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-base">{s.title}</div>
+                    {s.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{s.description}</p>
+                    )}
+                  </div>
+                  <Badge variant="outline" className={meta.color}>
+                    <Icon className="h-3 w-3 mr-1" /> {meta.label}
+                  </Badge>
+                </div>
+
+                <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                  <span className="truncate max-w-md">{s.source_label}</span>
+                  {s.source_url && (
+                    <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {s.reasoning && (
+                    <>
+                      <span>·</span>
+                      <span className="italic">{s.reasoning}</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => dismissMut.mutate(s.id)}
+                    disabled={dismissMut.isPending}
+                  >
+                    <X className="h-4 w-4 mr-1" /> Descartar
+                  </Button>
+                  <Button size="sm" onClick={() => setEditing(s)}>
+                    <Plus className="h-4 w-4 mr-1" /> Adicionar tarefa
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
-    </div>
-  );
-}
 
-type SuggestionRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  source: "email" | "meeting" | "pipedrive";
-  source_label: string | null;
-  source_url: string | null;
-  source_date: string | null;
-  suggested_category: string;
-  suggested_date: string | null;
-  reasoning: string | null;
-};
-
-function SuggestionCard({
-  suggestion,
-  projects,
-  onDismiss,
-  onAccept,
-  isAccepting,
-  isDismissing,
-}: {
-  suggestion: SuggestionRow;
-  projects: Array<{ id: string; name: string; color: string }>;
-  onDismiss: () => void;
-  onAccept: (input: { scheduled_date: string; project_id: string | null; title: string }) => void;
-  isAccepting: boolean;
-  isDismissing: boolean;
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [date, setDate] = useState(suggestion.suggested_date ?? today);
-  const [projectId, setProjectId] = useState<string>("none");
-  const [title, setTitle] = useState(suggestion.title);
-
-  const meta = SOURCE_META[suggestion.source];
-  const Icon = meta.icon;
-
-  return (
-    <Card className="p-4 space-y-3 hover:border-border transition-colors">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="font-medium border-0 px-0 h-auto py-0 text-base focus-visible:ring-0 shadow-none bg-transparent"
-          />
-          {suggestion.description && (
-            <p className="text-sm text-muted-foreground mt-1">{suggestion.description}</p>
-          )}
-        </div>
-        <Badge variant="outline" className={meta.color}>
-          <Icon className="h-3 w-3 mr-1" /> {meta.label}
-        </Badge>
-      </div>
-
-      <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-        <span className="truncate max-w-md">{suggestion.source_label}</span>
-        {suggestion.source_url && (
-          <a href={suggestion.source_url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
-        {suggestion.reasoning && (
-          <>
-            <span>·</span>
-            <span className="italic">{suggestion.reasoning}</span>
-          </>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap pt-1">
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-auto h-9"
+      {editing && userId && (
+        <TaskDialog
+          open={!!editing}
+          onOpenChange={(v) => !v && setEditing(null)}
+          defaultDate={editing.suggested_date ?? new Date().toISOString().slice(0, 10)}
+          isSeed
+          task={
+            {
+              title: editing.title,
+              description: editing.description,
+              category: editing.suggested_category,
+              duration_minutes: editing.suggested_duration_minutes,
+              scheduled_date: editing.suggested_date ?? new Date().toISOString().slice(0, 10),
+              recurrence: "none",
+              role_id: null,
+              project_id: null,
+              non_negotiable: false,
+            } as never
+          }
+          roles={roles}
+          projects={projects}
+          onSave={async (d) => {
+            await acceptSuggestion({
+              id: editing.id,
+              userId,
+              task: {
+                title: d.title,
+                description: d.description,
+                scheduled_date: d.scheduled_date,
+                duration_minutes: d.duration_minutes,
+                category: d.category,
+                project_id: d.project_id,
+                role_id: d.role_id,
+                non_negotiable: d.non_negotiable,
+              },
+            });
+            qc.invalidateQueries({ queryKey: ["inbox-suggestions"] });
+            qc.invalidateQueries({ queryKey: ["tasks"] });
+            toast.success("Tarefa adicionada");
+            setEditing(null);
+          }}
         />
-        <Select value={projectId} onValueChange={setProjectId}>
-          <SelectTrigger className="w-[180px] h-9">
-            <SelectValue placeholder="Projeto" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Sem projeto</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-                  {p.name}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="ml-auto flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDismiss}
-            disabled={isDismissing || isAccepting}
-          >
-            <X className="h-4 w-4 mr-1" /> Descartar
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => onAccept({ scheduled_date: date, project_id: projectId === "none" ? null : projectId, title })}
-            disabled={isAccepting || isDismissing || !title.trim()}
-          >
-            <Check className="h-4 w-4 mr-1" /> Adicionar
-          </Button>
-        </div>
-      </div>
-    </Card>
+      )}
+    </div>
   );
 }

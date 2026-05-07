@@ -181,6 +181,38 @@ export function TaskCard({
             </button>
             {role && <RoleBadge role={role} size="xs" />}
             {project && <ProjectChip project={project} size="xs" />}
+            {(task as any).origin_source && (() => {
+              const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
+              const url = (task as any).origin_source_url as string | null;
+              const label = (task as any).origin_source_label as string | null;
+              const meta =
+                src === "email"
+                  ? { l: "Outlook", c: "border-blue-500/40 bg-blue-500/10 text-blue-600" }
+                  : src === "meeting"
+                  ? { l: "Fireflies", c: "border-purple-500/40 bg-purple-500/10 text-purple-600" }
+                  : { l: "Pipedrive", c: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600" };
+              const chip = (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${meta.c}`}
+                  title={label ?? meta.l}
+                >
+                  {meta.l}
+                </span>
+              );
+              return url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {chip}
+                </a>
+              ) : (
+                chip
+              );
+            })()}
             {followupNumber > 1 && (
               <span
                 className="inline-flex items-center gap-1 rounded-md border border-circumstantial/40 bg-circumstantial/10 px-1.5 py-0.5 text-[10px] font-semibold text-circumstantial"

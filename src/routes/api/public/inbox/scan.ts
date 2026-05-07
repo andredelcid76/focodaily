@@ -124,10 +124,23 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
   if (!token || !domain) return [];
   try {
     const base = `https://${domain}.pipedrive.com/api/v1`;
-    // Activities assigned to the current authenticated user (user_id=0 = self).
-    // Includes incomplete activities and recently updated ones.
+
+    // Get the authenticated Pipedrive user id (the token's owner).
+    const meR = await fetch(`${base}/users/me?api_token=${token}`);
+    if (!meR.ok) {
+      console.error("pipedrive /users/me failed", meR.status);
+      return [];
+    }
+    const meJson = await meR.json();
+    const pdUserId = meJson?.data?.id as number | undefined;
+    if (!pdUserId) {
+      console.error("pipedrive: no user id from /users/me");
+      return [];
+    }
+
+    // Activities assigned to that specific user, not done, recent.
     const r = await fetch(
-      `${base}/activities?user_id=0&done=0&sort=update_time%20DESC&limit=30&api_token=${token}`,
+      `${base}/activities?user_id=${pdUserId}&done=0&start=0&limit=50&api_token=${token}`,
     );
     if (!r.ok) {
       console.error("pipedrive activities failed", r.status);
