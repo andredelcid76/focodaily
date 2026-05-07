@@ -70,7 +70,7 @@ export async function acceptSuggestion(input: {
     original_date: input.scheduled_date,
     planned_date: input.scheduled_date,
     duration_minutes: sug.suggested_duration_minutes ?? 30,
-    category: sug.suggested_category ?? "important",
+    category: (sug.suggested_category ?? "important") as "urgent" | "important" | "circumstantial",
     project_id: input.project_id,
   };
   const { data: task, error: tErr } = await supabase
