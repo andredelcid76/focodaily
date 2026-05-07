@@ -124,22 +124,40 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
   if (!token || !domain) return [];
   try {
     const base = `https://${domain}.pipedrive.com/api/v1`;
-    // Recent deals updated in last 14 days
-    const r = await fetch(`${base}/deals?status=open&sort=update_time%20DESC&limit=20&api_token=${token}`);
+    // Activities assigned to the current authenticated user (user_id=0 = self).
+    // Includes incomplete activities and recently updated ones.
+    const r = await fetch(
+      `${base}/activities?user_id=0&done=0&sort=update_time%20DESC&limit=30&api_token=${token}`,
+    );
     if (!r.ok) {
-      console.error("pipedrive deals failed", r.status);
+      console.error("pipedrive activities failed", r.status);
       return [];
     }
     const json = await r.json();
-    type Deal = { id: number; title?: string; org_name?: string; person_name?: string; next_activity_subject?: string | null; next_activity_date?: string | null; update_time?: string; stage_id?: number };
-    const deals = (json?.data ?? []) as Deal[];
-    return deals.slice(0, 15).map((d) => ({
+    type Activity = {
+      id: number;
+      subject?: string;
+      type?: string;
+      note?: string | null;
+      public_description?: string | null;
+      due_date?: string | null;
+      due_time?: string | null;
+      done?: boolean;
+      org_name?: string | null;
+      person_name?: string | null;
+      deal_title?: string | null;
+      deal_id?: number | null;
+      update_time?: string;
+      add_time?: string;
+    };
+    const acts = (json?.data ?? []) as Activity[];
+    return acts.slice(0, 20).map((a) => ({
       source: "pipedrive" as const,
-      source_id: `deal_${d.id}`,
-      source_label: `Pipedrive: ${d.title ?? "Deal"} (${d.org_name ?? d.person_name ?? "—"})`,
-      source_url: `https://${domain}.pipedrive.com/deal/${d.id}`,
-      source_date: d.update_time ?? null,
-      text: `Deal: ${d.title}\nOrganização: ${d.org_name ?? "—"}\nPessoa: ${d.person_name ?? "—"}\nPróxima atividade: ${d.next_activity_subject ?? "—"} (${d.next_activity_date ?? "—"})\nÚltima atualização: ${d.update_time ?? "—"}`,
+      source_id: `activity_${a.id}`,
+      source_label: `Pipedrive: ${a.subject ?? a.type ?? "Atividade"}${a.org_name ? ` (${a.org_name})` : a.person_name ? ` (${a.person_name})` : ""}`,
+      source_url: `https://${domain}.pipedrive.com/activities/list#dialog/activity/${a.id}`,
+      source_date: a.due_date ?? a.update_time ?? a.add_time ?? null,
+      text: `Atividade: ${a.subject ?? "—"}\nTipo: ${a.type ?? "—"}\nVencimento: ${a.due_date ?? "—"} ${a.due_time ?? ""}\nDeal: ${a.deal_title ?? "—"}\nOrganização: ${a.org_name ?? "—"}\nPessoa: ${a.person_name ?? "—"}\nNota: ${(a.note ?? a.public_description ?? "").replace(/<[^>]+>/g, "").slice(0, 800)}`,
     }));
   } catch (e) {
     console.error("pipedrive", e);
