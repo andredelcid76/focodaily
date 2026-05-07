@@ -551,6 +551,7 @@ function TodayInner({ userId }: { userId: string }) {
                 onPostpone={(date) => handlePostpone(t, date)}
                 onDuplicate={(date) => handleDuplicate(t, date)}
                 onFollowUp={(date) => handleFollowUp(t, date)}
+                subtaskCount={subtaskCounts[t.id]}
               />
             ))}
           </div>
@@ -589,6 +590,7 @@ function TodayInner({ userId }: { userId: string }) {
                     selectionMode={selectionMode}
                     selected={selectedIds.has(t.id)}
                     onSelectToggle={() => toggleSelect(t.id)}
+                    subtaskCount={subtaskCounts[t.id]}
                   />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => moveOverdueToToday(t)}>
@@ -706,6 +708,7 @@ function TodayInner({ userId }: { userId: string }) {
                     selectionMode={selectionMode}
                     selected={selectedIds.has(t.id)}
                     onSelectToggle={() => toggleSelect(t.id)}
+                    subtaskCount={subtaskCounts[t.id]}
                   />
                 ))}
               </div>
