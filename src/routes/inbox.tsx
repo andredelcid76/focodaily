@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { listInboxSuggestions, dismissInboxSuggestion, acceptInboxSuggestion, triggerInboxScan } from "@/lib/inbox.functions";
+import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan } from "@/lib/inbox.client";
 import { useAuth } from "@/lib/auth";
 import { useProjects } from "@/hooks/useProjects";
 import { formatDistanceToNow } from "date-fns";
@@ -33,26 +32,24 @@ const SOURCE_META = {
 function InboxPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const list = useServerFn(listInboxSuggestions);
-  const dismiss = useServerFn(dismissInboxSuggestion);
-  const accept = useServerFn(acceptInboxSuggestion);
-  const scan = useServerFn(triggerInboxScan);
+  const userId = user?.id;
 
-  const { projects } = useProjects(user?.id);
+  const { projects } = useProjects(userId);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["inbox-suggestions"],
-    queryFn: () => list(),
+    queryKey: ["inbox-suggestions", userId],
+    queryFn: () => fetchInboxSuggestions(userId!),
+    enabled: !!userId,
   });
 
   const dismissMut = useMutation({
-    mutationFn: (id: string) => dismiss({ data: { id } }),
+    mutationFn: (id: string) => dismissSuggestion(id, userId!),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox-suggestions"] }),
   });
 
   const acceptMut = useMutation({
     mutationFn: (input: { id: string; scheduled_date: string; project_id: string | null; title: string }) =>
-      accept({ data: input }),
+      acceptSuggestion({ ...input, userId: userId! }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox-suggestions"] });
       toast.success("Tarefa adicionada");
@@ -61,7 +58,7 @@ function InboxPage() {
   });
 
   const scanMut = useMutation({
-    mutationFn: () => scan(),
+    mutationFn: () => triggerScan(userId!),
     onSuccess: (r: unknown) => {
       const created = (r as { results?: Array<{ created?: number }> })?.results?.[0]?.created ?? 0;
       toast.success(created > 0 ? `${created} nova(s) sugestão(ões)` : "Nada novo encontrado");
