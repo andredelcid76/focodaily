@@ -473,6 +473,13 @@ function TodayInner({ userId }: { userId: string }) {
             </Button>
           </div>
           <Button
+            variant="outline"
+            onClick={() => setBulkDialogOpen(true)}
+            title="Criar várias tarefas de uma vez"
+          >
+            <ListPlus className="mr-1 h-4 w-4" /> Em lote
+          </Button>
+          <Button
             onClick={() => openNew()}
             className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90"
           >
