@@ -64,23 +64,61 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     }
   }
 
-  const since = new Date(Date.now() - 3 * 24 * 3600_000).toISOString();
-  const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=25&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink`;
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!r.ok) {
-    console.error("outlook fetch failed", r.status);
+  // Look back 60 days so older unanswered emails (e.g. weeks-old questions) still surface.
+  const since = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
+  const userEmail = (conn.email as string | null)?.toLowerCase() ?? null;
+
+  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft`;
+  const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!inboxR.ok) {
+    console.error("outlook inbox fetch failed", inboxR.status);
     return [];
   }
-  const json = await r.json();
-  type Msg = { id: string; subject?: string; bodyPreview?: string; from?: { emailAddress?: { address?: string; name?: string } }; receivedDateTime?: string; webLink?: string };
-  const msgs = (json.value ?? []) as Msg[];
-  return msgs.map((m) => ({
+  const inboxJson = await inboxR.json();
+  type Msg = {
+    id: string;
+    subject?: string;
+    bodyPreview?: string;
+    from?: { emailAddress?: { address?: string; name?: string } };
+    receivedDateTime?: string;
+    webLink?: string;
+    conversationId?: string;
+    isDraft?: boolean;
+  };
+  const inboxMsgs = (inboxJson.value ?? []) as Msg[];
+
+  // Pull sent items in the same window to detect replies by conversation.
+  const sentUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=200&$orderby=sentDateTime desc&$filter=sentDateTime ge ${since}&$select=conversationId,sentDateTime`;
+  const sentR = await fetch(sentUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  type SentMsg = { conversationId?: string; sentDateTime?: string };
+  const sentMsgs = sentR.ok ? (((await sentR.json()).value ?? []) as SentMsg[]) : [];
+  const lastSentByConv = new Map<string, number>();
+  for (const s of sentMsgs) {
+    if (!s.conversationId || !s.sentDateTime) continue;
+    const t = new Date(s.sentDateTime).getTime();
+    const prev = lastSentByConv.get(s.conversationId) ?? 0;
+    if (t > prev) lastSentByConv.set(s.conversationId, t);
+  }
+
+  // Keep only emails NOT sent by me, NOT replied to yet.
+  const pending = inboxMsgs.filter((m) => {
+    if (m.isDraft) return false;
+    const fromAddr = m.from?.emailAddress?.address?.toLowerCase() ?? "";
+    if (userEmail && fromAddr === userEmail) return false; // self / sent-as
+    if (!fromAddr) return false;
+    const received = m.receivedDateTime ? new Date(m.receivedDateTime).getTime() : 0;
+    const lastSent = m.conversationId ? lastSentByConv.get(m.conversationId) ?? 0 : 0;
+    if (lastSent > received) return false; // already replied after this email
+    return true;
+  });
+
+  return pending.map((m) => ({
     source: "email" as const,
     source_id: m.id,
     source_label: `${m.from?.emailAddress?.name ?? m.from?.emailAddress?.address ?? "Email"}: ${m.subject ?? "(sem assunto)"}`,
     source_url: m.webLink ?? null,
     source_date: m.receivedDateTime ?? null,
-    text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>\nAssunto: ${m.subject ?? ""}\n\n${m.bodyPreview ?? ""}`,
+    text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>\nAssunto: ${m.subject ?? ""}\nRecebido em: ${m.receivedDateTime ?? ""}\nStatus: pendente de resposta\n\n${m.bodyPreview ?? ""}`,
   }));
 }
 
@@ -203,13 +241,14 @@ async function aiExtractTasks(items: SourceItem[]): Promise<Array<{ source_index
           content: `Você analisa e-mails, atas de reunião e deals do CRM e extrai tarefas concretas que o USUÁRIO precisa fazer. Hoje é ${today}.
 
 Regras estritas:
-- SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
-- IGNORE newsletters, notificações automáticas, FYI, e ações de outras pessoas.
+- Para E-MAILS marcados como "pendente de resposta": se o e-mail contém uma pergunta direta, um pedido, uma solicitação de retorno, ou claramente espera uma resposta do usuário, gere UMA sugestão "Responder a <Nome>: <assunto curto>" mesmo que não haja prazo explícito. Use a data de recebimento para calibrar urgência (>7 dias atrasada = urgent).
+- Para reuniões e CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
+- IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
 - Para cada item de entrada, retorne 0 ou mais sugestões.
-- Categoria: "urgent" (prazo <= 2 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
-- Duração em minutos: 15, 30, 60, 90 ou 120.
+- Categoria: "urgent" (prazo <= 2 dias OU e-mail pendente há > 7 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
+- Duração em minutos: 15, 30, 60, 90 ou 120 (responder e-mail = 15 ou 30).
 - Data sugerida (YYYY-MM-DD): hoje ou próxima data útil razoável.
-- Título curto e acionável (verbo no infinitivo).
+- Título curto e acionável (verbo no infinitivo). Para e-mails: "Responder <Nome>: <tema>".
 
 Retorne JSON válido:
 {"results":[{"source_index":0,"suggestions":[{"title":"...","description":"...","suggested_category":"important","suggested_duration_minutes":30,"suggested_date":"${today}","reasoning":"..."}]}]}`,
@@ -244,15 +283,41 @@ async function scanForUser(userId: string) {
   const all = [...emails, ...meetings, ...deals];
   if (all.length === 0) return { user_id: userId, scanned: 0, created: 0 };
 
-  // Filter out already-processed
-  const { data: processed } = await supabaseAdmin
-    .from("inbox_processed_sources")
+  // Filter out items that already have a suggestion (any status) or an existing task linked to them.
+  const { data: existingSugs } = await supabaseAdmin
+    .from("inbox_suggestions")
     .select("source,source_id")
-    .eq("user_id", userId)
-    .in("source", ["email", "meeting", "pipedrive"]);
-  const seen = new Set((processed ?? []).map((p) => `${p.source}:${p.source_id}`));
-  const fresh = all.filter((it) => !seen.has(`${it.source}:${it.source_id}`));
-  if (fresh.length === 0) return { user_id: userId, scanned: 0, created: 0 };
+    .eq("user_id", userId);
+  const seenSug = new Set((existingSugs ?? []).map((p) => `${p.source}:${p.source_id}`));
+
+  const sourceUrls = all.map((it) => it.source_url).filter(Boolean) as string[];
+  const linkedUrls = new Set<string>();
+  if (sourceUrls.length > 0) {
+    const { data: linkedTasks } = await supabaseAdmin
+      .from("tasks")
+      .select("origin_source_url")
+      .eq("user_id", userId)
+      .in("origin_source_url", sourceUrls);
+    for (const t of linkedTasks ?? []) {
+      if (t.origin_source_url) linkedUrls.add(t.origin_source_url as string);
+    }
+  }
+
+  const fresh = all.filter((it) => {
+    if (seenSug.has(`${it.source}:${it.source_id}`)) return false;
+    if (it.source_url && linkedUrls.has(it.source_url)) return false;
+    return true;
+  });
+  if (fresh.length === 0) {
+    await supabaseAdmin.from("inbox_scan_state").upsert({
+      user_id: userId,
+      last_scan_at: new Date().toISOString(),
+      last_status: "ok",
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    } as never);
+    return { user_id: userId, scanned: 0, created: 0 };
+  }
 
   // AI extract
   const results = await aiExtractTasks(fresh);
@@ -280,11 +345,6 @@ async function scanForUser(userId: string) {
       if (!error) created++;
     }
   }
-
-  // Mark all fresh items as processed (even those that yielded no suggestion)
-  await supabaseAdmin.from("inbox_processed_sources").insert(
-    fresh.map((it) => ({ user_id: userId, source: it.source, source_id: it.source_id })) as never,
-  );
 
   await supabaseAdmin.from("inbox_scan_state").upsert({
     user_id: userId,
