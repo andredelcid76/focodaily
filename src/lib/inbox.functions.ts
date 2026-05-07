@@ -90,23 +90,12 @@ export const acceptInboxSuggestion = createServerFn({ method: "POST" })
 export const triggerInboxScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { userId } = context;
-    const url = `${process.env.SUPABASE_URL?.replace(".supabase.co", "")}`; // not used
-    void url;
-    const base = process.env.PUBLIC_BASE_URL ?? "https://focodaily.lovable.app";
-    const r = await fetch(`${base}/api/public/inbox/scan?user_id=${userId}`, {
+    const base = "https://focodaily.lovable.app";
+    const r = await fetch(`${base}/api/public/inbox/scan?user_id=${context.userId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-internal-token": process.env.SUPABASE_SERVICE_ROLE_KEY ?? "" },
+      headers: { "Content-Type": "application/json" },
     });
     const text = await r.text();
-    if (!r.ok) throw new Error(`Scan failed [${r.status}]: ${text.slice(0, 300)}`);
+    if (!r.ok) throw new Error(`Scan falhou [${r.status}]: ${text.slice(0, 200)}`);
     return JSON.parse(text);
-  });
-
-export const getPipedriveStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    // We use shared env tokens so just return whether they're configured.
-    // No per-user secret needed for v1.
-    return { configured: true };
   });
