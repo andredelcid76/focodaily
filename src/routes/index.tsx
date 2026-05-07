@@ -47,7 +47,9 @@ import {
   LayoutGrid,
   List as ListIcon,
   KanbanSquare,
+  ListPlus,
 } from "lucide-react";
+import { BulkTaskDialog } from "@/components/BulkTaskDialog";
 import { MeetingsRail } from "@/components/MeetingsRail";
 import {
   DndContext,
