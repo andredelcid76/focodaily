@@ -201,6 +201,18 @@ export function TaskFiltersBar({
             ))}
           </FilterSection>
 
+          <FilterSection title="Origem">
+            {(Object.keys(ORIGIN_LABEL) as TaskOrigin[]).map((o) => (
+              <Chip
+                key={o}
+                active={filters.origins.has(o)}
+                onClick={() => toggle("origins", o)}
+                label={ORIGIN_LABEL[o]}
+                icon={ORIGIN_ICON[o]}
+              />
+            ))}
+          </FilterSection>
+
           <FilterSection title="Status">
             {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
               <Chip
