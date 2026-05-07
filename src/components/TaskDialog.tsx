@@ -498,6 +498,16 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               )}
             </div>
           )}
+
+          {task?.id && !isSeed && user?.id ? (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+              <SubtasksList taskId={task.id} userId={user.id} />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground">
+              Salve a tarefa para adicionar subtarefas.
+            </div>
+          )}
         </div>
         <DialogFooter className="flex justify-between sm:justify-between">
           <div>
