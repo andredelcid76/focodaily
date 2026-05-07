@@ -91,6 +91,7 @@ function TodayInner({ userId }: { userId: string }) {
   const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionActive, setSelectionActive] = useState(false);
