@@ -282,15 +282,41 @@ async function scanForUser(userId: string) {
   const all = [...emails, ...meetings, ...deals];
   if (all.length === 0) return { user_id: userId, scanned: 0, created: 0 };
 
-  // Filter out already-processed
-  const { data: processed } = await supabaseAdmin
-    .from("inbox_processed_sources")
+  // Filter out items that already have a suggestion (any status) or an existing task linked to them.
+  const { data: existingSugs } = await supabaseAdmin
+    .from("inbox_suggestions")
     .select("source,source_id")
-    .eq("user_id", userId)
-    .in("source", ["email", "meeting", "pipedrive"]);
-  const seen = new Set((processed ?? []).map((p) => `${p.source}:${p.source_id}`));
-  const fresh = all.filter((it) => !seen.has(`${it.source}:${it.source_id}`));
-  if (fresh.length === 0) return { user_id: userId, scanned: 0, created: 0 };
+    .eq("user_id", userId);
+  const seenSug = new Set((existingSugs ?? []).map((p) => `${p.source}:${p.source_id}`));
+
+  const sourceUrls = all.map((it) => it.source_url).filter(Boolean) as string[];
+  const linkedUrls = new Set<string>();
+  if (sourceUrls.length > 0) {
+    const { data: linkedTasks } = await supabaseAdmin
+      .from("tasks")
+      .select("origin_source_url")
+      .eq("user_id", userId)
+      .in("origin_source_url", sourceUrls);
+    for (const t of linkedTasks ?? []) {
+      if (t.origin_source_url) linkedUrls.add(t.origin_source_url as string);
+    }
+  }
+
+  const fresh = all.filter((it) => {
+    if (seenSug.has(`${it.source}:${it.source_id}`)) return false;
+    if (it.source_url && linkedUrls.has(it.source_url)) return false;
+    return true;
+  });
+  if (fresh.length === 0) {
+    await supabaseAdmin.from("inbox_scan_state").upsert({
+      user_id: userId,
+      last_scan_at: new Date().toISOString(),
+      last_status: "ok",
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    } as never);
+    return { user_id: userId, scanned: 0, created: 0 };
+  }
 
   // AI extract
   const results = await aiExtractTasks(fresh);
@@ -318,11 +344,6 @@ async function scanForUser(userId: string) {
       if (!error) created++;
     }
   }
-
-  // Mark all fresh items as processed (even those that yielded no suggestion)
-  await supabaseAdmin.from("inbox_processed_sources").insert(
-    fresh.map((it) => ({ user_id: userId, source: it.source, source_id: it.source_id })) as never,
-  );
 
   await supabaseAdmin.from("inbox_scan_state").upsert({
     user_id: userId,
