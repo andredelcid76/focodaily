@@ -43,13 +43,18 @@ export function useSubtasks(taskId: string | undefined, userId: string | undefin
   const create = async (title: string) => {
     if (!taskId || !userId || !title.trim()) return;
     const nextPos = subtasks.length > 0 ? Math.max(...subtasks.map((s) => s.position)) + 1 : 0;
-    const { error } = await supabase.from("task_subtasks").insert({
-      task_id: taskId,
-      user_id: userId,
-      title: title.trim(),
-      position: nextPos,
-    });
+    const { data, error } = await supabase
+      .from("task_subtasks")
+      .insert({
+        task_id: taskId,
+        user_id: userId,
+        title: title.trim(),
+        position: nextPos,
+      })
+      .select()
+      .single();
     if (error) throw error;
+    if (data) setSubtasks((prev) => (prev.some((s) => s.id === data.id) ? prev : [...prev, data]));
   };
 
   const toggle = async (id: string, completed: boolean) => {
