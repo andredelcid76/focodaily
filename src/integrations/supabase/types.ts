@@ -109,6 +109,117 @@ export type Database = {
         }
         Relationships: []
       }
+      inbox_processed_sources: {
+        Row: {
+          id: string
+          processed_at: string
+          source: string
+          source_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          processed_at?: string
+          source: string
+          source_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          processed_at?: string
+          source?: string
+          source_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      inbox_scan_state: {
+        Row: {
+          last_error: string | null
+          last_scan_at: string | null
+          last_status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_error?: string | null
+          last_scan_at?: string | null
+          last_status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_error?: string | null
+          last_scan_at?: string | null
+          last_status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      inbox_suggestions: {
+        Row: {
+          accepted_task_id: string | null
+          acted_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          reasoning: string | null
+          source: string
+          source_date: string | null
+          source_id: string
+          source_label: string | null
+          source_url: string | null
+          status: string
+          suggested_category: string
+          suggested_date: string | null
+          suggested_duration_minutes: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_task_id?: string | null
+          acted_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reasoning?: string | null
+          source: string
+          source_date?: string | null
+          source_id: string
+          source_label?: string | null
+          source_url?: string | null
+          status?: string
+          suggested_category?: string
+          suggested_date?: string | null
+          suggested_duration_minutes?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_task_id?: string | null
+          acted_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reasoning?: string | null
+          source?: string
+          source_date?: string | null
+          source_id?: string
+          source_label?: string | null
+          source_url?: string | null
+          status?: string
+          suggested_category?: string
+          suggested_date?: string | null
+          suggested_duration_minutes?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meetings: {
         Row: {
           color: string
@@ -238,6 +349,36 @@ export type Database = {
           ms_user_id?: string | null
           refresh_token?: string
           scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pipedrive_connections: {
+        Row: {
+          api_token: string
+          created_at: string
+          domain: string
+          id: string
+          last_sync_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_token: string
+          created_at?: string
+          domain: string
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_token?: string
+          created_at?: string
+          domain?: string
+          id?: string
+          last_sync_at?: string | null
           updated_at?: string
           user_id?: string
         }
