@@ -14,6 +14,8 @@ import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { FolderKanban, Lock } from "lucide-react";
+import { SubtasksList } from "@/components/SubtasksList";
+import { useAuth } from "@/lib/auth";
 
 type Props = {
   open: boolean;
@@ -60,6 +62,7 @@ const WEEKDAYS = [
 ];
 
 export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TaskCategory>("important");
@@ -493,6 +496,16 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {task?.id && !isSeed && user?.id ? (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+              <SubtasksList taskId={task.id} userId={user.id} />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground">
+              Salve a tarefa para adicionar subtarefas.
             </div>
           )}
         </div>
