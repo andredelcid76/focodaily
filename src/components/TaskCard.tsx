@@ -5,7 +5,7 @@ import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -41,6 +41,7 @@ type Props = {
   selectionMode?: boolean;
   selected?: boolean;
   onSelectToggle?: () => void;
+  subtaskCount?: { total: number; completed: number };
 };
 
 export function TaskCard({
