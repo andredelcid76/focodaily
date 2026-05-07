@@ -755,6 +755,24 @@ function TodayInner({ userId }: { userId: string }) {
         onDelete={editing ? handleDelete : undefined}
       />
 
+      <BulkTaskDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        defaultDate={viewDate}
+        roles={roles}
+        projects={projects}
+        onCreate={async (rows) => {
+          for (const r of rows) {
+            await tasksApi.createTask({
+              ...r,
+              original_date: r.scheduled_date,
+              position: tasksApi.topPositionForDay(r.scheduled_date),
+              recurrence: "none",
+            });
+          }
+        }}
+      />
+
       {/* Floating bulk-action bar */}
       {selectionMode && (
         <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
