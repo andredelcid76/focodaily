@@ -441,6 +441,7 @@ function TodayInner({ userId }: { userId: string }) {
     [timer, tasksApi],
   );
 
+  const dayLabel = isViewingToday
     ? `Hoje · ${formatHuman(viewDate)}`
     : viewDate === addDays(today, 1)
     ? `Amanhã · ${formatHuman(viewDate)}`
