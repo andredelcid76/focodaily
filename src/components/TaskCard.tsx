@@ -91,6 +91,7 @@ export function TaskCard({
     <div
       ref={setNodeRef}
       style={style}
+      data-task-card="true"
       {...attributes}
       {...listeners}
       onClick={(e) => {
@@ -247,9 +248,6 @@ export function TaskCard({
               return null;
             })()}
         </div>
-        {!compact && task.description && (
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-        )}
         <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}

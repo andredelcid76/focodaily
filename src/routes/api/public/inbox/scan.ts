@@ -68,7 +68,7 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   const since = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
   const userEmail = (conn.email as string | null)?.toLowerCase() ?? null;
 
-  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft`;
+  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft,categories`;
   const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!inboxR.ok) {
     console.error("outlook inbox fetch failed", inboxR.status);
@@ -84,8 +84,16 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     webLink?: string;
     conversationId?: string;
     isDraft?: boolean;
+    categories?: string[];
   };
   const inboxMsgs = (inboxJson.value ?? []) as Msg[];
+
+  // Only consider emails the user explicitly tagged with the "Foco App" category.
+  const FOCO_CATEGORY = "foco app";
+  const tagged = inboxMsgs.filter((m) =>
+    (m.categories ?? []).some((c) => (c ?? "").trim().toLowerCase() === FOCO_CATEGORY),
+  );
+  if (tagged.length === 0) return [];
 
   // Pull sent items in the same window to detect replies by conversation.
   const sentUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=200&$orderby=sentDateTime desc&$filter=sentDateTime ge ${since}&$select=conversationId,sentDateTime`;
@@ -100,15 +108,15 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     if (t > prev) lastSentByConv.set(s.conversationId, t);
   }
 
-  // Keep only emails NOT sent by me, NOT replied to yet.
-  const pending = inboxMsgs.filter((m) => {
+  // Keep only "Foco App" emails NOT sent by me and NOT already replied to.
+  const pending = tagged.filter((m) => {
     if (m.isDraft) return false;
     const fromAddr = m.from?.emailAddress?.address?.toLowerCase() ?? "";
-    if (userEmail && fromAddr === userEmail) return false; // self / sent-as
+    if (userEmail && fromAddr === userEmail) return false;
     if (!fromAddr) return false;
     const received = m.receivedDateTime ? new Date(m.receivedDateTime).getTime() : 0;
     const lastSent = m.conversationId ? lastSentByConv.get(m.conversationId) ?? 0 : 0;
-    if (lastSent > received) return false; // already replied after this email
+    if (lastSent > received) return false;
     return true;
   });
 
@@ -135,21 +143,61 @@ async function fetchFireflies(): Promise<SourceItem[]> {
         "X-Connection-Api-Key": ffKey,
       },
       body: JSON.stringify({
-        query: `query { transcripts(limit: 10) { id title date summary { overview action_items } } }`,
+        // host_email = the meeting host (typically the user). action_items is a markdown
+        // string where action items are grouped under headers like "**Name** (email)".
+        query: `query { transcripts(limit: 10) { id title date host_email summary { overview action_items } } }`,
       }),
     });
     if (!r.ok) return [];
     const json = await r.json();
-    type T = { id: string; title?: string; date?: number; summary?: { overview?: string; action_items?: string } };
+    type T = {
+      id: string;
+      title?: string;
+      date?: number;
+      host_email?: string;
+      summary?: { overview?: string; action_items?: string };
+    };
     const ts = (json?.data?.transcripts ?? []) as T[];
-    return ts.map((t) => ({
-      source: "meeting" as const,
-      source_id: t.id,
-      source_label: `Reunião: ${t.title ?? "(sem título)"}`,
-      source_url: null,
-      source_date: t.date ? new Date(t.date).toISOString() : null,
-      text: `Reunião: ${t.title ?? ""}\n\nResumo: ${t.summary?.overview ?? ""}\n\nAction items: ${t.summary?.action_items ?? ""}`,
-    }));
+
+    // Extract only action items explicitly assigned to the host (the user).
+    // Fireflies formats action_items as markdown sections like:
+    //   **John Doe**
+    //   - do X by Friday
+    //   **Jane**
+    //   - do Y
+    function actionItemsForHost(actionItems: string, hostEmail: string | undefined): string {
+      if (!actionItems) return "";
+      const hostLocal = (hostEmail ?? "").split("@")[0]?.toLowerCase() ?? "";
+      // Split on bold headers: **Name**
+      const blocks = actionItems.split(/\n(?=\*\*[^*]+\*\*)/g);
+      const matches = blocks.filter((b) => {
+        const headerMatch = b.match(/^\*\*([^*]+)\*\*/);
+        if (!headerMatch) return false;
+        const header = headerMatch[1].toLowerCase();
+        if (!hostEmail) return false;
+        if (header.includes(hostEmail.toLowerCase())) return true;
+        if (hostLocal && header.includes(hostLocal)) return true;
+        // Also accept name parts ("John" matches "John Doe")
+        const tokens = hostLocal.split(/[._-]+/).filter(Boolean);
+        return tokens.some((tok) => tok.length > 2 && header.includes(tok));
+      });
+      return matches.join("\n").trim();
+    }
+
+    return ts
+      .map((t) => {
+        const myItems = actionItemsForHost(t.summary?.action_items ?? "", t.host_email);
+        return { t, myItems };
+      })
+      .filter(({ myItems }) => myItems.length > 0)
+      .map(({ t, myItems }) => ({
+        source: "meeting" as const,
+        source_id: t.id,
+        source_label: `Reunião: ${t.title ?? "(sem título)"}`,
+        source_url: null,
+        source_date: t.date ? new Date(t.date).toISOString() : null,
+        text: `Reunião: ${t.title ?? ""}\nHost: ${t.host_email ?? ""}\n\nAction items atribuídos AO USUÁRIO (host):\n${myItems}`,
+      }));
   } catch (e) {
     console.error("fireflies", e);
     return [];
@@ -242,7 +290,8 @@ async function aiExtractTasks(items: SourceItem[]): Promise<Array<{ source_index
 
 Regras estritas:
 - Para E-MAILS marcados como "pendente de resposta": se o e-mail contém uma pergunta direta, um pedido, uma solicitação de retorno, ou claramente espera uma resposta do usuário, gere UMA sugestão "Responder a <Nome>: <assunto curto>" mesmo que não haja prazo explícito. Use a data de recebimento para calibrar urgência (>7 dias atrasada = urgent).
-- Para reuniões e CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
+- Para REUNIÕES: o texto já contém apenas action items atribuídos AO USUÁRIO (host). Mesmo assim, só gere sugestão quando houver verbo de ação claro e ação concreta. Se houver dúvida sobre quem é responsável, NÃO crie sugestão.
+- Para CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
 - IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
 - Para cada item de entrada, retorne 0 ou mais sugestões.
 - Categoria: "urgent" (prazo <= 2 dias OU e-mail pendente há > 7 dias), "important" (sem prazo crítico), "circumstantial" (rotina).

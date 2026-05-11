@@ -293,15 +293,33 @@ function TodayInner({ userId }: { userId: string }) {
     setSelectionActive(true);
   };
 
-  // ESC to deselect
+  // ESC to deselect; click outside any card also deselects
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedIds.size > 0) {
-        clearSelection();
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedIds.size > 0) clearSelection();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const onPointerDown = (e: PointerEvent) => {
+      if (selectedIds.size === 0) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // Ignore clicks inside cards, the bulk action bar, dialogs/popovers and the "Selecionar" toggle.
+      if (
+        target.closest("[data-task-card]") ||
+        target.closest("[data-bulk-bar]") ||
+        target.closest("[role='dialog']") ||
+        target.closest("[data-radix-popper-content-wrapper]") ||
+        target.closest("[data-selection-toggle]")
+      ) {
+        return;
+      }
+      clearSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointerDown, true);
+    };
   }, [selectedIds.size]);
 
   // Optional seed for the dialog when opened from QuickAdd
@@ -407,6 +425,21 @@ function TodayInner({ userId }: { userId: string }) {
       tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
     }
   };
+
+  // Wrap toggleComplete: if a task is being completed and the timer is on it,
+  // stop and persist the elapsed seconds so we don't lose tracked time.
+  const toggleCompleteWithTimer = useCallback(
+    async (t: Task) => {
+      if (!t.completed && timer.activeTaskId === t.id) {
+        const stopped = timer.stop();
+        if (stopped && stopped.deltaSeconds > 0) {
+          await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+        }
+      }
+      await tasksApi.toggleComplete(t);
+    },
+    [timer, tasksApi],
+  );
 
   const dayLabel = isViewingToday
     ? `Hoje · ${formatHuman(viewDate)}`
@@ -549,7 +582,7 @@ function TodayInner({ userId }: { userId: string }) {
                 task={t}
                 role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                 project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                onToggle={() => tasksApi.toggleComplete(t)}
+                onToggle={() => toggleCompleteWithTimer(t)}
                 onEdit={() => openEdit(t)}
                 isActive={timer.activeTaskId === t.id}
                 isPaused={timer.activeTaskId === t.id && timer.isPaused}
@@ -584,7 +617,7 @@ function TodayInner({ userId }: { userId: string }) {
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                     project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                    onToggle={() => tasksApi.toggleComplete(t)}
+                    onToggle={() => toggleCompleteWithTimer(t)}
                     onEdit={() => openEdit(t)}
                     isOverdue
                     isActive={timer.activeTaskId === t.id}
@@ -634,9 +667,10 @@ function TodayInner({ userId }: { userId: string }) {
                   : `Mostrar concluídas (${completedCount})`}
               </button>
             )}
-            {visibleDayTasks.length > 0 && taskView === "list" && (
+            {(visibleDayTasks.length > 0 || visibleOverdue.length > 0) && taskView === "list" && (
               <button
                 type="button"
+                data-selection-toggle="true"
                 onClick={selectionMode ? clearSelection : enterSelectionMode}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -702,7 +736,7 @@ function TodayInner({ userId }: { userId: string }) {
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                     project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                    onToggle={() => tasksApi.toggleComplete(t)}
+                    onToggle={() => toggleCompleteWithTimer(t)}
                     onEdit={() => openEdit(t)}
                     index={i + 1}
                     isActive={timer.activeTaskId === t.id}
@@ -730,7 +764,7 @@ function TodayInner({ userId }: { userId: string }) {
             rolesById={rolesById}
             projectsById={projectsById}
             onEdit={openEdit}
-            onToggle={(t) => tasksApi.toggleComplete(t)}
+            onToggle={(t) => toggleCompleteWithTimer(t)}
           />
         ) : (
           <TasksKanbanView
@@ -775,7 +809,7 @@ function TodayInner({ userId }: { userId: string }) {
 
       {/* Floating bulk-action bar */}
       {selectionMode && (
-        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
+        <div data-bulk-bar="true" className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
           <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2 shadow-[var(--shadow-glow)] backdrop-blur-xl max-w-full">
             <span className="px-1 text-sm font-medium tabular-nums">
               {selectedIds.size} selecionada{selectedIds.size === 1 ? "" : "s"}
@@ -1027,9 +1061,6 @@ function TasksCardsView({
                 {t.title}
               </p>
             </div>
-            {t.description && (
-              <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{t.description}</p>
-            )}
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
               {project && (
                 <span
