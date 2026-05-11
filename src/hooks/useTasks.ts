@@ -429,6 +429,12 @@ export function useTasks(userId: string | undefined) {
       completed_at: next ? new Date().toISOString() : null,
       status: next ? "done" : "todo",
     });
+    // If linked to a Pipedrive activity, mirror the completion state in Pipedrive.
+    if (t.origin_source === "pipedrive" && t.origin_source_url) {
+      void syncTaskCompletionToPipedrive({ data: { task_id: t.id, done: next } }).catch(
+        (e) => console.error("pipedrive sync", e),
+      );
+    }
   };
 
   const setStatus = async (id: string, status: TaskStatus) => {
