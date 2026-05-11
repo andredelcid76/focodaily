@@ -374,6 +374,8 @@ Retorne JSON válido:
 }
 
 async function scanForUser(userId: string) {
+  // Bidirectional sync: pull Pipedrive completions into the app first
+  await syncPipedriveCompletionsToApp(userId);
   // Collect sources
   const [emails, meetings, deals] = await Promise.all([
     fetchOutlookEmails(userId),
