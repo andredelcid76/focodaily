@@ -68,7 +68,7 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   const since = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
   const userEmail = (conn.email as string | null)?.toLowerCase() ?? null;
 
-  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft`;
+  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft,categories`;
   const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!inboxR.ok) {
     console.error("outlook inbox fetch failed", inboxR.status);
@@ -84,8 +84,16 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     webLink?: string;
     conversationId?: string;
     isDraft?: boolean;
+    categories?: string[];
   };
   const inboxMsgs = (inboxJson.value ?? []) as Msg[];
+
+  // Only consider emails the user explicitly tagged with the "Foco App" category.
+  const FOCO_CATEGORY = "foco app";
+  const tagged = inboxMsgs.filter((m) =>
+    (m.categories ?? []).some((c) => (c ?? "").trim().toLowerCase() === FOCO_CATEGORY),
+  );
+  if (tagged.length === 0) return [];
 
   // Pull sent items in the same window to detect replies by conversation.
   const sentUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=200&$orderby=sentDateTime desc&$filter=sentDateTime ge ${since}&$select=conversationId,sentDateTime`;
@@ -100,15 +108,15 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     if (t > prev) lastSentByConv.set(s.conversationId, t);
   }
 
-  // Keep only emails NOT sent by me, NOT replied to yet.
-  const pending = inboxMsgs.filter((m) => {
+  // Keep only "Foco App" emails NOT sent by me and NOT already replied to.
+  const pending = tagged.filter((m) => {
     if (m.isDraft) return false;
     const fromAddr = m.from?.emailAddress?.address?.toLowerCase() ?? "";
-    if (userEmail && fromAddr === userEmail) return false; // self / sent-as
+    if (userEmail && fromAddr === userEmail) return false;
     if (!fromAddr) return false;
     const received = m.receivedDateTime ? new Date(m.receivedDateTime).getTime() : 0;
     const lastSent = m.conversationId ? lastSentByConv.get(m.conversationId) ?? 0 : 0;
-    if (lastSent > received) return false; // already replied after this email
+    if (lastSent > received) return false;
     return true;
   });
 
