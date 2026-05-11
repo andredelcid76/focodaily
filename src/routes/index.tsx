@@ -293,15 +293,33 @@ function TodayInner({ userId }: { userId: string }) {
     setSelectionActive(true);
   };
 
-  // ESC to deselect
+  // ESC to deselect; click outside any card also deselects
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedIds.size > 0) {
-        clearSelection();
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedIds.size > 0) clearSelection();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const onPointerDown = (e: PointerEvent) => {
+      if (selectedIds.size === 0) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      // Ignore clicks inside cards, the bulk action bar, dialogs/popovers and the "Selecionar" toggle.
+      if (
+        target.closest("[data-task-card]") ||
+        target.closest("[data-bulk-bar]") ||
+        target.closest("[role='dialog']") ||
+        target.closest("[data-radix-popper-content-wrapper]") ||
+        target.closest("[data-selection-toggle]")
+      ) {
+        return;
+      }
+      clearSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointerDown, true);
+    };
   }, [selectedIds.size]);
 
   // Optional seed for the dialog when opened from QuickAdd
@@ -634,7 +652,7 @@ function TodayInner({ userId }: { userId: string }) {
                   : `Mostrar concluídas (${completedCount})`}
               </button>
             )}
-            {visibleDayTasks.length > 0 && taskView === "list" && (
+            {(visibleDayTasks.length > 0 || visibleOverdue.length > 0) && taskView === "list" && (
               <button
                 type="button"
                 onClick={selectionMode ? clearSelection : enterSelectionMode}
