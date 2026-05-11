@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { todayISO, addDays } from "@/lib/date";
+import { syncTaskCompletionToPipedrive } from "@/lib/pipedriveSync.functions";
 
 export type Task = Tables<"tasks">;
 export type TaskCategory = Task["category"];
