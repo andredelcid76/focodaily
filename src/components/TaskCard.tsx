@@ -91,6 +91,7 @@ export function TaskCard({
     <div
       ref={setNodeRef}
       style={style}
+      data-task-card="true"
       {...attributes}
       {...listeners}
       onClick={(e) => {
