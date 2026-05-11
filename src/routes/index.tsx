@@ -567,7 +567,7 @@ function TodayInner({ userId }: { userId: string }) {
                 task={t}
                 role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                 project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                onToggle={() => tasksApi.toggleComplete(t)}
+                onToggle={() => toggleCompleteWithTimer(t)}
                 onEdit={() => openEdit(t)}
                 isActive={timer.activeTaskId === t.id}
                 isPaused={timer.activeTaskId === t.id && timer.isPaused}
@@ -602,7 +602,7 @@ function TodayInner({ userId }: { userId: string }) {
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                     project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                    onToggle={() => tasksApi.toggleComplete(t)}
+                    onToggle={() => toggleCompleteWithTimer(t)}
                     onEdit={() => openEdit(t)}
                     isOverdue
                     isActive={timer.activeTaskId === t.id}
@@ -721,7 +721,7 @@ function TodayInner({ userId }: { userId: string }) {
                     task={t}
                     role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                     project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                    onToggle={() => tasksApi.toggleComplete(t)}
+                    onToggle={() => toggleCompleteWithTimer(t)}
                     onEdit={() => openEdit(t)}
                     index={i + 1}
                     isActive={timer.activeTaskId === t.id}
@@ -749,7 +749,7 @@ function TodayInner({ userId }: { userId: string }) {
             rolesById={rolesById}
             projectsById={projectsById}
             onEdit={openEdit}
-            onToggle={(t) => tasksApi.toggleComplete(t)}
+            onToggle={(t) => toggleCompleteWithTimer(t)}
           />
         ) : (
           <TasksKanbanView
