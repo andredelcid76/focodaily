@@ -64,6 +64,37 @@ function AuthPage() {
         </div>
 
         <div className="rounded-2xl border border-border/60 bg-card/60 p-6 backdrop-blur-xl shadow-[var(--shadow-card)]">
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+                if (r.error) { toast.error(r.error.message ?? "Falha no login Google"); setBusy(false); }
+              }}
+            >
+              Continuar com Google
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                const r = await lovable.auth.signInWithOAuth("apple", { redirect_uri: window.location.origin });
+                if (r.error) { toast.error(r.error.message ?? "Falha no login Apple"); setBusy(false); }
+              }}
+            >
+              Continuar com Apple
+            </Button>
+          </div>
+          <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <div className="h-px flex-1 bg-border/60" /> ou e-mail <div className="h-px flex-1 bg-border/60" />
+          </div>
           <Tabs defaultValue="signin">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Entrar</TabsTrigger>
