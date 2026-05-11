@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const TENANT = "common";
-const SCOPES = "offline_access openid profile User.Read Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
+const SCOPES = "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
 const LOVABLE_PROJECT_ID = "0f679b02-63a6-46ee-ae66-8b953bfe9f15";
 
 function getExpectedRedirectUri(url: URL) {
