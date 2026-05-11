@@ -88,12 +88,13 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   };
   const inboxMsgs = (inboxJson.value ?? []) as Msg[];
 
-  // Only consider emails the user explicitly tagged with the "Foco App" category.
+  // Skip emails the user already tagged with "Foco App" — those are considered already
+  // triaged into the app. We scan only emails WITHOUT that category.
   const FOCO_CATEGORY = "foco app";
-  const tagged = inboxMsgs.filter((m) =>
-    (m.categories ?? []).some((c) => (c ?? "").trim().toLowerCase() === FOCO_CATEGORY),
+  const untagged = inboxMsgs.filter((m) =>
+    !(m.categories ?? []).some((c) => (c ?? "").trim().toLowerCase() === FOCO_CATEGORY),
   );
-  if (tagged.length === 0) return [];
+  if (untagged.length === 0) return [];
 
   // Pull sent items in the same window to detect replies by conversation.
   const sentUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$top=200&$orderby=sentDateTime desc&$filter=sentDateTime ge ${since}&$select=conversationId,sentDateTime`;
