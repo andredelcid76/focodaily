@@ -110,7 +110,7 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   }
 
   // Keep only "Foco App" emails NOT sent by me and NOT already replied to.
-  const pending = tagged.filter((m) => {
+  const pending = untagged.filter((m) => {
     if (m.isDraft) return false;
     const fromAddr = m.from?.emailAddress?.address?.toLowerCase() ?? "";
     if (userEmail && fromAddr === userEmail) return false;
