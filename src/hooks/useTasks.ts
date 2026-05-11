@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { todayISO, addDays } from "@/lib/date";
+import { syncTaskCompletionToPipedrive } from "@/lib/pipedriveSync.functions";
 
 export type Task = Tables<"tasks">;
 export type TaskCategory = Task["category"];
@@ -428,6 +429,12 @@ export function useTasks(userId: string | undefined) {
       completed_at: next ? new Date().toISOString() : null,
       status: next ? "done" : "todo",
     });
+    // If linked to a Pipedrive activity, mirror the completion state in Pipedrive.
+    if (t.origin_source === "pipedrive" && t.origin_source_url) {
+      void syncTaskCompletionToPipedrive({ data: { task_id: t.id, done: next } }).catch(
+        (e) => console.error("pipedrive sync", e),
+      );
+    }
   };
 
   const setStatus = async (id: string, status: TaskStatus) => {

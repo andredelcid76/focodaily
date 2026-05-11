@@ -70,6 +70,10 @@ export const acceptInboxSuggestion = createServerFn({ method: "POST" })
       duration_minutes: data.duration_minutes ?? sug.suggested_duration_minutes ?? 30,
       category: data.category ?? sug.suggested_category ?? "important",
       project_id: data.project_id ?? null,
+      // Propagate origin so we can later sync completion back to the source (e.g. Pipedrive).
+      origin_source: sug.source ?? null,
+      origin_source_url: sug.source_url ?? null,
+      origin_source_label: sug.source_label ?? null,
     };
     const { data: task, error: tErr } = await supabase
       .from("tasks")
@@ -83,6 +87,20 @@ export const acceptInboxSuggestion = createServerFn({ method: "POST" })
       .update({ status: "accepted", accepted_task_id: task.id, acted_at: new Date().toISOString() })
       .eq("id", data.id)
       .eq("user_id", userId);
+
+    // If the suggestion came from an Outlook email, tag it as "Foco App" so it
+    // won't be re-suggested in future scans. Best-effort — don't fail the accept.
+    if (sug.source === "email" && sug.source_id) {
+      try {
+        await fetch(`${new URL("/api/public/inbox/tag-email", "https://focodaily.lovable.app").toString()}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, message_id: sug.source_id }),
+        });
+      } catch (e) {
+        console.error("tag-email failed", e);
+      }
+    }
 
     return { ok: true, task_id: task.id };
   });
