@@ -1027,9 +1027,6 @@ function TasksCardsView({
                 {t.title}
               </p>
             </div>
-            {t.description && (
-              <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{t.description}</p>
-            )}
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
               {project && (
                 <span
