@@ -655,6 +655,7 @@ function TodayInner({ userId }: { userId: string }) {
             {(visibleDayTasks.length > 0 || visibleOverdue.length > 0) && taskView === "list" && (
               <button
                 type="button"
+                data-selection-toggle="true"
                 onClick={selectionMode ? clearSelection : enterSelectionMode}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -793,7 +794,7 @@ function TodayInner({ userId }: { userId: string }) {
 
       {/* Floating bulk-action bar */}
       {selectionMode && (
-        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
+        <div data-bulk-bar="true" className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
           <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2 shadow-[var(--shadow-glow)] backdrop-blur-xl max-w-full">
             <span className="px-1 text-sm font-medium tabular-nums">
               {selectedIds.size} selecionada{selectedIds.size === 1 ? "" : "s"}
