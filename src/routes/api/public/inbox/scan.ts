@@ -143,21 +143,61 @@ async function fetchFireflies(): Promise<SourceItem[]> {
         "X-Connection-Api-Key": ffKey,
       },
       body: JSON.stringify({
-        query: `query { transcripts(limit: 10) { id title date summary { overview action_items } } }`,
+        // host_email = the meeting host (typically the user). action_items is a markdown
+        // string where action items are grouped under headers like "**Name** (email)".
+        query: `query { transcripts(limit: 10) { id title date host_email summary { overview action_items } } }`,
       }),
     });
     if (!r.ok) return [];
     const json = await r.json();
-    type T = { id: string; title?: string; date?: number; summary?: { overview?: string; action_items?: string } };
+    type T = {
+      id: string;
+      title?: string;
+      date?: number;
+      host_email?: string;
+      summary?: { overview?: string; action_items?: string };
+    };
     const ts = (json?.data?.transcripts ?? []) as T[];
-    return ts.map((t) => ({
-      source: "meeting" as const,
-      source_id: t.id,
-      source_label: `Reunião: ${t.title ?? "(sem título)"}`,
-      source_url: null,
-      source_date: t.date ? new Date(t.date).toISOString() : null,
-      text: `Reunião: ${t.title ?? ""}\n\nResumo: ${t.summary?.overview ?? ""}\n\nAction items: ${t.summary?.action_items ?? ""}`,
-    }));
+
+    // Extract only action items explicitly assigned to the host (the user).
+    // Fireflies formats action_items as markdown sections like:
+    //   **John Doe**
+    //   - do X by Friday
+    //   **Jane**
+    //   - do Y
+    function actionItemsForHost(actionItems: string, hostEmail: string | undefined): string {
+      if (!actionItems) return "";
+      const hostLocal = (hostEmail ?? "").split("@")[0]?.toLowerCase() ?? "";
+      // Split on bold headers: **Name**
+      const blocks = actionItems.split(/\n(?=\*\*[^*]+\*\*)/g);
+      const matches = blocks.filter((b) => {
+        const headerMatch = b.match(/^\*\*([^*]+)\*\*/);
+        if (!headerMatch) return false;
+        const header = headerMatch[1].toLowerCase();
+        if (!hostEmail) return false;
+        if (header.includes(hostEmail.toLowerCase())) return true;
+        if (hostLocal && header.includes(hostLocal)) return true;
+        // Also accept name parts ("John" matches "John Doe")
+        const tokens = hostLocal.split(/[._-]+/).filter(Boolean);
+        return tokens.some((tok) => tok.length > 2 && header.includes(tok));
+      });
+      return matches.join("\n").trim();
+    }
+
+    return ts
+      .map((t) => {
+        const myItems = actionItemsForHost(t.summary?.action_items ?? "", t.host_email);
+        return { t, myItems };
+      })
+      .filter(({ myItems }) => myItems.length > 0)
+      .map(({ t, myItems }) => ({
+        source: "meeting" as const,
+        source_id: t.id,
+        source_label: `Reunião: ${t.title ?? "(sem título)"}`,
+        source_url: null,
+        source_date: t.date ? new Date(t.date).toISOString() : null,
+        text: `Reunião: ${t.title ?? ""}\nHost: ${t.host_email ?? ""}\n\nAction items atribuídos AO USUÁRIO (host):\n${myItems}`,
+      }));
   } catch (e) {
     console.error("fireflies", e);
     return [];
