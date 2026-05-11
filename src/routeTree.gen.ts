@@ -21,6 +21,7 @@ import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planne
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
+import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
 import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
 
 const SemanaRoute = SemanaRouteImport.update({
@@ -84,6 +85,11 @@ const ApiPublicOutlookCallbackRoute =
     path: '/callback',
     getParentRoute: () => ApiPublicOutlookRoute,
   } as any)
+const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
+  id: '/api/public/inbox/tag-email',
+  path: '/api/public/inbox/tag-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
   id: '/api/public/inbox/scan',
   path: '/api/public/inbox/scan',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
+  '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
+  '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesById {
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
+  '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRouteTypes {
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/api/public/inbox/scan'
+    | '/api/public/inbox/tag-email'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/api/public/inbox/scan'
+    | '/api/public/inbox/tag-email'
     | '/api/public/outlook/callback'
   id:
     | '__root__'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/api/public/inbox/scan'
+    | '/api/public/inbox/tag-email'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
 }
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
+  ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
       parentRoute: typeof ApiPublicOutlookRoute
     }
+    '/api/public/inbox/tag-email': {
+      id: '/api/public/inbox/tag-email'
+      path: '/api/public/inbox/tag-email'
+      fullPath: '/api/public/inbox/tag-email'
+      preLoaderRoute: typeof ApiPublicInboxTagEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inbox/scan': {
       id: '/api/public/inbox/scan'
       path: '/api/public/inbox/scan'
@@ -319,6 +339,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
+  ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
