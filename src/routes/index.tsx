@@ -426,7 +426,21 @@ function TodayInner({ userId }: { userId: string }) {
     }
   };
 
-  const dayLabel = isViewingToday
+  // Wrap toggleComplete: if a task is being completed and the timer is on it,
+  // stop and persist the elapsed seconds so we don't lose tracked time.
+  const toggleCompleteWithTimer = useCallback(
+    async (t: Task) => {
+      if (!t.completed && timer.activeTaskId === t.id) {
+        const stopped = timer.stop();
+        if (stopped && stopped.deltaSeconds > 0) {
+          await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+        }
+      }
+      await tasksApi.toggleComplete(t);
+    },
+    [timer, tasksApi],
+  );
+
     ? `Hoje · ${formatHuman(viewDate)}`
     : viewDate === addDays(today, 1)
     ? `Amanhã · ${formatHuman(viewDate)}`
