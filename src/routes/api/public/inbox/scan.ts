@@ -272,6 +272,56 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
   }
 }
 
+// Poll Pipedrive for activities recently marked as "done" and complete any
+// linked task in our DB (Pipedrive → App sync).
+async function syncPipedriveCompletionsToApp(userId: string): Promise<void> {
+  const token = process.env.PIPEDRIVE_API_TOKEN;
+  const domain = process.env.PIPEDRIVE_DOMAIN;
+  if (!token || !domain) return;
+  try {
+    const base = `https://${domain}.pipedrive.com/api/v1`;
+    const meR = await fetch(`${base}/users/me?api_token=${token}`);
+    if (!meR.ok) return;
+    const meJson = await meR.json();
+    const pdUserId = meJson?.data?.id as number | undefined;
+    if (!pdUserId) return;
+
+    const startDate = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+    const endDate = new Date(Date.now() + 1 * 86400_000).toISOString().slice(0, 10);
+    const r = await fetch(
+      `${base}/activities?user_id=${pdUserId}&done=1&start_date=${startDate}&end_date=${endDate}&start=0&limit=200&api_token=${token}`,
+    );
+    if (!r.ok) return;
+    const json = await r.json();
+    const acts = (json?.data ?? []) as Array<{ id: number }>;
+    if (acts.length === 0) return;
+
+    const candidateUrls = acts.map(
+      (a) => `https://${domain}.pipedrive.com/activities/list#dialog/activity/${a.id}`,
+    );
+    const { data: linkedTasks } = await supabaseAdmin
+      .from("tasks")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("origin_source", "pipedrive")
+      .eq("completed", false)
+      .in("origin_source_url", candidateUrls);
+
+    if (!linkedTasks || linkedTasks.length === 0) return;
+    const ids = linkedTasks.map((t) => t.id as string);
+    await supabaseAdmin
+      .from("tasks")
+      .update({
+        completed: true,
+        completed_at: new Date().toISOString(),
+        status: "done",
+      } as never)
+      .in("id", ids);
+  } catch (e) {
+    console.error("pipedrive→app sync", e);
+  }
+}
+
 async function aiExtractTasks(items: SourceItem[]): Promise<Array<{ source_index: number; suggestions: AISuggestion[] }>> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!lovableKey || items.length === 0) return [];
