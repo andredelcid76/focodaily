@@ -6,7 +6,7 @@ import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
 import { useRoles, type Role } from "@/hooks/useRoles";
 import { useProjects, type Project } from "@/hooks/useProjects";
-import { TaskDialog } from "@/components/TaskDialog";
+import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { Lock, Repeat } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -208,7 +208,14 @@ function WeekInner({ userId }: { userId: string }) {
         roles={roles}
         projects={projects}
         onSave={handleSave}
-        onDelete={editing ? async () => { await tasksApi.deleteTask(editing.id); toast.success("Tarefa excluída"); } : undefined}
+        onDelete={editing ? async (scope?: RecurrenceScope) => {
+          if (scope && (editing.recurrence_parent_id || editing.recurrence !== "none")) {
+            await tasksApi.deleteTaskWithScope(editing, scope);
+          } else {
+            await tasksApi.deleteTask(editing.id);
+          }
+          toast.success("Tarefa excluída");
+        } : undefined}
       />
     </div>
   );
