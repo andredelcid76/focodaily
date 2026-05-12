@@ -140,6 +140,7 @@ function WeekInner({ userId }: { userId: string }) {
           <h1 className="font-display text-3xl font-bold">Visão semanal</h1>
         </div>
         <div className="flex items-center gap-2">
+          <AutoOrganizeButton scope="week" weekStart={weekStart} onDone={() => tasksApi.refresh()} />
           <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft className="h-4 w-4" /></Button>
           <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(todayISO()))}>Esta semana</Button>
           <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight className="h-4 w-4" /></Button>
