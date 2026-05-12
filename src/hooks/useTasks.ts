@@ -8,6 +8,7 @@ export type Task = Tables<"tasks">;
 export type TaskCategory = Task["category"];
 export type TaskRecurrence = Task["recurrence"];
 export type TaskStatus = Task["status"];
+type TaskRecurrenceException = Tables<"task_recurrence_exceptions">;
 
 // How many days ahead we materialize recurring task instances (4 weeks)
 const FUTURE_DAYS = 28;
@@ -19,6 +20,7 @@ const ensureLocks = new Map<string, Promise<void>>();
 // Returns false for the parent's own original_date (parent occupies that slot itself).
 function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
   if (dayISO === parent.original_date) return false;
+  if (parent.recurrence_until && dayISO > parent.recurrence_until) return false;
   const [sy, sm, sd] = parent.original_date.split("-").map(Number);
   const startD = new Date(sy, sm - 1, sd);
   const [ty, tm, td] = dayISO.split("-").map(Number);
@@ -110,8 +112,20 @@ export function useTasks(userId: string | undefined) {
         .in("recurrence_parent_id", parentIds)
         .gte("scheduled_date", today)
         .lte("scheduled_date", windowEnd);
+      const { data: exceptions } = await supabase
+        .from("task_recurrence_exceptions")
+        .select("parent_task_id, exception_date, kind")
+        .eq("user_id", userId)
+        .in("parent_task_id", parentIds)
+        .gte("exception_date", today)
+        .lte("exception_date", windowEnd);
       const existingSet = new Set(
         (existing ?? []).map((e) => `${e.recurrence_parent_id}__${e.scheduled_date}`)
+      );
+      const exceptionSet = new Set(
+        ((exceptions ?? []) as Pick<TaskRecurrenceException, "parent_task_id" | "exception_date" | "kind">[])
+          .filter((e) => e.kind === "deleted")
+          .map((e) => `${e.parent_task_id}__${e.exception_date}`)
       );
 
       const inserts: TablesInsert<"tasks">[] = [];
@@ -124,6 +138,7 @@ export function useTasks(userId: string | undefined) {
           const dayISO = addDays(today, i);
           if (dayISO === p.original_date) continue;
           if (existingSet.has(`${p.id}__${dayISO}`)) continue;
+          if (exceptionSet.has(`${p.id}__${dayISO}`)) continue;
 
           const [ty, tm, td] = dayISO.split("-").map(Number);
           const dayD = new Date(ty, tm - 1, td);
@@ -283,6 +298,23 @@ export function useTasks(userId: string | undefined) {
     if (error) throw error;
   };
 
+  const createRecurrenceException = async (parentId: string, date: string) => {
+    if (!userId) return;
+    const { error } = await supabase.from("task_recurrence_exceptions").upsert(
+      {
+        user_id: userId,
+        parent_task_id: parentId,
+        exception_date: date,
+        kind: "deleted",
+      },
+      {
+        onConflict: "user_id,parent_task_id,exception_date,kind",
+        ignoreDuplicates: true,
+      }
+    );
+    if (error) throw error;
+  };
+
   // Scope-aware update/delete for recurring instances.
   // - "this": only the single row
   // - "future": this row and all sibling instances scheduled on/after its date (plus the parent if its original_date >= this date)
@@ -397,6 +429,9 @@ export function useTasks(userId: string | undefined) {
 
   const deleteTaskWithScope = async (task: Task, scope: "this" | "future" | "all" = "this") => {
     if (scope === "this") {
+      if (task.recurrence_parent_id) {
+        await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
+      }
       await deleteTask(task.id);
       return;
     }
@@ -408,9 +443,6 @@ export function useTasks(userId: string | undefined) {
       instances.forEach((t) => idsToDelete.add(t.id));
     } else {
       // future
-      if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
-        idsToDelete.add(parent.id);
-      }
       for (const t of instances) {
         if (t.completed) continue;
         if (t.scheduled_date >= baseDate) idsToDelete.add(t.id);
@@ -418,7 +450,20 @@ export function useTasks(userId: string | undefined) {
     }
     const ids = Array.from(idsToDelete);
     setTasks((prev) => prev.filter((t) => !idsToDelete.has(t.id)));
-    await supabase.from("tasks").delete().in("id", ids);
+    if (scope === "future") {
+      if (parent) {
+        const until = addDays(baseDate, -1);
+        setTasks((prev) =>
+          prev.map((t) => (t.id === parent.id ? { ...t, recurrence_until: until } : t))
+        );
+        const { error } = await supabase.from("tasks").update({ recurrence_until: until }).eq("id", parent.id);
+        if (error) throw error;
+      }
+    }
+    if (ids.length > 0) {
+      const { error } = await supabase.from("tasks").delete().in("id", ids);
+      if (error) throw error;
+    }
     void parentId;
   };
 
