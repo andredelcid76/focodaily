@@ -652,6 +652,7 @@ function TodayInner({ userId }: { userId: string }) {
             Tarefas {isViewingToday ? "de hoje" : "do dia"}
           </h2>
           <div className="flex items-center gap-3">
+            <AutoOrganizeButton scope="day" date={viewDate} onDone={() => tasksApi.refresh()} />
             <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-0.5">
               <ViewBtn active={taskView === "list"} onClick={() => changeTaskView("list")} icon={<ListIcon className="h-3.5 w-3.5" />} label="Lista" />
               <ViewBtn active={taskView === "cards"} onClick={() => changeTaskView("cards")} icon={<LayoutGrid className="h-3.5 w-3.5" />} label="Cards" />
