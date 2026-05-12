@@ -23,6 +23,7 @@ import {
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
+import { AutoOrganizeButton } from "@/components/AutoOrganizeButton";
 import { Switch } from "@/components/ui/switch";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
