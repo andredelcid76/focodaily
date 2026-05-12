@@ -614,6 +614,36 @@ export type Database = {
         }
         Relationships: []
       }
+      task_recurrence_exceptions: {
+        Row: {
+          created_at: string
+          exception_date: string
+          id: string
+          kind: string
+          parent_task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exception_date: string
+          id?: string
+          kind?: string
+          parent_task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exception_date?: string
+          id?: string
+          kind?: string
+          parent_task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_subtasks: {
         Row: {
           completed: boolean
@@ -673,6 +703,7 @@ export type Database = {
           recurrence_interval: number | null
           recurrence_monthly_pattern: Json | null
           recurrence_parent_id: string | null
+          recurrence_until: string | null
           recurrence_week_interval: number | null
           recurrence_weekdays: number[] | null
           role_id: string | null
@@ -708,6 +739,7 @@ export type Database = {
           recurrence_interval?: number | null
           recurrence_monthly_pattern?: Json | null
           recurrence_parent_id?: string | null
+          recurrence_until?: string | null
           recurrence_week_interval?: number | null
           recurrence_weekdays?: number[] | null
           role_id?: string | null
@@ -743,6 +775,7 @@ export type Database = {
           recurrence_interval?: number | null
           recurrence_monthly_pattern?: Json | null
           recurrence_parent_id?: string | null
+          recurrence_until?: string | null
           recurrence_week_interval?: number | null
           recurrence_weekdays?: number[] | null
           role_id?: string | null
