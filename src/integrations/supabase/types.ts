@@ -644,6 +644,39 @@ export type Database = {
         }
         Relationships: []
       }
+      task_reorder_logs: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          ordered_task_ids: string[]
+          reasoning: string | null
+          reference_date: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          ordered_task_ids: string[]
+          reasoning?: string | null
+          reference_date: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          ordered_task_ids?: string[]
+          reasoning?: string | null
+          reference_date?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_subtasks: {
         Row: {
           completed: boolean
@@ -809,6 +842,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          auto_organize_use_ai: boolean
+          created_at: string
+          daily_capacity_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_organize_use_ai?: boolean
+          created_at?: string
+          daily_capacity_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_organize_use_ai?: boolean
+          created_at?: string
+          daily_capacity_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
