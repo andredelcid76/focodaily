@@ -315,6 +315,14 @@ export function useTasks(userId: string | undefined) {
     if (error) throw error;
   };
 
+  const findNextOccurrenceDate = (parent: Task, afterDate: string) => {
+    for (let i = 1; i <= 730; i++) {
+      const candidate = addDays(afterDate, i);
+      if (instanceMatchesRecurrence(parent, candidate)) return candidate;
+    }
+    return null;
+  };
+
   // Scope-aware update/delete for recurring instances.
   // - "this": only the single row
   // - "future": this row and all sibling instances scheduled on/after its date (plus the parent if its original_date >= this date)
@@ -431,6 +439,35 @@ export function useTasks(userId: string | undefined) {
     if (scope === "this") {
       if (task.recurrence_parent_id) {
         await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
+        await deleteTask(task.id);
+        return;
+      }
+      if (task.recurrence !== "none") {
+        const nextDate = findNextOccurrenceDate(task, task.scheduled_date);
+        if (!nextDate) {
+          await deleteTask(task.id);
+          return;
+        }
+        const nextInstance = tasks.find(
+          (t) => t.recurrence_parent_id === task.id && t.scheduled_date === nextDate
+        );
+        setTasks((prev) =>
+          prev
+            .filter((t) => t.id !== nextInstance?.id)
+            .map((t) =>
+              t.id === task.id ? { ...t, scheduled_date: nextDate, original_date: nextDate } : t
+            )
+        );
+        if (nextInstance) {
+          const { error: deleteNextError } = await supabase.from("tasks").delete().eq("id", nextInstance.id);
+          if (deleteNextError) throw deleteNextError;
+        }
+        const { error: updateParentError } = await supabase
+          .from("tasks")
+          .update({ scheduled_date: nextDate, original_date: nextDate })
+          .eq("id", task.id);
+        if (updateParentError) throw updateParentError;
+        return;
       }
       await deleteTask(task.id);
       return;
@@ -443,6 +480,9 @@ export function useTasks(userId: string | undefined) {
       instances.forEach((t) => idsToDelete.add(t.id));
     } else {
       // future
+      if (parent && parent.id === task.id) {
+        idsToDelete.add(parent.id);
+      }
       for (const t of instances) {
         if (t.completed) continue;
         if (t.scheduled_date >= baseDate) idsToDelete.add(t.id);
@@ -451,7 +491,7 @@ export function useTasks(userId: string | undefined) {
     const ids = Array.from(idsToDelete);
     setTasks((prev) => prev.filter((t) => !idsToDelete.has(t.id)));
     if (scope === "future") {
-      if (parent) {
+      if (parent && !idsToDelete.has(parent.id)) {
         const until = addDays(baseDate, -1);
         setTasks((prev) =>
           prev.map((t) => (t.id === parent.id ? { ...t, recurrence_until: until } : t))
