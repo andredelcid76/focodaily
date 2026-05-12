@@ -23,6 +23,7 @@ import {
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
+import { AutoOrganizeButton } from "@/components/AutoOrganizeButton";
 import { Switch } from "@/components/ui/switch";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -651,6 +652,7 @@ function TodayInner({ userId }: { userId: string }) {
             Tarefas {isViewingToday ? "de hoje" : "do dia"}
           </h2>
           <div className="flex items-center gap-3">
+            <AutoOrganizeButton scope="day" date={viewDate} onDone={() => tasksApi.refresh()} />
             <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-0.5">
               <ViewBtn active={taskView === "list"} onClick={() => changeTaskView("list")} icon={<ListIcon className="h-3.5 w-3.5" />} label="Lista" />
               <ViewBtn active={taskView === "cards"} onClick={() => changeTaskView("cards")} icon={<LayoutGrid className="h-3.5 w-3.5" />} label="Cards" />

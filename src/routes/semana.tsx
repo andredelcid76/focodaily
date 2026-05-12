@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
+import { AutoOrganizeButton } from "@/components/AutoOrganizeButton";
 import {
   DndContext,
   PointerSensor,
@@ -139,6 +140,7 @@ function WeekInner({ userId }: { userId: string }) {
           <h1 className="font-display text-3xl font-bold">Visão semanal</h1>
         </div>
         <div className="flex items-center gap-2">
+          <AutoOrganizeButton scope="week" weekStart={weekStart} onDone={() => tasksApi.refresh()} />
           <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, -7))}><ChevronLeft className="h-4 w-4" /></Button>
           <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(todayISO()))}>Esta semana</Button>
           <Button variant="outline" size="icon" onClick={() => setWeekStart(addDays(weekStart, 7))}><ChevronRight className="h-4 w-4" /></Button>
@@ -192,6 +194,7 @@ function WeekInner({ userId }: { userId: string }) {
                     onAdd={() => openNew(d)}
                     onToggle={(t) => tasksApi.toggleComplete(t)}
                     onEdit={(t) => openEdit(t)}
+                    onAutoOrganized={() => tasksApi.refresh()}
                   />
                 </div>
               );
@@ -222,7 +225,7 @@ function WeekInner({ userId }: { userId: string }) {
 }
 
 function DayColumn({
-  day, tasks, meetings, rolesById, projectsById, isToday, tasksMinutes, meetingsMinutes, onAdd, onToggle, onEdit,
+  day, tasks, meetings, rolesById, projectsById, isToday, tasksMinutes, meetingsMinutes, onAdd, onToggle, onEdit, onAutoOrganized,
 }: {
   day: string;
   tasks: Task[];
@@ -235,6 +238,7 @@ function DayColumn({
   onAdd: () => void;
   onToggle: (t: Task) => void;
   onEdit: (t: Task) => void;
+  onAutoOrganized?: () => void;
 }) {
   const totalMinutes = tasksMinutes + meetingsMinutes;
   return (
@@ -261,9 +265,14 @@ function DayColumn({
             </div>
           </div>
         </div>
-        <button onClick={onAdd} className="rounded-md p-1 text-muted-foreground hover:bg-accent/40 hover:text-foreground shrink-0" aria-label="Adicionar">
-          <Plus className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-0.5 shrink-0">
+          {tasks.length > 1 && (
+            <AutoOrganizeButton scope="day" date={day} size="icon" variant="ghost" onDone={onAutoOrganized} />
+          )}
+          <button onClick={onAdd} className="rounded-md p-1 text-muted-foreground hover:bg-accent/40 hover:text-foreground" aria-label="Adicionar">
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {meetings.length > 0 && (
         <div className="mb-2 space-y-1">
