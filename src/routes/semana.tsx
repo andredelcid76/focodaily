@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
+import { AutoOrganizeButton } from "@/components/AutoOrganizeButton";
 import {
   DndContext,
   PointerSensor,
