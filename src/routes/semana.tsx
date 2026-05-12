@@ -194,6 +194,7 @@ function WeekInner({ userId }: { userId: string }) {
                     onAdd={() => openNew(d)}
                     onToggle={(t) => tasksApi.toggleComplete(t)}
                     onEdit={(t) => openEdit(t)}
+                    onAutoOrganized={() => tasksApi.refresh()}
                   />
                 </div>
               );
