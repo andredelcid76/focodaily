@@ -99,6 +99,7 @@ export function useTasks(userId: string | undefined) {
         .from("tasks")
         .select("*")
         .eq("user_id", userId)
+        .eq("completed", false)
         .neq("recurrence", "none")
         .is("recurrence_parent_id", null);
 
