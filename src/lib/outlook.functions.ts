@@ -167,10 +167,12 @@ export const syncOutlookCalendar = createServerFn({ method: "POST" })
     const events = (json.value ?? []) as GraphEvent[];
 
     let imported = 0;
+    const fetchedIds: string[] = [];
     for (const ev of events) {
       const startsAt = new Date(ev.start.dateTime + "Z").toISOString();
       const endsAt = new Date(ev.end.dateTime + "Z").toISOString();
       const scheduledDate = startsAt.slice(0, 10);
+      fetchedIds.push(ev.id);
       const { error } = await supabaseAdmin
         .from("meetings")
         .upsert(
@@ -193,10 +195,32 @@ export const syncOutlookCalendar = createServerFn({ method: "POST" })
       if (!error) imported++;
     }
 
+    // Delete meetings (source=outlook) within the synced window that are no
+    // longer present in Outlook (i.e. cancelled / removed by the user).
+    const startDate = start.slice(0, 10);
+    const endDate = end.slice(0, 10);
+    let removed = 0;
+    {
+      const delQuery = supabaseAdmin
+        .from("meetings")
+        .delete({ count: "exact" })
+        .eq("user_id", userId)
+        .eq("source", "outlook")
+        .gte("scheduled_date", startDate)
+        .lte("scheduled_date", endDate);
+      const finalQuery = fetchedIds.length
+        ? delQuery.not("external_id", "in", `(${fetchedIds.map((id) => `"${id.replace(/"/g, '\\"')}"`).join(",")})`)
+        : delQuery;
+      const { count, error: delErr } = await finalQuery;
+      if (delErr) console.error("[outlook sync] delete stale error", delErr);
+      else removed = count ?? 0;
+    }
+
     await supabaseAdmin
       .from("outlook_connections")
       .update({ last_sync_at: new Date().toISOString() })
       .eq("user_id", userId);
 
-    return { imported, total: events.length };
+    console.log("[outlook sync]", { userId, totalFromGraph: events.length, imported, removed });
+    return { imported, removed, total: events.length };
   });
