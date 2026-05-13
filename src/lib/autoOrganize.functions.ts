@@ -165,8 +165,12 @@ export const autoOrganizeDay = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .eq("scheduled_date", data.date)
       .order("position", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[autoOrganizeDay] load tasks error", error);
+      throw new Error(error.message);
+    }
     const list = (tasks ?? []) as DbTask[];
+    console.log("[autoOrganizeDay]", { userId, date: data.date, taskCount: list.length, useAi });
     if (list.length === 0) {
       return { ok: true, ordered_ids: [], reasoning: "Nenhuma tarefa no dia.", capacity_minutes: capacity, total_minutes: 0, overflow: false };
     }
