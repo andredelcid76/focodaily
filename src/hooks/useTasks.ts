@@ -95,6 +95,43 @@ export function useTasks(userId: string | undefined) {
 
     const run = (async () => {
       const today = todayISO();
+
+      // STEP 0 — Auto-cleanup zombie instances:
+      // Future open children whose parent is completed, deleted, or whose
+      // recurrence_until has passed should not exist. They get re-introduced
+      // by older code paths or by manual edits to the parent. Sweep them out
+      // before materializing anything new.
+      const { data: openFuture } = await supabase
+        .from("tasks")
+        .select("id, recurrence_parent_id, scheduled_date")
+        .eq("user_id", userId)
+        .eq("completed", false)
+        .gte("scheduled_date", today)
+        .not("recurrence_parent_id", "is", null);
+      if (openFuture && openFuture.length > 0) {
+        const parentIdsAll = Array.from(
+          new Set(openFuture.map((c) => c.recurrence_parent_id as string)),
+        );
+        const { data: parentRows } = await supabase
+          .from("tasks")
+          .select("id, completed, recurrence, recurrence_until")
+          .in("id", parentIdsAll);
+        const parentMap = new Map((parentRows ?? []).map((p) => [p.id as string, p]));
+        const orphanIds: string[] = [];
+        for (const c of openFuture) {
+          const p = parentMap.get(c.recurrence_parent_id as string);
+          // Parent missing, completed, no longer recurring, or recurrence ended
+          if (!p) { orphanIds.push(c.id as string); continue; }
+          if ((p as { completed?: boolean }).completed) { orphanIds.push(c.id as string); continue; }
+          if ((p as { recurrence?: string }).recurrence === "none") { orphanIds.push(c.id as string); continue; }
+          const until = (p as { recurrence_until?: string | null }).recurrence_until;
+          if (until && (c.scheduled_date as string) > until) { orphanIds.push(c.id as string); continue; }
+        }
+        if (orphanIds.length > 0) {
+          await supabase.from("tasks").delete().in("id", orphanIds);
+        }
+      }
+
       const { data: parents } = await supabase
         .from("tasks")
         .select("*")
