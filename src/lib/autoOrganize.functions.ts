@@ -290,11 +290,16 @@ export const autoOrganizeWeek = createServerFn({ method: "POST" })
           finalOrder = [...refined.orderedIds.map((id) => byId.get(id)!).filter(Boolean), ...completed];
         }
       }
-      await Promise.all(
-        finalOrder.map((t, idx) =>
-          supabase.from("tasks").update({ position: idx }).eq("id", t.id).eq("user_id", userId),
-        ),
-      );
+      await Promise.resolve();
+      for (let idx = 0; idx < finalOrder.length; idx++) {
+        const t = finalOrder[idx];
+        const { error: upErr } = await supabase
+          .from("tasks")
+          .update({ position: idx })
+          .eq("id", t.id)
+          .eq("user_id", userId);
+        if (upErr) console.error("[autoOrganizeWeek] update error", t.id, upErr);
+      }
       const openMinutes = finalOrder.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0);
       summary.push({
         date,
