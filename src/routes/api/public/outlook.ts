@@ -263,11 +263,13 @@ async function syncOutlookCalendar(userId: string) {
   const events = (jsonResponse.value ?? []) as GraphEvent[];
   let imported = 0;
   const errors: string[] = [];
+  const fetchedIds: string[] = [];
 
   for (const ev of events) {
     const startsAt = new Date(ev.start.dateTime + "Z").toISOString();
     const endsAt = new Date(ev.end.dateTime + "Z").toISOString();
     const scheduledDate = startsAt.slice(0, 10);
+    fetchedIds.push(ev.id);
 
     const { error } = await supabaseAdmin
       .from("meetings")
@@ -297,7 +299,36 @@ async function syncOutlookCalendar(userId: string) {
     }
   }
 
-  console.log("[outlook sync]", { userId, totalFromGraph: events.length, imported, errors: errors.length });
+  // Remove meetings that were deleted in Outlook (no longer present in window)
+  const startDate = start.slice(0, 10);
+  const endDate = end.slice(0, 10);
+  let removed = 0;
+  try {
+    const delQuery = supabaseAdmin
+      .from("meetings")
+      .delete({ count: "exact" })
+      .eq("user_id", userId)
+      .eq("source", "outlook")
+      .gte("scheduled_date", startDate)
+      .lte("scheduled_date", endDate);
+    const finalQuery = fetchedIds.length
+      ? delQuery.not(
+          "external_id",
+          "in",
+          `(${fetchedIds.map((id) => `"${id.replace(/"/g, '\\"')}"`).join(",")})`,
+        )
+      : delQuery;
+    const { count, error: delErr } = await finalQuery;
+    if (delErr) {
+      console.error("[outlook sync] delete stale error", delErr);
+    } else {
+      removed = count ?? 0;
+    }
+  } catch (e) {
+    console.error("[outlook sync] delete stale exception", e);
+  }
+
+  console.log("[outlook sync]", { userId, totalFromGraph: events.length, imported, removed, errors: errors.length });
 
   if (events.length > 0 && imported === 0 && errors.length > 0) {
     throw new Error(`Falha ao salvar reuniões: ${errors[0]}`);
@@ -312,7 +343,7 @@ async function syncOutlookCalendar(userId: string) {
     throw new Error(syncError.message);
   }
 
-  return { imported, total: events.length, errors };
+  return { imported, removed, total: events.length, errors };
 }
 
 function json(payload: unknown, status = 200) {
