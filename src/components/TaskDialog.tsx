@@ -62,7 +62,7 @@ const WEEKDAYS = [
   { v: 0, l: "D" },
 ];
 
-export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete }: Props) {
+export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, roles, projects = [], defaultProjectId, lockedProjectId, onSave, onDelete, onToggleComplete }: Props) {
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
