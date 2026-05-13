@@ -54,17 +54,18 @@ export function AutoOrganizeButton({ scope, date, weekStart, onDone, variant = "
       if (scope === "day" && date) {
         const r = await runDay({ data: { date } });
         console.log("[AutoOrganize] day result", r);
-        if (r.ordered_ids.length === 0) {
+        const ids = r?.ordered_ids ?? [];
+        if (ids.length === 0) {
           toast.info("Nenhuma tarefa para organizar neste dia.");
-        } else if (r.overflow) {
-          toast.warning(`Dia organizado, mas está cheio: ${Math.round(r.total_minutes / 60 * 10) / 10}h em ${Math.round(r.capacity_minutes / 60 * 10) / 10}h disponíveis.`);
+        } else if (r?.overflow) {
+          toast.warning(`Dia organizado, mas está cheio: ${Math.round((r.total_minutes ?? 0) / 60 * 10) / 10}h em ${Math.round((r.capacity_minutes ?? 0) / 60 * 10) / 10}h disponíveis.`);
         } else {
-          toast.success(r.reasoning ? `Organizado · ${r.reasoning}` : "Dia organizado");
+          toast.success(r?.reasoning ? `Organizado · ${r.reasoning}` : "Dia organizado");
         }
       } else if (scope === "week" && weekStart) {
         const r = await runWeek({ data: { week_start: weekStart } });
         console.log("[AutoOrganize] week result", r);
-        const overflow = r.days.filter((d) => d.overflow);
+        const overflow = (r?.days ?? []).filter((d) => d.overflow);
         if (overflow.length) {
           toast.warning(`Semana organizada · ${overflow.length} dia(s) acima da capacidade.`);
         } else {

@@ -910,7 +910,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      reorder_tasks: { Args: { p_ordered_ids: string[] }; Returns: undefined }
     }
     Enums: {
       milestone_status: "pending" | "in_progress" | "done"
