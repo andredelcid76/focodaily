@@ -192,12 +192,20 @@ export const autoOrganizeDay = createServerFn({ method: "POST" })
       }
     }
 
-    // Persist new positions
-    await Promise.all(
-      finalOrder.map((t, idx) =>
-        supabase.from("tasks").update({ position: idx }).eq("id", t.id).eq("user_id", userId),
-      ),
-    );
+    // Persist new positions sequentially to stay within Worker subrequest limits.
+    let updateErrors = 0;
+    for (let idx = 0; idx < finalOrder.length; idx++) {
+      const t = finalOrder[idx];
+      const { error: upErr } = await supabase
+        .from("tasks")
+        .update({ position: idx })
+        .eq("id", t.id)
+        .eq("user_id", userId);
+      if (upErr) {
+        updateErrors++;
+        console.error("[autoOrganizeDay] update position error", t.id, upErr);
+      }
+    }
 
     // Log
     await supabase.from("task_reorder_logs").insert({
@@ -206,10 +214,11 @@ export const autoOrganizeDay = createServerFn({ method: "POST" })
       source: "auto",
       ordered_task_ids: finalOrder.map((t) => t.id),
       reasoning,
-      metadata: { capacity_minutes: capacity, used_ai: useAi },
+      metadata: { capacity_minutes: capacity, used_ai: useAi, update_errors: updateErrors },
     } as never);
 
     const openMinutes = finalOrder.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0);
+    console.log("[autoOrganizeDay] done", { date: data.date, count: finalOrder.length, updateErrors, openMinutes });
     return {
       ok: true,
       ordered_ids: finalOrder.map((t) => t.id),
