@@ -46,6 +46,7 @@ type Props = {
     scope?: RecurrenceScope
   ) => Promise<void>;
   onDelete?: (scope?: RecurrenceScope) => Promise<void>;
+  onToggleComplete?: () => Promise<void> | void;
 };
 
 export type RecurrenceScope = "this" | "future" | "all";
