@@ -510,15 +510,31 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             </div>
           )}
         </div>
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <div>
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          <div className="flex gap-2">
             {task && onDelete && (
               <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={handleDeleteClick}>
                 Excluir
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            {task && !isSeed && onToggleComplete && (
+              <Button
+                variant={task.completed ? "outline" : "secondary"}
+                onClick={async () => {
+                  await onToggleComplete();
+                  onOpenChange(false);
+                }}
+                className={task.completed ? "" : "text-green-600 hover:text-green-700"}
+              >
+                {task.completed ? (
+                  <><RotateCcw className="h-4 w-4" /> Reabrir</>
+                ) : (
+                  <><CheckCircle2 className="h-4 w-4" /> Concluir</>
+                )}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</Button>
           </div>
