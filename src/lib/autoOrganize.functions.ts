@@ -192,19 +192,14 @@ export const autoOrganizeDay = createServerFn({ method: "POST" })
       }
     }
 
-    // Persist new positions sequentially to stay within Worker subrequest limits.
+    // Persist new positions in a single RPC call (avoids Worker subrequest limits).
     let updateErrors = 0;
-    for (let idx = 0; idx < finalOrder.length; idx++) {
-      const t = finalOrder[idx];
-      const { error: upErr } = await supabase
-        .from("tasks")
-        .update({ position: idx })
-        .eq("id", t.id)
-        .eq("user_id", userId);
-      if (upErr) {
-        updateErrors++;
-        console.error("[autoOrganizeDay] update position error", t.id, upErr);
-      }
+    const orderedIds = finalOrder.map((t) => t.id);
+    const { error: rpcErr } = await supabase.rpc("reorder_tasks" as never, { p_ordered_ids: orderedIds } as never);
+    if (rpcErr) {
+      updateErrors = 1;
+      console.error("[autoOrganizeDay] reorder_tasks rpc error", rpcErr);
+      throw new Error(rpcErr.message);
     }
 
     // Log
