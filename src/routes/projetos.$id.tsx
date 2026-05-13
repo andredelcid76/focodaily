@@ -427,6 +427,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
           }
           toast.success("Subtarefa excluída");
         } : undefined}
+        onToggleComplete={editingTask ? () => tasksApi.toggleComplete(editingTask) : undefined}
       />
 
       <ProjectDialog
