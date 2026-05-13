@@ -219,6 +219,7 @@ function WeekInner({ userId }: { userId: string }) {
           }
           toast.success("Tarefa excluída");
         } : undefined}
+        onToggleComplete={editing ? () => tasksApi.toggleComplete(editing) : undefined}
       />
     </div>
   );

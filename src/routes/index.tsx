@@ -789,6 +789,7 @@ function TodayInner({ userId }: { userId: string }) {
         projects={projects}
         onSave={handleSave}
         onDelete={editing ? handleDelete : undefined}
+        onToggleComplete={editing ? () => toggleCompleteWithTimer(editing) : undefined}
       />
 
       <BulkTaskDialog
