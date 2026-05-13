@@ -384,10 +384,19 @@ Retorne JSON válido:
 async function scanForUser(userId: string) {
   // Bidirectional sync: pull Pipedrive completions into the app first
   await syncPipedriveCompletionsToApp(userId);
+  // Look up the user's email/name (used to attribute Fireflies action items).
+  const { data: oconn } = await supabaseAdmin
+    .from("outlook_connections")
+    .select("email,display_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const userEmail = (oconn?.email as string | null) ?? null;
+  const userName = (oconn?.display_name as string | null) ?? null;
+
   // Collect sources
   const [emails, meetings, deals] = await Promise.all([
     fetchOutlookEmails(userId),
-    fetchFireflies(),
+    fetchFireflies(userEmail, userName),
     fetchPipedrive(),
   ]);
   const all = [...emails, ...meetings, ...deals];
