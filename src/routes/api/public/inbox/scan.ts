@@ -131,7 +131,7 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   }));
 }
 
-async function fetchFireflies(): Promise<SourceItem[]> {
+async function fetchFireflies(userEmail: string | null, userName: string | null): Promise<SourceItem[]> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const ffKey = process.env.FIREFLIES_API_KEY;
   if (!lovableKey || !ffKey) return [];
@@ -144,50 +144,58 @@ async function fetchFireflies(): Promise<SourceItem[]> {
         "X-Connection-Api-Key": ffKey,
       },
       body: JSON.stringify({
-        // host_email = the meeting host (typically the user). action_items is a markdown
-        // string where action items are grouped under headers like "**Name** (email)".
-        query: `query { transcripts(limit: 10) { id title date host_email summary { overview action_items } } }`,
+        // Pull more transcripts and the participants list so we can match action
+        // items to the actual user (not only meetings they hosted).
+        query: `query { transcripts(limit: 30) { id title date host_email participants summary { overview action_items } } }`,
       }),
     });
-    if (!r.ok) return [];
+    if (!r.ok) {
+      console.error("fireflies http", r.status, await r.text());
+      return [];
+    }
     const json = await r.json();
     type T = {
       id: string;
       title?: string;
       date?: number;
       host_email?: string;
+      participants?: string[];
       summary?: { overview?: string; action_items?: string };
     };
     const ts = (json?.data?.transcripts ?? []) as T[];
 
-    // Extract only action items explicitly assigned to the host (the user).
-    // Fireflies formats action_items as markdown sections like:
-    //   **John Doe**
-    //   - do X by Friday
-    //   **Jane**
-    //   - do Y
-    function actionItemsForHost(actionItems: string, hostEmail: string | undefined): string {
+    // Build identity tokens for the user. We match action item headers like
+    // "**John Doe (john@acme.com)**" against any of: full email, email local part,
+    // display name tokens (>2 chars). This catches meetings the user attended
+    // but did NOT host — previously those were silently dropped.
+    const emailLower = (userEmail ?? "").toLowerCase();
+    const emailLocal = emailLower.split("@")[0] ?? "";
+    const nameTokens = (userName ?? "")
+      .toLowerCase()
+      .split(/[\s._-]+/)
+      .filter((t) => t.length > 2);
+    const localTokens = emailLocal.split(/[._-]+/).filter((t) => t.length > 2);
+    const allTokens = Array.from(new Set([emailLower, emailLocal, ...nameTokens, ...localTokens])).filter(Boolean);
+
+    function actionItemsForUser(actionItems: string, hostEmail?: string): string {
       if (!actionItems) return "";
-      const hostLocal = (hostEmail ?? "").split("@")[0]?.toLowerCase() ?? "";
-      // Split on bold headers: **Name**
       const blocks = actionItems.split(/\n(?=\*\*[^*]+\*\*)/g);
       const matches = blocks.filter((b) => {
         const headerMatch = b.match(/^\*\*([^*]+)\*\*/);
         if (!headerMatch) return false;
         const header = headerMatch[1].toLowerCase();
-        if (!hostEmail) return false;
-        if (header.includes(hostEmail.toLowerCase())) return true;
-        if (hostLocal && header.includes(hostLocal)) return true;
-        // Also accept name parts ("John" matches "John Doe")
-        const tokens = hostLocal.split(/[._-]+/).filter(Boolean);
-        return tokens.some((tok) => tok.length > 2 && header.includes(tok));
+        // Match by user's own identity
+        if (allTokens.some((tok) => tok && header.includes(tok))) return true;
+        // Fallback: if we have no user identity, match host (legacy behavior)
+        if (allTokens.length === 0 && hostEmail && header.includes(hostEmail.toLowerCase())) return true;
+        return false;
       });
       return matches.join("\n").trim();
     }
 
     return ts
       .map((t) => {
-        const myItems = actionItemsForHost(t.summary?.action_items ?? "", t.host_email);
+        const myItems = actionItemsForUser(t.summary?.action_items ?? "", t.host_email);
         return { t, myItems };
       })
       .filter(({ myItems }) => myItems.length > 0)
@@ -197,7 +205,7 @@ async function fetchFireflies(): Promise<SourceItem[]> {
         source_label: `Reunião: ${t.title ?? "(sem título)"}`,
         source_url: null,
         source_date: t.date ? new Date(t.date).toISOString() : null,
-        text: `Reunião: ${t.title ?? ""}\nHost: ${t.host_email ?? ""}\n\nAction items atribuídos AO USUÁRIO (host):\n${myItems}`,
+        text: `Reunião: ${t.title ?? ""}\nHost: ${t.host_email ?? ""}\n\nAction items atribuídos AO USUÁRIO (${userEmail ?? "?"}):\n${myItems}`,
       }));
   } catch (e) {
     console.error("fireflies", e);
