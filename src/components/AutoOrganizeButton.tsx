@@ -50,15 +50,20 @@ export function AutoOrganizeButton({ scope, date, weekStart, onDone, variant = "
   const handleRun = async () => {
     setLoading(true);
     try {
+      console.log("[AutoOrganize] click", { scope, date, weekStart });
       if (scope === "day" && date) {
         const r = await runDay({ data: { date } });
-        if (r.overflow) {
+        console.log("[AutoOrganize] day result", r);
+        if (r.ordered_ids.length === 0) {
+          toast.info("Nenhuma tarefa para organizar neste dia.");
+        } else if (r.overflow) {
           toast.warning(`Dia organizado, mas está cheio: ${Math.round(r.total_minutes / 60 * 10) / 10}h em ${Math.round(r.capacity_minutes / 60 * 10) / 10}h disponíveis.`);
         } else {
           toast.success(r.reasoning ? `Organizado · ${r.reasoning}` : "Dia organizado");
         }
       } else if (scope === "week" && weekStart) {
         const r = await runWeek({ data: { week_start: weekStart } });
+        console.log("[AutoOrganize] week result", r);
         const overflow = r.days.filter((d) => d.overflow);
         if (overflow.length) {
           toast.warning(`Semana organizada · ${overflow.length} dia(s) acima da capacidade.`);
@@ -68,6 +73,7 @@ export function AutoOrganizeButton({ scope, date, weekStart, onDone, variant = "
       }
       onDone?.();
     } catch (e) {
+      console.error("[AutoOrganize] error", e);
       toast.error(e instanceof Error ? e.message : "Falha ao auto-organizar");
     } finally {
       setLoading(false);
