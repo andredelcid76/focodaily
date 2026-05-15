@@ -133,11 +133,12 @@ export function useTasks(userId: string | undefined) {
         }
       }
 
+      // Materialize from ALL recurring seeds, even ones whose own seed-day instance
+      // was completed (that's normal — the recurrence must continue).
       const { data: parents } = await supabase
         .from("tasks")
         .select("*")
         .eq("user_id", userId)
-        .eq("completed", false)
         .neq("recurrence", "none")
         .is("recurrence_parent_id", null);
 
