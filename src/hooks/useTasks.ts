@@ -122,7 +122,8 @@ export function useTasks(userId: string | undefined) {
           const p = parentMap.get(c.recurrence_parent_id as string);
           // Parent missing, completed, no longer recurring, or recurrence ended
           if (!p) { orphanIds.push(c.id as string); continue; }
-          if ((p as { completed?: boolean }).completed) { orphanIds.push(c.id as string); continue; }
+          // NOTE: parent.completed=true is normal — it just means the user finished
+          // the seed-day instance. Future occurrences should still be generated.
           if ((p as { recurrence?: string }).recurrence === "none") { orphanIds.push(c.id as string); continue; }
           const until = (p as { recurrence_until?: string | null }).recurrence_until;
           if (until && (c.scheduled_date as string) > until) { orphanIds.push(c.id as string); continue; }
@@ -132,11 +133,12 @@ export function useTasks(userId: string | undefined) {
         }
       }
 
+      // Materialize from ALL recurring seeds, even ones whose own seed-day instance
+      // was completed (that's normal — the recurrence must continue).
       const { data: parents } = await supabase
         .from("tasks")
         .select("*")
         .eq("user_id", userId)
-        .eq("completed", false)
         .neq("recurrence", "none")
         .is("recurrence_parent_id", null);
 
