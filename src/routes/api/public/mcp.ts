@@ -70,6 +70,7 @@ export const Route = createFileRoute("/api/public/mcp")({
       },
       GET: async () => methodNotAllowed(),
       DELETE: async () => methodNotAllowed(),
+      OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
     },
   },
 });
