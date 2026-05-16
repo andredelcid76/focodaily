@@ -19,6 +19,7 @@ import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
+import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
@@ -74,6 +75,11 @@ const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
   path: '/api/public/outlook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
+  id: '/api/public/mcp',
+  path: '/api/public/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
   id: '/api/public/maya',
   path: '/api/public/maya',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
+  '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
+  '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
+  '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/projetos/$id'
     | '/projetos/'
     | '/api/public/maya'
+    | '/api/public/mcp'
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/api/public/inbox/scan'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/projetos/$id'
     | '/projetos'
     | '/api/public/maya'
+    | '/api/public/mcp'
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/api/public/inbox/scan'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/projetos/$id'
     | '/projetos/'
     | '/api/public/maya'
+    | '/api/public/mcp'
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/api/public/inbox/scan'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   ProjetosIdRoute: typeof ProjetosIdRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
+  ApiPublicMcpRoute: typeof ApiPublicMcpRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOutlookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mcp': {
+      id: '/api/public/mcp'
+      path: '/api/public/mcp'
+      fullPath: '/api/public/mcp'
+      preLoaderRoute: typeof ApiPublicMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/maya': {
       id: '/api/public/maya'
       path: '/api/public/maya'
@@ -336,6 +356,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjetosIdRoute: ProjetosIdRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
+  ApiPublicMcpRoute: ApiPublicMcpRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
@@ -344,3 +365,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
