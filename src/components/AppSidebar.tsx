@@ -23,6 +23,7 @@ const items = [
   { title: "Agenda", url: "/agenda", icon: CalendarClock },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
   { title: "Papéis", url: "/papeis", icon: Users },
+  { title: "Configurações", url: "/configuracoes", icon: Settings },
 ] as const;
 
 function useInboxCount(userId: string | undefined) {
