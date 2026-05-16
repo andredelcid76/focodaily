@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { CalendarClock, CalendarDays, FolderKanban, Inbox, ListTodo, LogOut, Search, Sparkles, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, FolderKanban, Inbox, ListTodo, LogOut, Search, Settings, Sparkles, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Sidebar,
