@@ -52,9 +52,13 @@ function ConfiguracoesPage() {
   const revoke = useServerFn(revokeMcpToken);
   const remove = useServerFn(deleteMcpToken);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["mcp-tokens"],
-    queryFn: () => list(),
+    queryFn: async () => {
+      const res = await list();
+      return res ?? { tokens: [] };
+    },
+    retry: false,
   });
 
   const [label, setLabel] = useState("Claude");
@@ -150,7 +154,11 @@ function ConfiguracoesPage() {
 
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Carregando…</p>
-            ) : !data?.tokens.length ? (
+            ) : error ? (
+              <p className="text-sm text-destructive">
+                Não foi possível carregar os tokens: {(error as Error).message}
+              </p>
+            ) : !data?.tokens?.length ? (
               <p className="text-sm text-muted-foreground">Nenhum token criado ainda.</p>
             ) : (
               <div className="space-y-2">
