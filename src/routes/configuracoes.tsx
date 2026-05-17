@@ -52,9 +52,13 @@ function ConfiguracoesPage() {
   const revoke = useServerFn(revokeMcpToken);
   const remove = useServerFn(deleteMcpToken);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["mcp-tokens"],
-    queryFn: () => list(),
+    queryFn: async () => {
+      const res = await list();
+      return res ?? { tokens: [] };
+    },
+    retry: false,
   });
 
   const [label, setLabel] = useState("Claude");
