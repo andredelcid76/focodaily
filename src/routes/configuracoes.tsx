@@ -154,7 +154,11 @@ function ConfiguracoesPage() {
 
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Carregando…</p>
-            ) : !data?.tokens.length ? (
+            ) : error ? (
+              <p className="text-sm text-destructive">
+                Não foi possível carregar os tokens: {(error as Error).message}
+              </p>
+            ) : !data?.tokens?.length ? (
               <p className="text-sm text-muted-foreground">Nenhum token criado ainda.</p>
             ) : (
               <div className="space-y-2">
