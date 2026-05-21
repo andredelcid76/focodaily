@@ -147,7 +147,7 @@ export function BulkTaskDialog({
             <ListPlus className="h-5 w-5" /> Criar várias tarefas
           </DialogTitle>
           <DialogDescription>
-            Uma tarefa por linha. Use <code className="text-xs bg-muted px-1 rounded">@30</code> para duração em minutos e <code className="text-xs bg-muted px-1 rounded">!urgente</code>, <code className="text-xs bg-muted px-1 rounded">!importante</code> ou <code className="text-xs bg-muted px-1 rounded">!circ</code> para categoria.
+            Uma tarefa por linha. Use <code className="text-xs bg-muted px-1 rounded">@30</code> para duração em minutos, <code className="text-xs bg-muted px-1 rounded">!urgente</code>/<code className="text-xs bg-muted px-1 rounded">!importante</code>/<code className="text-xs bg-muted px-1 rounded">!circ</code> para categoria e <code className="text-xs bg-muted px-1 rounded">#25/12</code>, <code className="text-xs bg-muted px-1 rounded">#2026-05-22</code>, <code className="text-xs bg-muted px-1 rounded">#hoje</code> ou <code className="text-xs bg-muted px-1 rounded">#amanha</code> para data.
           </DialogDescription>
         </DialogHeader>
 
@@ -155,10 +155,11 @@ export function BulkTaskDialog({
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={"Ex.:\nResponder e-mails @20\nPreparar apresentação @60 !urgente\nLigar para cliente @15"}
+            placeholder={"Ex.:\nResponder e-mails @20 #hoje\nPreparar apresentação @60 !urgente #amanha\nLigar para cliente @15 #25/12"}
             className="min-h-[200px] font-mono text-sm"
             autoFocus
           />
+
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
