@@ -124,7 +124,7 @@ export function BulkTaskDialog({
           title: l.title,
           duration_minutes: l.duration,
           category: l.category,
-          scheduled_date: date,
+          scheduled_date: l.date,
           role_id: roleId === "none" ? null : roleId,
           project_id: projectId === "none" ? null : projectId,
         }))
