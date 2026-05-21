@@ -110,7 +110,7 @@ export function BulkTaskDialog({
   const [projectId, setProjectId] = useState<string>("none");
   const [busy, setBusy] = useState(false);
 
-  const lines = text.split("\n").map((l) => parseLine(l, { duration, category })).filter(Boolean) as LineParse[];
+  const lines = text.split("\n").map((l) => parseLine(l, { duration, category, date })).filter(Boolean) as LineParse[];
 
   const submit = async () => {
     if (lines.length === 0) {
