@@ -633,19 +633,9 @@ export function useTasks(userId: string | undefined) {
   const bulkMoveToDay = async (taskIds: string[], date: string) => {
     if (taskIds.length === 0) return;
     const basePos = topPositionForDay(date);
-    // Assign descending positions starting from basePos so the first selected ends up on top
-    const updates = taskIds.map((id, idx) => ({ id, position: basePos - idx }));
-    setTasks((prev) =>
-      prev.map((t) => {
-        const u = updates.find((x) => x.id === t.id);
-        return u ? { ...t, scheduled_date: date, position: u.position } : t;
-      })
-    );
-    await Promise.all(
-      updates.map((u) =>
-        supabase.from("tasks").update({ scheduled_date: date, position: u.position }).eq("id", u.id)
-      )
-    );
+    for (const [idx, id] of taskIds.entries()) {
+      await moveTaskToDay(id, date, basePos - idx);
+    }
   };
 
   const bulkDelete = async (taskIds: string[]) => {
