@@ -41,6 +41,8 @@ import {
   deleteMcpToken,
 } from "@/lib/mcpTokens.functions";
 
+const PUBLISHED_MCP_URL = "https://focodaily.lovable.app/api/public/mcp";
+
 export const Route = createFileRoute("/configuracoes")({
   component: ConfiguracoesPage,
 });
@@ -91,7 +93,7 @@ function ConfiguracoesPage() {
     },
   });
 
-  const mcpUrl = typeof window !== "undefined" ? `${window.location.origin}/api/public/mcp` : "";
+  const mcpUrl = PUBLISHED_MCP_URL;
 
   const copy = (txt: string) => {
     navigator.clipboard.writeText(txt);
@@ -140,7 +142,7 @@ function ConfiguracoesPage() {
                 </Button>
               </div>
               <p className="mt-2 text-muted-foreground">
-                No Claude Desktop, em Settings → Connectors → Add custom connector, cole essa URL e o token gerado.
+                  No Claude Desktop ou Web, adicione um custom connector usando essa URL publicada e o token gerado.
               </p>
               <a
                 href="https://modelcontextprotocol.io/quickstart/user"

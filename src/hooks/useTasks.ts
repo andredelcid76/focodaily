@@ -355,6 +355,21 @@ export function useTasks(userId: string | undefined) {
     if (error) throw error;
   };
 
+  const buildDetachedRecurringPatch = (task: Task, patch: Partial<Task>): Partial<Task> => {
+    const nextDate = patch.scheduled_date ?? task.scheduled_date;
+    return {
+      ...patch,
+      scheduled_date: nextDate,
+      original_date: patch.original_date ?? nextDate,
+      recurrence: "none",
+      recurrence_parent_id: null,
+      recurrence_interval: null,
+      recurrence_weekdays: null,
+      recurrence_week_interval: null,
+      recurrence_monthly_pattern: null,
+    };
+  };
+
   const findNextOccurrenceDate = (parent: Task, afterDate: string) => {
     for (let i = 1; i <= 730; i++) {
       const candidate = addDays(afterDate, i);
@@ -399,6 +414,15 @@ export function useTasks(userId: string | undefined) {
     scope: "this" | "future" | "all" = "this"
   ) => {
     if (scope === "this") {
+      if (
+        task.recurrence_parent_id &&
+        patch.scheduled_date !== undefined &&
+        patch.scheduled_date !== task.scheduled_date
+      ) {
+        await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
+        await updateTask(task.id, buildDetachedRecurringPatch(task, patch));
+        return;
+      }
       await updateTask(task.id, patch);
       return;
     }
@@ -591,6 +615,15 @@ export function useTasks(userId: string | undefined) {
   };
 
   const moveTaskToDay = async (taskId: string, date: string, position = 0) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task?.recurrence_parent_id && task.scheduled_date !== date) {
+      await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
+      await updateTask(taskId, {
+        ...buildDetachedRecurringPatch(task, { scheduled_date: date, position }),
+        position,
+      });
+      return;
+    }
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, scheduled_date: date, position } : t)));
     await supabase.from("tasks").update({ scheduled_date: date, position }).eq("id", taskId);
   };
@@ -600,25 +633,22 @@ export function useTasks(userId: string | undefined) {
   const bulkMoveToDay = async (taskIds: string[], date: string) => {
     if (taskIds.length === 0) return;
     const basePos = topPositionForDay(date);
-    // Assign descending positions starting from basePos so the first selected ends up on top
-    const updates = taskIds.map((id, idx) => ({ id, position: basePos - idx }));
-    setTasks((prev) =>
-      prev.map((t) => {
-        const u = updates.find((x) => x.id === t.id);
-        return u ? { ...t, scheduled_date: date, position: u.position } : t;
-      })
-    );
-    await Promise.all(
-      updates.map((u) =>
-        supabase.from("tasks").update({ scheduled_date: date, position: u.position }).eq("id", u.id)
-      )
-    );
+    for (const [idx, id] of taskIds.entries()) {
+      await moveTaskToDay(id, date, basePos - idx);
+    }
   };
 
   const bulkDelete = async (taskIds: string[]) => {
     if (taskIds.length === 0) return;
-    setTasks((prev) => prev.filter((t) => !taskIds.includes(t.id)));
-    await supabase.from("tasks").delete().in("id", taskIds);
+    for (const id of taskIds) {
+      const task = tasks.find((t) => t.id === id);
+      if (!task) continue;
+      if (task.recurrence_parent_id || task.recurrence !== "none") {
+        await deleteTaskWithScope(task, "this");
+      } else {
+        await deleteTask(task.id);
+      }
+    }
   };
 
   const bulkAssignProject = async (taskIds: string[], projectId: string | null) => {
