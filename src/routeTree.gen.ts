@@ -18,6 +18,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
+import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
@@ -25,7 +26,9 @@ import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outloo
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
+import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
+import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
 import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
 import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
 
@@ -74,6 +77,11 @@ const ProjetosIdRoute = ProjetosIdRouteImport.update({
   path: '/projetos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotwellKnownOauthProtectedResourceRoute =
   DotwellKnownOauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -112,9 +120,19 @@ const ApiPublicOutlookCallbackRoute =
     path: '/callback',
     getParentRoute: () => ApiPublicOutlookRoute,
   } as any)
+const ApiPublicOauthTokenRoute = ApiPublicOauthTokenRouteImport.update({
+  id: '/api/public/oauth/token',
+  path: '/api/public/oauth/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOauthRegisterRoute = ApiPublicOauthRegisterRouteImport.update({
   id: '/api/public/oauth/register',
   path: '/api/public/oauth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOauthAuthorizeRoute = ApiPublicOauthAuthorizeRouteImport.update({
+  id: '/api/public/oauth/authorize',
+  path: '/api/public/oauth/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
@@ -138,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
@@ -146,7 +165,9 @@ export interface FileRoutesByFullPath {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
+  '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -159,6 +180,7 @@ export interface FileRoutesByTo {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
@@ -167,7 +189,9 @@ export interface FileRoutesByTo {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
+  '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRoutesById {
@@ -181,6 +205,7 @@ export interface FileRoutesById {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
@@ -189,7 +214,9 @@ export interface FileRoutesById {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
+  '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
 export interface FileRouteTypes {
@@ -204,6 +231,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/oauth/consent'
     | '/projetos/$id'
     | '/projetos/'
     | '/api/public/maya'
@@ -212,7 +240,9 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/tag-email'
+    | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
+    | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -225,6 +255,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/oauth/consent'
     | '/projetos/$id'
     | '/projetos'
     | '/api/public/maya'
@@ -233,7 +264,9 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/tag-email'
+    | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
+    | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
   id:
     | '__root__'
@@ -246,6 +279,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/oauth/consent'
     | '/projetos/$id'
     | '/projetos/'
     | '/api/public/maya'
@@ -254,7 +288,9 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/tag-email'
+    | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
+    | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
 }
@@ -268,6 +304,7 @@ export interface RootRouteChildren {
   SemanaRoute: typeof SemanaRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  OauthConsentRoute: typeof OauthConsentRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
@@ -276,7 +313,9 @@ export interface RootRouteChildren {
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
   ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
+  ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
+  ApiPublicOauthTokenRoute: typeof ApiPublicOauthTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -344,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjetosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -393,11 +439,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
       parentRoute: typeof ApiPublicOutlookRoute
     }
+    '/api/public/oauth/token': {
+      id: '/api/public/oauth/token'
+      path: '/api/public/oauth/token'
+      fullPath: '/api/public/oauth/token'
+      preLoaderRoute: typeof ApiPublicOauthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/register': {
       id: '/api/public/oauth/register'
       path: '/api/public/oauth/register'
       fullPath: '/api/public/oauth/register'
       preLoaderRoute: typeof ApiPublicOauthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/authorize': {
+      id: '/api/public/oauth/authorize'
+      path: '/api/public/oauth/authorize'
+      fullPath: '/api/public/oauth/authorize'
+      preLoaderRoute: typeof ApiPublicOauthAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/inbox/tag-email': {
@@ -440,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
+  OauthConsentRoute: OauthConsentRoute,
   ProjetosIdRoute: ProjetosIdRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
@@ -448,7 +509,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
   ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
+  ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
+  ApiPublicOauthTokenRoute: ApiPublicOauthTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
