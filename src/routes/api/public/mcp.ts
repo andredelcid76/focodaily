@@ -44,13 +44,30 @@ const authenticatedHandler = withMcpAuth(
     const token = header.slice("Bearer ".length).trim();
     if (!token) return null;
     const hash = hashToken(token);
+
+    // OAuth access tokens (issued via DCR flow) take priority
+    if (token.startsWith("foco_oauth_")) {
+      const { data, error } = await supabaseAdmin
+        .from("oauth_access_tokens")
+        .select("id, user_id, revoked_at, expires_at")
+        .eq("token_hash", hash)
+        .maybeSingle();
+      if (error || !data || data.revoked_at) return null;
+      if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return null;
+      void supabaseAdmin
+        .from("oauth_access_tokens")
+        .update({ last_used_at: new Date().toISOString() } as never)
+        .eq("id", data.id);
+      return { token, claims: { userId: data.user_id } };
+    }
+
+    // Legacy: manual MCP tokens
     const { data, error } = await supabaseAdmin
       .from("mcp_tokens")
       .select("id, user_id, revoked_at")
       .eq("token_hash", hash)
       .maybeSingle();
     if (error || !data || data.revoked_at) return null;
-    // Best-effort touch last_used_at
     void supabaseAdmin
       .from("mcp_tokens")
       .update({ last_used_at: new Date().toISOString() } as never)
@@ -59,6 +76,14 @@ const authenticatedHandler = withMcpAuth(
   },
 );
 
+function buildWwwAuthenticate(request: Request): string {
+  const url = new URL(request.url);
+  const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
+  const host = request.headers.get("x-forwarded-host") ?? url.host;
+  const origin = `${proto}://${host}`;
+  return `Bearer realm="foco-mcp", resource_metadata="${origin}/.well-known/oauth-protected-resource"`;
+}
+
 export const Route = createFileRoute("/api/public/mcp")({
   server: {
     handlers: {
@@ -66,9 +91,26 @@ export const Route = createFileRoute("/api/public/mcp")({
         const res = await authenticatedHandler(request);
         const headers = new Headers(res.headers);
         for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
+        if (res.status === 401) {
+          headers.set("WWW-Authenticate", buildWwwAuthenticate(request));
+        }
         return new Response(res.body, { status: res.status, headers });
       },
-      GET: async () => methodNotAllowed(),
+      GET: async ({ request }) => {
+        const headers = new Headers({
+          "Content-Type": "application/json",
+          Allow: "POST, OPTIONS",
+          "WWW-Authenticate": buildWwwAuthenticate(request),
+        });
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Method not allowed." },
+            id: null,
+          }),
+          { status: 405, headers },
+        );
+      },
       DELETE: async () => methodNotAllowed(),
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
     },
