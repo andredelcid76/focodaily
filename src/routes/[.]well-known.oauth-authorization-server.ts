@@ -20,10 +20,11 @@ export const Route = createFileRoute("/.well-known/oauth-authorization-server")(
             token_endpoint: `${origin}/api/public/oauth/token`,
             registration_endpoint: `${origin}/api/public/oauth/register`,
             response_types_supported: ["code"],
-            grant_types_supported: ["authorization_code"],
+            grant_types_supported: ["authorization_code", "refresh_token"],
             code_challenge_methods_supported: ["S256"],
             token_endpoint_auth_methods_supported: ["none"],
-            scopes_supported: ["mcp"],
+            scopes_supported: ["mcp", "offline_access"],
+            client_id_metadata_document_supported: true,
           },
           request,
         );
