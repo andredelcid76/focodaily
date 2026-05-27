@@ -325,6 +325,8 @@ export type Database = {
           expires_at: string | null
           id: string
           last_used_at: string | null
+          refresh_expires_at: string | null
+          refresh_token_hash: string | null
           revoked_at: string | null
           scope: string | null
           token_hash: string
@@ -336,6 +338,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           last_used_at?: string | null
+          refresh_expires_at?: string | null
+          refresh_token_hash?: string | null
           revoked_at?: string | null
           scope?: string | null
           token_hash: string
@@ -347,6 +351,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           last_used_at?: string | null
+          refresh_expires_at?: string | null
+          refresh_token_hash?: string | null
           revoked_at?: string | null
           scope?: string | null
           token_hash?: string
