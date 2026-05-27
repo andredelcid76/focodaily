@@ -58,7 +58,7 @@ const authenticatedHandler = withMcpAuth(
         .from("oauth_access_tokens")
         .update({ last_used_at: new Date().toISOString() } as never)
         .eq("id", data.id);
-      return { token, claims: { userId: data.user_id } };
+      return { token, claims: { sub: data.user_id, userId: data.user_id } };
     }
 
     // Legacy: manual MCP tokens
@@ -72,7 +72,7 @@ const authenticatedHandler = withMcpAuth(
       .from("mcp_tokens")
       .update({ last_used_at: new Date().toISOString() } as never)
       .eq("id", data.id);
-    return { token, claims: { userId: data.user_id } };
+    return { token, claims: { sub: data.user_id, userId: data.user_id } };
   },
 );
 
