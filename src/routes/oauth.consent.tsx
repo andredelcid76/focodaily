@@ -27,7 +27,11 @@ export const Route = createFileRoute("/oauth/consent")({
     scope: s.scope ? String(s.scope) : undefined,
     state: s.state ? String(s.state) : undefined,
   }),
-  component: ConsentPage,
+  component: () => (
+    <AuthProvider>
+      <ConsentPage />
+    </AuthProvider>
+  ),
 });
 
 function ConsentPage() {
