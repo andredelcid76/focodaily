@@ -1,0 +1,2 @@
+ALTER TABLE public.oauth_clients DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.oauth_auth_codes DISABLE ROW LEVEL SECURITY;
