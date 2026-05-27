@@ -4,10 +4,26 @@ import { db, getUserId } from "../supabase";
 
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
 
+export const listRoles = defineTool({
+  name: "list_roles",
+  description: "Lista os papéis do usuário (CEO, Pessoal, etc) com id, nome e cor.",
+  parameters: z.object({}),
+  execute: async (_args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const { data, error } = await db()
+      .from("roles")
+      .select("id,name,color,position")
+      .eq("user_id", userId)
+      .order("position", { ascending: true });
+    if (error) throw new Error(error.message);
+    return JSON.stringify(data ?? []);
+  },
+});
+
 export const listTasks = defineTool({
   name: "list_tasks",
   description:
-    "Lista tarefas do usuário com filtros opcionais. Útil para perguntar 'o que tenho pra hoje', ver atrasos, próximos dias, ou tarefas de um projeto.",
+    "Lista tarefas do usuário com filtros opcionais. Útil para perguntar 'o que tenho pra hoje', ver atrasos, próximos dias, ou tarefas de um projeto. Cada tarefa inclui role (papel) e project (projeto) com nome.",
   parameters: z.object({
     from_date: z.string().optional().describe("Data inicial YYYY-MM-DD"),
     to_date: z.string().optional().describe("Data final YYYY-MM-DD"),
@@ -20,7 +36,7 @@ export const listTasks = defineTool({
     let q = db()
       .from("tasks")
       .select(
-        "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable",
+        "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,role:roles(id,name,color),project:projects(id,name,color)",
       )
       .eq("user_id", userId)
       .order("scheduled_date", { ascending: true })
@@ -37,13 +53,13 @@ export const listTasks = defineTool({
 
 export const listProjects = defineTool({
   name: "list_projects",
-  description: "Lista projetos do usuário (id, nome, status, prazo).",
+  description: "Lista projetos do usuário (id, nome, status, prazo, papel associado).",
   parameters: z.object({}),
   execute: async (_args, ctx) => {
     const userId = getUserId(ctx.auth);
     const { data, error } = await db()
       .from("projects")
-      .select("id,name,description,status,deadline,starts_on,color")
+      .select("id,name,description,status,deadline,starts_on,color,role_id,role:roles(id,name,color)")
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return JSON.stringify(data ?? []);
@@ -229,6 +245,7 @@ export const getFirefliesTranscript = defineTool({
 export const allTools = [
   listTasks,
   listProjects,
+  listRoles,
   listMeetings,
   createTask,
   updateTask,
