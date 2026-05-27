@@ -5,7 +5,8 @@ export function db() {
 }
 
 export function getUserId(auth: unknown): string {
-  const claims = (auth as { claims?: { userId?: string } } | undefined)?.claims;
-  if (!claims?.userId) throw new Error("Não autenticado");
-  return claims.userId;
+  const claims = (auth as { claims?: { sub?: string; userId?: string } } | undefined)?.claims;
+  const userId = claims?.sub ?? claims?.userId;
+  if (!userId) throw new Error("Não autenticado");
+  return userId;
 }
