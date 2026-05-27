@@ -4,6 +4,23 @@ import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { allTools } from "@/lib/mcp/tools";
 
+type McpAuth = {
+  token: string;
+  claims: {
+    sub: string;
+    userId: string;
+  };
+  scopes?: string[];
+};
+
+type CachedSessionAuth = {
+  auth: McpAuth;
+  expiresAt: number;
+};
+
+const SESSION_AUTH_TTL_MS = 60 * 60 * 1000;
+const sessionAuthCache = new Map<string, CachedSessionAuth>();
+
 const mcp = createMcpServer({
   name: "foco-mcp",
   version: "1.0.0",
@@ -36,40 +53,93 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "Mcp-Session-Id",
 };
 
-async function getMcpAuth(request: Request) {
-  const header = request.headers.get("Authorization") ?? request.headers.get("authorization");
-  if (!header?.startsWith("Bearer ")) return null;
-  const token = header.slice("Bearer ".length).trim();
-  if (!token) return null;
-  const hash = hashToken(token);
+function getSessionId(request: Request): string | null {
+  return request.headers.get("Mcp-Session-Id") ?? request.headers.get("mcp-session-id");
+}
 
-  // OAuth access tokens (issued via DCR flow) take priority
-  if (token.startsWith("foco_oauth_")) {
-    const { data, error } = await supabaseAdmin
-      .from("oauth_access_tokens")
-      .select("id, user_id, revoked_at, expires_at")
-      .eq("token_hash", hash)
-      .maybeSingle();
-    if (error || !data || data.revoked_at) return null;
-    if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return null;
-    void supabaseAdmin
-      .from("oauth_access_tokens")
-      .update({ last_used_at: new Date().toISOString() } as never)
-      .eq("id", data.id);
-    return { token, claims: { sub: data.user_id, userId: data.user_id } };
+function getBearerToken(request: Request): string | null {
+  const header = request.headers.get("Authorization") ?? request.headers.get("authorization");
+  if (!header) return null;
+
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const token = match[1]?.trim().replace(/^"|"$/g, "");
+  return token || null;
+}
+
+function getCachedSessionAuth(sessionId: string | null): McpAuth | null {
+  if (!sessionId) return null;
+
+  const cached = sessionAuthCache.get(sessionId);
+  if (!cached) return null;
+  if (cached.expiresAt < Date.now()) {
+    sessionAuthCache.delete(sessionId);
+    return null;
   }
 
-  // Legacy: manual MCP tokens
+  cached.expiresAt = Date.now() + SESSION_AUTH_TTL_MS;
+  return cached.auth;
+}
+
+function cacheSessionAuth(sessionId: string | null, auth: McpAuth) {
+  if (!sessionId) return;
+
+  sessionAuthCache.set(sessionId, {
+    auth,
+    expiresAt: Date.now() + SESSION_AUTH_TTL_MS,
+  });
+}
+
+function pruneSessionAuthCache() {
+  const now = Date.now();
+  for (const [sessionId, cached] of sessionAuthCache.entries()) {
+    if (cached.expiresAt < now) sessionAuthCache.delete(sessionId);
+  }
+}
+
+async function getMcpAuth(request: Request): Promise<McpAuth | null> {
+  pruneSessionAuthCache();
+
+  const sessionId = getSessionId(request);
+  const token = getBearerToken(request);
+  if (!token) return getCachedSessionAuth(sessionId);
+
+  const hash = hashToken(token);
+
+  const { data: oauthToken, error: oauthError } = await supabaseAdmin
+    .from("oauth_access_tokens")
+    .select("id, user_id, scope, revoked_at, expires_at")
+    .eq("token_hash", hash)
+    .maybeSingle();
+
+  if (!oauthError && oauthToken && !oauthToken.revoked_at) {
+    if (oauthToken.expires_at && new Date(oauthToken.expires_at).getTime() < Date.now()) return null;
+
+    await supabaseAdmin
+      .from("oauth_access_tokens")
+      .update({ last_used_at: new Date().toISOString() } as never)
+      .eq("id", oauthToken.id);
+
+    return {
+      token,
+      claims: { sub: oauthToken.user_id, userId: oauthToken.user_id },
+      scopes: oauthToken.scope?.split(/\s+/).filter(Boolean),
+    };
+  }
+
   const { data, error } = await supabaseAdmin
     .from("mcp_tokens")
     .select("id, user_id, revoked_at")
     .eq("token_hash", hash)
     .maybeSingle();
   if (error || !data || data.revoked_at) return null;
-  void supabaseAdmin
+
+  await supabaseAdmin
     .from("mcp_tokens")
     .update({ last_used_at: new Date().toISOString() } as never)
     .eq("id", data.id);
+
   return { token, claims: { sub: data.user_id, userId: data.user_id } };
 }
 
@@ -106,6 +176,8 @@ export const Route = createFileRoute("/api/public/mcp")({
 
         const res = await mcp.handleRequest(request, { auth });
         const headers = new Headers(res.headers);
+        const sessionId = headers.get("Mcp-Session-Id") ?? getSessionId(request);
+        cacheSessionAuth(sessionId, auth);
         for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
         if (res.status === 401) {
           headers.set("WWW-Authenticate", buildWwwAuthenticate(request));
