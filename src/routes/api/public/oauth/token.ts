@@ -48,6 +48,7 @@ export const Route = createFileRoute("/api/public/oauth/token")({
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS_HEADERS }),
       POST: async ({ request }) => {
+        const admin = supabaseAdmin as any;
         const body = await parseBody(request);
         const grantType = body.grant_type;
         if (grantType !== "authorization_code" && grantType !== "refresh_token") {
@@ -62,7 +63,7 @@ export const Route = createFileRoute("/api/public/oauth/token")({
           }
 
           const refreshHash = sha256Hex(refreshToken);
-          const { data: stored, error } = await supabaseAdmin
+          const { data: stored, error } = await admin
             .from("oauth_access_tokens")
             .select("id, user_id, client_id, scope, revoked_at, refresh_expires_at")
             .eq("refresh_token_hash", refreshHash)
@@ -84,7 +85,7 @@ export const Route = createFileRoute("/api/public/oauth/token")({
             Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
           ).toISOString();
 
-          const { error: updErr } = await supabaseAdmin
+          const { error: updErr } = await admin
             .from("oauth_access_tokens")
             .update({
               token_hash: sha256Hex(nextAccess),
@@ -147,7 +148,7 @@ export const Route = createFileRoute("/api/public/oauth/token")({
         const refreshExpiresAt = new Date(
           Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
         ).toISOString();
-        const { error: insErr } = await supabaseAdmin.from("oauth_access_tokens").insert({
+        const { error: insErr } = await admin.from("oauth_access_tokens").insert({
           token_hash: tokenHash,
           refresh_token_hash: refreshTokenHash,
           client_id: ac.client_id,
