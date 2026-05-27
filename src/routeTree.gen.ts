@@ -26,6 +26,7 @@ import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
+import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
 import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
 import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
 
@@ -117,6 +118,11 @@ const ApiPublicOauthRegisterRoute = ApiPublicOauthRegisterRouteImport.update({
   path: '/api/public/oauth/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOauthAuthorizeRoute = ApiPublicOauthAuthorizeRouteImport.update({
+  id: '/api/public/oauth/authorize',
+  path: '/api/public/oauth/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
   id: '/api/public/inbox/tag-email',
   path: '/api/public/inbox/tag-email',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
 }
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/tag-email'
+    | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/outlook/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/tag-email'
+    | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/outlook/callback'
   id:
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/tag-email'
+    | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/outlook/callback'
   fileRoutesById: FileRoutesById
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
   ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
+  ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
 }
 
@@ -400,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOauthRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/oauth/authorize': {
+      id: '/api/public/oauth/authorize'
+      path: '/api/public/oauth/authorize'
+      fullPath: '/api/public/oauth/authorize'
+      preLoaderRoute: typeof ApiPublicOauthAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inbox/tag-email': {
       id: '/api/public/inbox/tag-email'
       path: '/api/public/inbox/tag-email'
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
   ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
+  ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
 }
 export const routeTree = rootRouteImport
