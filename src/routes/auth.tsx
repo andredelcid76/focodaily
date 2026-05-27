@@ -11,6 +11,9 @@ import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: () => (
     <AuthProvider>
       <AuthPage />
@@ -21,13 +24,20 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.navigate({ to: "/" });
-  }, [loading, user, router]);
+    if (!loading && user) {
+      if (next && next.startsWith("/")) {
+        window.location.replace(next);
+      } else {
+        router.navigate({ to: "/" });
+      }
+    }
+  }, [loading, user, router, next]);
 
   const onSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
