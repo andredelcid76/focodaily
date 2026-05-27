@@ -18,6 +18,8 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
+import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
+import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
@@ -71,6 +73,18 @@ const ProjetosIdRoute = ProjetosIdRouteImport.update({
   path: '/projetos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownOauthProtectedResourceRoute =
+  DotwellKnownOauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOauthAuthorizationServerRoute =
+  DotwellKnownOauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPlannerRoute = ApiPublicPlannerRouteImport.update({
   id: '/api/public/planner',
   path: '/api/public/planner',
@@ -116,6 +130,8 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
@@ -134,6 +150,8 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
@@ -153,6 +171,8 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
@@ -173,6 +193,8 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/papeis'
     | '/semana'
+    | '/.well-known/oauth-authorization-server'
+    | '/.well-known/oauth-protected-resource'
     | '/projetos/$id'
     | '/projetos/'
     | '/api/public/maya'
@@ -191,6 +213,8 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/papeis'
     | '/semana'
+    | '/.well-known/oauth-authorization-server'
+    | '/.well-known/oauth-protected-resource'
     | '/projetos/$id'
     | '/projetos'
     | '/api/public/maya'
@@ -209,6 +233,8 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/papeis'
     | '/semana'
+    | '/.well-known/oauth-authorization-server'
+    | '/.well-known/oauth-protected-resource'
     | '/projetos/$id'
     | '/projetos/'
     | '/api/public/maya'
@@ -228,6 +254,8 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
+  DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
+  DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
@@ -303,6 +331,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjetosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/planner': {
       id: '/api/public/planner'
       path: '/api/public/planner'
@@ -374,6 +416,10 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
+  DotwellKnownOauthAuthorizationServerRoute:
+    DotwellKnownOauthAuthorizationServerRoute,
+  DotwellKnownOauthProtectedResourceRoute:
+    DotwellKnownOauthProtectedResourceRoute,
   ProjetosIdRoute: ProjetosIdRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
