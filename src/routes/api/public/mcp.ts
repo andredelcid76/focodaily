@@ -27,6 +27,9 @@ const mcp = createMcpServer({
   instructions:
     "Ferramentas do app Foco (produtividade pessoal). Use list_tasks/list_projects/list_meetings para consultar dados antes de criar ou alterar tarefas. Datas no formato YYYY-MM-DD. Categorias: urgent, important, circumstantial. Durações típicas: 5, 15, 30, 60, 90, 120 minutos. Para gerar tarefas a partir de uma reunião, use list_fireflies_meetings e get_fireflies_transcript primeiro.",
   tools: allTools,
+  transport: {
+    enableJsonResponse: true,
+  },
 });
 
 function hashToken(token: string): string {
