@@ -131,7 +131,14 @@ export function BulkTaskDialog({
   const [projectId, setProjectId] = useState<string>("none");
   const [busy, setBusy] = useState(false);
 
-  const lines = text.split("\n").map((l) => parseLine(l, { duration, category, date })).filter(Boolean) as LineParse[];
+  const defaultProjectId = projectId === "none" ? null : projectId;
+  const lines = text
+    .split("\n")
+    .map((l) => parseLine(l, { duration, category, date, projectId: defaultProjectId }, projects))
+    .filter(Boolean) as LineParse[];
+  const unmatchedProjects = Array.from(
+    new Set(lines.map((l) => l.projectMatchFailed).filter(Boolean) as string[]),
+  );
 
   const submit = async () => {
     if (lines.length === 0) {
@@ -147,7 +154,7 @@ export function BulkTaskDialog({
           category: l.category,
           scheduled_date: l.date,
           role_id: roleId === "none" ? null : roleId,
-          project_id: projectId === "none" ? null : projectId,
+          project_id: l.projectId,
         }))
       );
       toast.success(`${lines.length} tarefa${lines.length === 1 ? "" : "s"} criada${lines.length === 1 ? "" : "s"}`);
