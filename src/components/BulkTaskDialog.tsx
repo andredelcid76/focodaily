@@ -183,7 +183,7 @@ export function BulkTaskDialog({
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={"Ex.:\nResponder e-mails @20 #hoje\nPreparar apresentação @60 !urgente #amanha\nLigar para cliente @15 #25/12"}
+            placeholder={"Ex.:\nResponder e-mails @20 #hoje +Marketing\nPreparar apresentação @60 !urgente #amanha +\"Lançamento Q3\"\nLigar para cliente @15 #25/12"}
             className="min-h-[200px] font-mono text-sm"
             autoFocus
           />
