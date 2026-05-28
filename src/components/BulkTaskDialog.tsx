@@ -47,13 +47,19 @@ function parseDateTag(raw: string, fallbackDate: string): string | null {
 // Parse a line. Supports inline tags:
 //   "Revisar contrato @45 !urgente #25/12"
 //   "@30" → duração, "!urg|!imp|!circ" → categoria, "#data" → data
-function parseLine(raw: string, defaults: { duration: number; category: TaskCategory; date: string }): LineParse | null {
+function parseLine(
+  raw: string,
+  defaults: { duration: number; category: TaskCategory; date: string; projectId: string | null },
+  projects: Project[],
+): LineParse | null {
   const line = raw.trim();
   if (!line) return null;
   let title = line;
   let duration = defaults.duration;
   let category = defaults.category;
   let date = defaults.date;
+  let projectId = defaults.projectId;
+  let projectMatchFailed: string | undefined;
 
   const durMatch = title.match(/(?:^|\s)@(\d{1,4})\b/);
   if (durMatch) {
@@ -76,10 +82,23 @@ function parseLine(raw: string, defaults: { duration: number; category: TaskCate
     else if (tag.startsWith("circ")) category = "circumstantial";
     title = title.replace(catMatch[0], " ").trim();
   }
+  // +projeto (suporta aspas para nomes com espaço: +"Projeto X")
+  const projMatch = title.match(/(?:^|\s)\+(?:"([^"]+)"|(\S+))/);
+  if (projMatch) {
+    const raw = (projMatch[1] ?? projMatch[2] ?? "").replace(/_/g, " ").trim().toLowerCase();
+    const active = projects.filter((p) => p.status !== "archived");
+    const found =
+      active.find((p) => p.name.toLowerCase() === raw) ||
+      active.find((p) => p.name.toLowerCase().startsWith(raw)) ||
+      active.find((p) => p.name.toLowerCase().includes(raw));
+    if (found) projectId = found.id;
+    else projectMatchFailed = projMatch[1] ?? projMatch[2];
+    title = title.replace(projMatch[0], " ").trim();
+  }
   // Strip leading bullets
   title = title.replace(/^[-*•]\s*/, "").trim();
   if (!title) return null;
-  return { title, duration, category, date };
+  return { title, duration, category, date, projectId, projectMatchFailed };
 }
 
 export function BulkTaskDialog({
