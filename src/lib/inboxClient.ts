@@ -102,9 +102,12 @@ export async function acceptSuggestion(input: {
 
 export async function triggerScan(userId: string) {
   const base = window.location.origin;
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Não autenticado");
   const r = await fetch(`${base}/api/public/inbox/scan?user_id=${userId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
   });
   const text = await r.text();
   if (!r.ok) throw new Error(`Scan falhou [${r.status}]: ${text.slice(0, 200)}`);
