@@ -233,6 +233,12 @@ export function BulkTaskDialog({
             </div>
           </div>
 
+          {unmatchedProjects.length > 0 && (
+            <p className="text-xs text-amber-500">
+              Projeto não encontrado: {unmatchedProjects.map((p) => `+${p}`).join(", ")}. Será usado o projeto padrão.
+            </p>
+          )}
+
           <div className="flex items-center justify-between pt-2 border-t border-border/40">
             <p className="text-xs text-muted-foreground">
               {lines.length} tarefa{lines.length === 1 ? "" : "s"} pronta{lines.length === 1 ? "" : "s"} para criar
