@@ -427,7 +427,7 @@ async function scanForUser(userId: string) {
   const [emails, meetings, deals] = await Promise.all([
     fetchOutlookEmails(userId),
     fetchFireflies(userEmail, userName),
-    fetchPipedrive(),
+    fetchPipedrive(userId),
   ]);
   const all = [...emails, ...meetings, ...deals];
   if (all.length === 0) return { user_id: userId, scanned: 0, created: 0 };
