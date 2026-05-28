@@ -1,7 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 
 const FOCO_CATEGORY = "Foco App";
+
+async function authenticateRequest(request: Request): Promise<string> {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    throw new Response("Server misconfigured", { status: 500 });
+  }
+  const token = authHeader.slice("Bearer ".length);
+  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims?.sub) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  return data.claims.sub as string;
+}
 
 async function refreshOutlookToken(refreshToken: string) {
   const body = new URLSearchParams({
@@ -17,21 +41,29 @@ async function refreshOutlookToken(refreshToken: string) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
-  const json = await r.json();
-  if (!r.ok) throw new Error(`Outlook refresh failed: ${JSON.stringify(json).slice(0, 300)}`);
-  return json as { access_token: string; refresh_token?: string; expires_in: number };
+  if (!r.ok) throw new Error("Outlook refresh failed");
+  return (await r.json()) as { access_token: string; refresh_token?: string; expires_in: number };
 }
 
 export const Route = createFileRoute("/api/public/inbox/tag-email")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        let userId: string;
         try {
-          const body = (await request.json()) as { user_id?: string; message_id?: string };
-          const userId = body.user_id;
+          userId = await authenticateRequest(request);
+        } catch (e) {
+          if (e instanceof Response) return e;
+          return new Response("Unauthorized", { status: 401 });
+        }
+        try {
+          const body = (await request.json()) as { message_id?: string };
           const messageId = body.message_id;
-          if (!userId || !messageId) {
-            return new Response(JSON.stringify({ error: "missing params" }), { status: 400 });
+          if (!messageId || typeof messageId !== "string" || messageId.length > 500) {
+            return new Response(JSON.stringify({ error: "missing or invalid message_id" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
           }
 
           const { data: conn } = await supabaseAdmin
@@ -55,11 +87,11 @@ export const Route = createFileRoute("/api/public/inbox/tag-email")({
                 })
                 .eq("user_id", userId);
             } catch (e) {
-              return Response.json({ ok: false, reason: "refresh-failed", error: String(e) });
+              console.error("[tag-email] refresh failed", e);
+              return Response.json({ ok: false, reason: "refresh-failed" });
             }
           }
 
-          // Fetch existing categories so we don't overwrite user-set ones.
           const getR = await fetch(
             `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(messageId)}?$select=categories`,
             { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -83,13 +115,16 @@ export const Route = createFileRoute("/api/public/inbox/tag-email")({
             },
           );
           if (!patchR.ok) {
-            const txt = await patchR.text();
-            return Response.json({ ok: false, status: patchR.status, error: txt.slice(0, 300) });
+            console.error("[tag-email] graph patch failed", patchR.status, await patchR.text());
+            return Response.json({ ok: false, status: patchR.status });
           }
           return Response.json({ ok: true });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : "erro";
-          return new Response(JSON.stringify({ error: msg }), { status: 500 });
+          console.error("[tag-email] internal error", e);
+          return new Response(JSON.stringify({ error: "Internal server error" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },

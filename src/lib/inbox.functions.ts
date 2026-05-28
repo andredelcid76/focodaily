@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
@@ -92,10 +93,11 @@ export const acceptInboxSuggestion = createServerFn({ method: "POST" })
     // won't be re-suggested in future scans. Best-effort — don't fail the accept.
     if (sug.source === "email" && sug.source_id) {
       try {
+        const authHeader = getRequest()?.headers.get("authorization") ?? "";
         await fetch(`${new URL("/api/public/inbox/tag-email", "https://focodaily.lovable.app").toString()}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, message_id: sug.source_id }),
+          headers: { "Content-Type": "application/json", Authorization: authHeader },
+          body: JSON.stringify({ message_id: sug.source_id }),
         });
       } catch (e) {
         console.error("tag-email failed", e);
@@ -109,11 +111,12 @@ export const triggerInboxScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const base = "https://focodaily.lovable.app";
+    const authHeader = getRequest()?.headers.get("authorization") ?? "";
     const r = await fetch(`${base}/api/public/inbox/scan?user_id=${context.userId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
     });
     const text = await r.text();
-    if (!r.ok) throw new Error(`Scan falhou [${r.status}]: ${text.slice(0, 200)}`);
+    if (!r.ok) throw new Error(`Scan falhou [${r.status}]`);
     return JSON.parse(text);
   });

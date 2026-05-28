@@ -1,5 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
+
+async function authenticateRequest(request: Request): Promise<string> {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    throw new Response("Server misconfigured", { status: 500 });
+  }
+  const token = authHeader.slice("Bearer ".length);
+  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims?.sub) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  return data.claims.sub as string;
+}
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
@@ -480,40 +504,37 @@ export const Route = createFileRoute("/api/public/inbox/scan")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        let authedUserId: string;
         try {
-          const url = new URL(request.url);
-          const specificUser = url.searchParams.get("user_id");
-
-          let userIds: string[];
-          if (specificUser) {
-            userIds = [specificUser];
-          } else {
-            // Scan all users that have an outlook connection
-            const { data } = await supabaseAdmin.from("outlook_connections").select("user_id");
-            userIds = (data ?? []).map((r) => r.user_id as string);
-          }
-
+          authedUserId = await authenticateRequest(request);
+        } catch (e) {
+          if (e instanceof Response) return e;
+          return new Response("Unauthorized", { status: 401 });
+        }
+        try {
+          // Always scan only the authenticated user. Ignore any user_id query param.
           const results: unknown[] = [];
-          for (const uid of userIds) {
-            try {
-              results.push(await scanForUser(uid));
-            } catch (e) {
-              const msg = e instanceof Error ? e.message : "erro";
-              console.error("scan user", uid, msg);
-              await supabaseAdmin.from("inbox_scan_state").upsert({
-                user_id: uid,
-                last_scan_at: new Date().toISOString(),
-                last_status: "error",
-                last_error: msg.slice(0, 500),
-                updated_at: new Date().toISOString(),
-              } as never);
-              results.push({ user_id: uid, error: msg });
-            }
+          try {
+            results.push(await scanForUser(authedUserId));
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : "erro";
+            console.error("scan user", authedUserId, msg);
+            await supabaseAdmin.from("inbox_scan_state").upsert({
+              user_id: authedUserId,
+              last_scan_at: new Date().toISOString(),
+              last_status: "error",
+              last_error: msg.slice(0, 500),
+              updated_at: new Date().toISOString(),
+            } as never);
+            results.push({ user_id: authedUserId, error: "scan failed" });
           }
           return Response.json({ ok: true, results });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : "erro";
-          return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { "Content-Type": "application/json" } });
+          console.error("[inbox/scan] internal error", e);
+          return new Response(JSON.stringify({ error: "Internal server error" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },
