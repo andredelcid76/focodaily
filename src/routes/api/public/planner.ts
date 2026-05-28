@@ -34,7 +34,10 @@ export const Route = createFileRoute("/api/public/planner")({
               .eq("id", payload.projectId)
               .eq("user_id", userId);
 
-            if (error) return json({ error: error.message }, 500);
+            if (error) {
+              console.error("[planner] linkPlan failed", error);
+              return json({ error: "Erro interno" }, 500);
+            }
             return json({ ok: true });
           }
 
