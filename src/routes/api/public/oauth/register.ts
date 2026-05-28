@@ -51,7 +51,8 @@ export const Route = createFileRoute("/api/public/oauth/register")({
           software_version: data.software_version ?? null,
         } as never);
         if (error) {
-          return json({ error: "server_error", error_description: error.message }, 500);
+          console.error("[oauth/register] insert failed", error);
+          return json({ error: "server_error", error_description: "Internal server error" }, 500);
         }
         return json(
           {
