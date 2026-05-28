@@ -16,6 +16,8 @@ type LineParse = {
   duration: number;
   category: TaskCategory;
   date: string;
+  projectId: string | null;
+  projectMatchFailed?: string;
 };
 
 // Parse #date in formats: #YYYY-MM-DD, #DD/MM, #DD/MM/YYYY, #DD-MM, #hoje, #amanha
@@ -45,13 +47,19 @@ function parseDateTag(raw: string, fallbackDate: string): string | null {
 // Parse a line. Supports inline tags:
 //   "Revisar contrato @45 !urgente #25/12"
 //   "@30" → duração, "!urg|!imp|!circ" → categoria, "#data" → data
-function parseLine(raw: string, defaults: { duration: number; category: TaskCategory; date: string }): LineParse | null {
+function parseLine(
+  raw: string,
+  defaults: { duration: number; category: TaskCategory; date: string; projectId: string | null },
+  projects: Project[],
+): LineParse | null {
   const line = raw.trim();
   if (!line) return null;
   let title = line;
   let duration = defaults.duration;
   let category = defaults.category;
   let date = defaults.date;
+  let projectId = defaults.projectId;
+  let projectMatchFailed: string | undefined;
 
   const durMatch = title.match(/(?:^|\s)@(\d{1,4})\b/);
   if (durMatch) {
@@ -74,10 +82,23 @@ function parseLine(raw: string, defaults: { duration: number; category: TaskCate
     else if (tag.startsWith("circ")) category = "circumstantial";
     title = title.replace(catMatch[0], " ").trim();
   }
+  // +projeto (suporta aspas para nomes com espaço: +"Projeto X")
+  const projMatch = title.match(/(?:^|\s)\+(?:"([^"]+)"|(\S+))/);
+  if (projMatch) {
+    const raw = (projMatch[1] ?? projMatch[2] ?? "").replace(/_/g, " ").trim().toLowerCase();
+    const active = projects.filter((p) => p.status !== "archived");
+    const found =
+      active.find((p) => p.name.toLowerCase() === raw) ||
+      active.find((p) => p.name.toLowerCase().startsWith(raw)) ||
+      active.find((p) => p.name.toLowerCase().includes(raw));
+    if (found) projectId = found.id;
+    else projectMatchFailed = projMatch[1] ?? projMatch[2];
+    title = title.replace(projMatch[0], " ").trim();
+  }
   // Strip leading bullets
   title = title.replace(/^[-*•]\s*/, "").trim();
   if (!title) return null;
-  return { title, duration, category, date };
+  return { title, duration, category, date, projectId, projectMatchFailed };
 }
 
 export function BulkTaskDialog({
@@ -110,7 +131,14 @@ export function BulkTaskDialog({
   const [projectId, setProjectId] = useState<string>("none");
   const [busy, setBusy] = useState(false);
 
-  const lines = text.split("\n").map((l) => parseLine(l, { duration, category, date })).filter(Boolean) as LineParse[];
+  const defaultProjectId = projectId === "none" ? null : projectId;
+  const lines = text
+    .split("\n")
+    .map((l) => parseLine(l, { duration, category, date, projectId: defaultProjectId }, projects))
+    .filter(Boolean) as LineParse[];
+  const unmatchedProjects = Array.from(
+    new Set(lines.map((l) => l.projectMatchFailed).filter(Boolean) as string[]),
+  );
 
   const submit = async () => {
     if (lines.length === 0) {
@@ -126,7 +154,7 @@ export function BulkTaskDialog({
           category: l.category,
           scheduled_date: l.date,
           role_id: roleId === "none" ? null : roleId,
-          project_id: projectId === "none" ? null : projectId,
+          project_id: l.projectId,
         }))
       );
       toast.success(`${lines.length} tarefa${lines.length === 1 ? "" : "s"} criada${lines.length === 1 ? "" : "s"}`);
@@ -147,7 +175,7 @@ export function BulkTaskDialog({
             <ListPlus className="h-5 w-5" /> Criar várias tarefas
           </DialogTitle>
           <DialogDescription>
-            Uma tarefa por linha. Use <code className="text-xs bg-muted px-1 rounded">@30</code> para duração em minutos, <code className="text-xs bg-muted px-1 rounded">!urgente</code>/<code className="text-xs bg-muted px-1 rounded">!importante</code>/<code className="text-xs bg-muted px-1 rounded">!circ</code> para categoria e <code className="text-xs bg-muted px-1 rounded">#25/12</code>, <code className="text-xs bg-muted px-1 rounded">#2026-05-22</code>, <code className="text-xs bg-muted px-1 rounded">#hoje</code> ou <code className="text-xs bg-muted px-1 rounded">#amanha</code> para data.
+            Uma tarefa por linha. Use <code className="text-xs bg-muted px-1 rounded">@30</code> (duração), <code className="text-xs bg-muted px-1 rounded">!urgente</code>/<code className="text-xs bg-muted px-1 rounded">!importante</code>/<code className="text-xs bg-muted px-1 rounded">!circ</code> (categoria), <code className="text-xs bg-muted px-1 rounded">#25/12</code>/<code className="text-xs bg-muted px-1 rounded">#hoje</code>/<code className="text-xs bg-muted px-1 rounded">#amanha</code> (data) e <code className="text-xs bg-muted px-1 rounded">+projeto</code> ou <code className="text-xs bg-muted px-1 rounded">+"Nome do projeto"</code> (projeto).
           </DialogDescription>
         </DialogHeader>
 
@@ -155,7 +183,7 @@ export function BulkTaskDialog({
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={"Ex.:\nResponder e-mails @20 #hoje\nPreparar apresentação @60 !urgente #amanha\nLigar para cliente @15 #25/12"}
+            placeholder={"Ex.:\nResponder e-mails @20 #hoje +Marketing\nPreparar apresentação @60 !urgente #amanha +\"Lançamento Q3\"\nLigar para cliente @15 #25/12"}
             className="min-h-[200px] font-mono text-sm"
             autoFocus
           />
@@ -204,6 +232,12 @@ export function BulkTaskDialog({
               </Select>
             </div>
           </div>
+
+          {unmatchedProjects.length > 0 && (
+            <p className="text-xs text-amber-500">
+              Projeto não encontrado: {unmatchedProjects.map((p) => `+${p}`).join(", ")}. Será usado o projeto padrão.
+            </p>
+          )}
 
           <div className="flex items-center justify-between pt-2 border-t border-border/40">
             <p className="text-xs text-muted-foreground">

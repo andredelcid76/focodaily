@@ -51,6 +51,37 @@ export const listTasks = defineTool({
   },
 });
 
+export const createProject = defineTool({
+  name: "create_project",
+  description:
+    "Cria um novo projeto. Use antes de criar tarefas que pertencem a um projeto que ainda não existe. Retorna o projeto criado (com id) para reutilizar em create_task.",
+  parameters: z.object({
+    name: z.string().min(1).max(200),
+    description: z.string().optional(),
+    color: z.string().optional().describe("Hex tipo #8b5cf6. Padrão violet."),
+    role_id: z.string().optional().describe("ID do papel associado (use list_roles)."),
+    status: z.enum(["draft", "active", "paused", "done", "archived"]).optional(),
+    starts_on: z.string().optional().describe("YYYY-MM-DD"),
+    deadline: z.string().optional().describe("YYYY-MM-DD"),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const insert = {
+      user_id: userId,
+      name: args.name,
+      description: args.description ?? null,
+      color: args.color ?? "#8b5cf6",
+      role_id: args.role_id ?? null,
+      status: args.status ?? "active",
+      starts_on: args.starts_on ?? null,
+      deadline: args.deadline ?? null,
+    };
+    const { data, error } = await db().from("projects").insert(insert as never).select().single();
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true, project: data });
+  },
+});
+
 export const listProjects = defineTool({
   name: "list_projects",
   description: "Lista projetos do usuário (id, nome, status, prazo, papel associado).",
@@ -245,6 +276,7 @@ export const getFirefliesTranscript = defineTool({
 export const allTools = [
   listTasks,
   listProjects,
+  createProject,
   listRoles,
   listMeetings,
   createTask,
