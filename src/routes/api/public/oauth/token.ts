@@ -160,7 +160,10 @@ export const Route = createFileRoute("/api/public/oauth/token")({
           expires_at: expiresAt,
           refresh_expires_at: refreshExpiresAt,
         } as never);
-        if (insErr) return json({ error: "server_error", error_description: insErr.message }, 500);
+        if (insErr) {
+          console.error("[oauth/token] token insert failed", insErr);
+          return json({ error: "server_error", error_description: "Internal server error" }, 500);
+        }
 
         return json({
           access_token: access,
