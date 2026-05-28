@@ -313,9 +313,9 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
 // Poll Pipedrive for activities recently marked as "done" and complete any
 // linked task in our DB (Pipedrive → App sync).
 async function syncPipedriveCompletionsToApp(userId: string): Promise<void> {
-  const token = process.env.PIPEDRIVE_API_TOKEN;
-  const domain = process.env.PIPEDRIVE_DOMAIN;
-  if (!token || !domain) return;
+  const creds = await getPipedriveCreds(userId);
+  if (!creds) return;
+  const { token, domain } = creds;
   try {
     const base = `https://${domain}.pipedrive.com/api/v1`;
     const meR = await fetch(`${base}/users/me?api_token=${token}`);
