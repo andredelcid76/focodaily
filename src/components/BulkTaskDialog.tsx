@@ -16,6 +16,8 @@ type LineParse = {
   duration: number;
   category: TaskCategory;
   date: string;
+  projectId: string | null;
+  projectMatchFailed?: string;
 };
 
 // Parse #date in formats: #YYYY-MM-DD, #DD/MM, #DD/MM/YYYY, #DD-MM, #hoje, #amanha
