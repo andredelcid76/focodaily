@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD CONSTRAINT projects_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE SET NULL;
