@@ -325,6 +325,8 @@ export const allTools = [
   listTasks,
   listProjects,
   createProject,
+  updateProject,
+  deleteProject,
   listRoles,
   listMeetings,
   createTask,
