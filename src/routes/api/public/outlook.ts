@@ -108,7 +108,8 @@ export const Route = createFileRoute("/api/public/outlook")({
               .eq("user_id", userId);
 
             if (error) {
-              return json({ error: error.message }, 500);
+              console.error("[outlook] disconnect failed", error);
+              return json({ error: "Erro interno" }, 500);
             }
 
             return json({ success: true });

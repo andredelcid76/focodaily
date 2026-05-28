@@ -78,10 +78,11 @@ function ConsentPage() {
 
   const deny = () => {
     setDenied(true);
-    const url = new URL(search.redirect_uri);
-    url.searchParams.set("error", "access_denied");
-    if (search.state) url.searchParams.set("state", search.state);
-    window.location.replace(url.toString());
+    // Do NOT redirect to the search.redirect_uri here — it has not been
+    // validated server-side against the registered client's redirect_uris
+    // and would allow an open-redirect/phishing vector. Send the user to
+    // a safe internal page; the client app must handle the missing code.
+    window.location.replace("/");
   };
 
   if (loading || !user) {

@@ -393,8 +393,7 @@ export const Route = createFileRoute("/api/public/maya")({
         } catch (err) {
           if (err instanceof Response) return err;
           console.error("maya error:", err);
-          const msg = err instanceof Error ? err.message : "Erro desconhecido";
-          return new Response(JSON.stringify({ error: msg }), {
+          return new Response(JSON.stringify({ error: "Erro interno" }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
           });
