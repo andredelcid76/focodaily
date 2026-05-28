@@ -97,6 +97,54 @@ export const listProjects = defineTool({
   },
 });
 
+export const updateProject = defineTool({
+  name: "update_project",
+  description:
+    "Atualiza um projeto existente: renomear, mudar status, prazos, cor, descrição ou papel associado.",
+  parameters: z.object({
+    id: z.string(),
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().nullable().optional(),
+    color: z.string().optional(),
+    role_id: z.string().nullable().optional(),
+    status: z.enum(["draft", "active", "paused", "done", "archived"]).optional(),
+    starts_on: z.string().nullable().optional().describe("YYYY-MM-DD ou null"),
+    deadline: z.string().nullable().optional().describe("YYYY-MM-DD ou null"),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const patch: Record<string, unknown> = {};
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.description !== undefined) patch.description = args.description;
+    if (args.color !== undefined) patch.color = args.color;
+    if (args.role_id !== undefined) patch.role_id = args.role_id;
+    if (args.status !== undefined) patch.status = args.status;
+    if (args.starts_on !== undefined) patch.starts_on = args.starts_on;
+    if (args.deadline !== undefined) patch.deadline = args.deadline;
+    const { data, error } = await db()
+      .from("projects")
+      .update(patch as never)
+      .eq("id", args.id)
+      .eq("user_id", userId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true, project: data });
+  },
+});
+
+export const deleteProject = defineTool({
+  name: "delete_project",
+  description: "Exclui um projeto do usuário. As tarefas vinculadas ficam sem projeto (project_id = null).",
+  parameters: z.object({ id: z.string() }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const { error } = await db().from("projects").delete().eq("id", args.id).eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true });
+  },
+});
+
 export const listMeetings = defineTool({
   name: "list_meetings",
   description: "Lista reuniões da agenda em um intervalo de datas.",
