@@ -1,0 +1,1 @@
+update public.mcp_tokens set revoked_at = now() where label = 'tools-test' and revoked_at is null;
