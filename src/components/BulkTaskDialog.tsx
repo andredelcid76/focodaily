@@ -175,7 +175,7 @@ export function BulkTaskDialog({
             <ListPlus className="h-5 w-5" /> Criar várias tarefas
           </DialogTitle>
           <DialogDescription>
-            Uma tarefa por linha. Use <code className="text-xs bg-muted px-1 rounded">@30</code> para duração em minutos, <code className="text-xs bg-muted px-1 rounded">!urgente</code>/<code className="text-xs bg-muted px-1 rounded">!importante</code>/<code className="text-xs bg-muted px-1 rounded">!circ</code> para categoria e <code className="text-xs bg-muted px-1 rounded">#25/12</code>, <code className="text-xs bg-muted px-1 rounded">#2026-05-22</code>, <code className="text-xs bg-muted px-1 rounded">#hoje</code> ou <code className="text-xs bg-muted px-1 rounded">#amanha</code> para data.
+            Uma tarefa por linha. Use <code className="text-xs bg-muted px-1 rounded">@30</code> (duração), <code className="text-xs bg-muted px-1 rounded">!urgente</code>/<code className="text-xs bg-muted px-1 rounded">!importante</code>/<code className="text-xs bg-muted px-1 rounded">!circ</code> (categoria), <code className="text-xs bg-muted px-1 rounded">#25/12</code>/<code className="text-xs bg-muted px-1 rounded">#hoje</code>/<code className="text-xs bg-muted px-1 rounded">#amanha</code> (data) e <code className="text-xs bg-muted px-1 rounded">+projeto</code> ou <code className="text-xs bg-muted px-1 rounded">+"Nome do projeto"</code> (projeto).
           </DialogDescription>
         </DialogHeader>
 
