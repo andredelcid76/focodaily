@@ -237,10 +237,20 @@ async function fetchFireflies(userEmail: string | null, userName: string | null)
   }
 }
 
-async function fetchPipedrive(): Promise<SourceItem[]> {
-  const token = process.env.PIPEDRIVE_API_TOKEN;
-  const domain = process.env.PIPEDRIVE_DOMAIN;
-  if (!token || !domain) return [];
+async function getPipedriveCreds(userId: string): Promise<{ token: string; domain: string } | null> {
+  const { data } = await supabaseAdmin
+    .from("pipedrive_connections")
+    .select("api_token,domain")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data?.api_token || !data?.domain) return null;
+  return { token: data.api_token as string, domain: data.domain as string };
+}
+
+async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
+  const creds = await getPipedriveCreds(userId);
+  if (!creds) return [];
+  const { token, domain } = creds;
   try {
     const base = `https://${domain}.pipedrive.com/api/v1`;
 
@@ -257,10 +267,6 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
       return [];
     }
 
-    // Activities assigned to that specific user, not done, in a window
-    // around today (yesterday → +21 days). The API sorts by due_date asc,
-    // so without a date filter the oldest pending items fill the page and
-    // upcoming activities never show up.
     const startDate = new Date(Date.now() - 1 * 86400_000).toISOString().slice(0, 10);
     const endDate = new Date(Date.now() + 21 * 86400_000).toISOString().slice(0, 10);
     const r = await fetch(
@@ -288,7 +294,6 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
       add_time?: string;
     };
     const allActs = (json?.data ?? []) as Activity[];
-    // Only activities of type "task" that are linked to a deal.
     const acts = allActs.filter((a) => !!a.deal_id && (a.type ?? "").toLowerCase() === "task");
     return acts.slice(0, 20).map((a) => ({
       source: "pipedrive" as const,
@@ -303,6 +308,7 @@ async function fetchPipedrive(): Promise<SourceItem[]> {
     return [];
   }
 }
+
 
 // Poll Pipedrive for activities recently marked as "done" and complete any
 // linked task in our DB (Pipedrive → App sync).
