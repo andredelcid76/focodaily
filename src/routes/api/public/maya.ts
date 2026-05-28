@@ -66,9 +66,38 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "list_projects",
-      description: "Lista os projetos do usuário (id, nome, status, deadline).",
+      name: "list_roles",
+      description: "Lista os papéis do usuário com id, nome e cor.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_projects",
+      description: "Lista os projetos do usuário (id, nome, status, prazo e papel associado).",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_project",
+      description: "Cria um novo projeto e retorna o projeto criado com id.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          description: { type: "string" },
+          color: { type: "string", description: "Hex tipo #8b5cf6" },
+          role_id: { type: "string", description: "ID do papel associado (opcional)" },
+          status: { type: "string", enum: ["draft", "active", "paused", "done", "archived"] },
+          starts_on: { type: "string", description: "YYYY-MM-DD" },
+          deadline: { type: "string", description: "YYYY-MM-DD" },
+        },
+        required: ["name"],
+        additionalProperties: false,
+      },
     },
   },
   {
@@ -150,6 +179,16 @@ async function execTool(
 ): Promise<unknown> {
   const { supabase, userId } = ctx;
 
+  if (name === "list_roles") {
+    const { data, error } = await supabase
+      .from("roles")
+      .select("id,name,color,position")
+      .eq("user_id", userId)
+      .order("position", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
   if (name === "list_tasks") {
     let q = supabase
       .from("tasks")
@@ -183,10 +222,26 @@ async function execTool(
   if (name === "list_projects") {
     const { data, error } = await supabase
       .from("projects")
-      .select("id,name,description,status,deadline,starts_on,color")
+      .select("id,name,description,status,deadline,starts_on,color,role_id,role:roles(id,name,color)")
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return data;
+  }
+
+  if (name === "create_project") {
+    const insert = {
+      user_id: userId,
+      name: String(args.name),
+      description: args.description ? String(args.description) : null,
+      color: args.color ? String(args.color) : "#8b5cf6",
+      role_id: args.role_id ? String(args.role_id) : null,
+      status: (args.status as "draft" | "active" | "paused" | "done" | "archived") ?? "active",
+      starts_on: args.starts_on ? String(args.starts_on) : null,
+      deadline: args.deadline ? String(args.deadline) : null,
+    };
+    const { data, error } = await supabase.from("projects").insert(insert as never).select().single();
+    if (error) throw new Error(error.message);
+    return { ok: true, project: data };
   }
 
   if (name === "create_task") {
