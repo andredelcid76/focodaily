@@ -260,5 +260,5 @@ function handleRouteError(error: unknown) {
   if (error instanceof Response) return error;
   if (error instanceof z.ZodError) return json({ error: "Requisição inválida" }, 400);
   console.error("[planner route] internal error", error);
-  return json({ error: error instanceof Error ? error.message : "Erro interno" }, 500);
+  return json({ error: "Erro interno" }, 500);
 }
