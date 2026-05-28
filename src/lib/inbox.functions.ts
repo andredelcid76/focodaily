@@ -111,11 +111,12 @@ export const triggerInboxScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const base = "https://focodaily.lovable.app";
+    const authHeader = getRequest()?.headers.get("authorization") ?? "";
     const r = await fetch(`${base}/api/public/inbox/scan?user_id=${context.userId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
     });
     const text = await r.text();
-    if (!r.ok) throw new Error(`Scan falhou [${r.status}]: ${text.slice(0, 200)}`);
+    if (!r.ok) throw new Error(`Scan falhou [${r.status}]`);
     return JSON.parse(text);
   });
