@@ -95,7 +95,10 @@ export const Route = createFileRoute("/api/public/oauth/token")({
               last_used_at: new Date().toISOString(),
             } as never)
             .eq("id", stored.id);
-          if (updErr) return json({ error: "server_error", error_description: updErr.message }, 500);
+          if (updErr) {
+            console.error("[oauth/token] refresh update failed", updErr);
+            return json({ error: "server_error", error_description: "Internal server error" }, 500);
+          }
 
           return json({
             access_token: nextAccess,
