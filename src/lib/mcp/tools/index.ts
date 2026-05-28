@@ -276,6 +276,7 @@ export const getFirefliesTranscript = defineTool({
 export const allTools = [
   listTasks,
   listProjects,
+  createProject,
   listRoles,
   listMeetings,
   createTask,
