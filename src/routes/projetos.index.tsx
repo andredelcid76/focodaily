@@ -384,11 +384,40 @@ function ProjectCard({
         </div>
       )}
 
+      <NextTaskRow stats={stats} />
+
       {project.deadline && (
         <p className="mt-2 text-[10px] text-muted-foreground">
           Prazo: <span className="capitalize">{formatHuman(project.deadline)}</span>
         </p>
       )}
+    </div>
+  );
+}
+
+function NextTaskRow({ stats }: { stats: { nextTaskDate: string | null; nextTaskOverdue: boolean } }) {
+  if (!stats.nextTaskDate) {
+    return (
+      <p className="mt-2 text-[10px] text-muted-foreground">
+        Próxima tarefa: <span>sem tarefas abertas</span>
+      </p>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+      <span className="text-muted-foreground">Próxima tarefa:</span>
+      <span className={`capitalize font-medium ${stats.nextTaskOverdue ? "text-overdue" : "text-foreground"}`}>
+        {formatShort(stats.nextTaskDate)}
+      </span>
+      <span
+        className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+          stats.nextTaskOverdue
+            ? "bg-overdue/15 text-overdue border border-overdue/40"
+            : "bg-green-500/15 text-green-600 border border-green-500/40"
+        }`}
+      >
+        {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+      </span>
     </div>
   );
 }
