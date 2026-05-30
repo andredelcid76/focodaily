@@ -757,6 +757,28 @@ function KanbanProjectCard({
         )}
       </div>
 
+      <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
+        <span className="text-muted-foreground">Próx.:</span>
+        {stats.nextTaskDate ? (
+          <>
+            <span className={`capitalize ${stats.nextTaskOverdue ? "text-overdue font-medium" : "text-foreground"}`}>
+              {formatShort(stats.nextTaskDate)}
+            </span>
+            <span
+              className={`inline-flex items-center rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
+                stats.nextTaskOverdue
+                  ? "bg-overdue/15 text-overdue border border-overdue/40"
+                  : "bg-green-500/15 text-green-600 border border-green-500/40"
+              }`}
+            >
+              {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </div>
+
       {stats.overdueTasks > 0 && (
         <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-overdue/10 px-1.5 py-0.5 text-[10px] font-medium text-overdue">
           <AlertTriangle className="h-2.5 w-2.5" /> {stats.overdueTasks} atrasada{stats.overdueTasks === 1 ? "" : "s"}
