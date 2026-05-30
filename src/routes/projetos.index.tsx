@@ -473,6 +473,7 @@ function ListView({
               <th className="px-3 py-2 font-semibold text-right">Progresso</th>
               <th className="px-3 py-2 font-semibold text-right">Tarefas</th>
               <th className="px-3 py-2 font-semibold">Prazo</th>
+              <th className="px-3 py-2 font-semibold">Próxima tarefa</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
