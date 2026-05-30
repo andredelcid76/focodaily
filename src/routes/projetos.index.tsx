@@ -525,6 +525,26 @@ function ListView({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
+                  <td className="px-3 py-2 text-xs">
+                    {stats.nextTaskDate ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className={`capitalize ${stats.nextTaskOverdue ? "text-overdue font-medium" : ""}`}>
+                          {formatShort(stats.nextTaskDate)}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                            stats.nextTaskOverdue
+                              ? "bg-overdue/15 text-overdue border border-overdue/40"
+                              : "bg-green-500/15 text-green-600 border border-green-500/40"
+                          }`}
+                        >
+                          {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
                       Editar
