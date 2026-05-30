@@ -33,7 +33,7 @@ import {
   CalendarClock, History, Link2, Link2Off, MessageSquare, Flag, ExternalLink, Trash2, RefreshCw,
   Sparkles, Loader2,
 } from "lucide-react";
-import { todayISO, addDays, formatHuman, formatMinutes } from "@/lib/date";
+import { todayISO, addDays, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projetos/$id")({
