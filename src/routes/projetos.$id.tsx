@@ -483,16 +483,31 @@ function TaskGroup({
         {title} · {tasks.length}
       </h3>
       <div className="space-y-2">
-        {tasks.map((t) => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
-            onToggle={() => tasksApi.toggleComplete(t)}
-            onEdit={() => onEdit(t)}
-            isOverdue={overdue}
-          />
-        ))}
+        {tasks.map((t) => {
+          const isLate = !t.completed && t.scheduled_date < todayISO();
+          return (
+            <div key={t.id} className="space-y-1">
+              <div className="flex items-center gap-1.5 pl-1 text-[10px]">
+                <Calendar className="h-3 w-3 text-muted-foreground" />
+                <span className={`capitalize ${isLate ? "text-overdue font-medium" : "text-muted-foreground"}`}>
+                  {formatShort(t.scheduled_date)}
+                </span>
+                {isLate && (
+                  <span className="inline-flex items-center rounded px-1 py-0.5 text-[9px] font-semibold uppercase bg-overdue/15 text-overdue border border-overdue/40">
+                    Atrasada
+                  </span>
+                )}
+              </div>
+              <TaskCard
+                task={t}
+                role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                onToggle={() => tasksApi.toggleComplete(t)}
+                onEdit={() => onEdit(t)}
+                isOverdue={overdue || isLate}
+              />
+            </div>
+          );
+        })}
       </div>
     </section>
   );
