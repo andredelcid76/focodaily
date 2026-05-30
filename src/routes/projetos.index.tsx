@@ -28,7 +28,7 @@ import {
   Users as UsersIcon,
   Layers,
 } from "lucide-react";
-import { todayISO, formatHuman, formatMinutes } from "@/lib/date";
+import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -384,11 +384,40 @@ function ProjectCard({
         </div>
       )}
 
+      <NextTaskRow stats={stats} />
+
       {project.deadline && (
         <p className="mt-2 text-[10px] text-muted-foreground">
           Prazo: <span className="capitalize">{formatHuman(project.deadline)}</span>
         </p>
       )}
+    </div>
+  );
+}
+
+function NextTaskRow({ stats }: { stats: { nextTaskDate: string | null; nextTaskOverdue: boolean } }) {
+  if (!stats.nextTaskDate) {
+    return (
+      <p className="mt-2 text-[10px] text-muted-foreground">
+        Próxima tarefa: <span>sem tarefas abertas</span>
+      </p>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+      <span className="text-muted-foreground">Próxima tarefa:</span>
+      <span className={`capitalize font-medium ${stats.nextTaskOverdue ? "text-overdue" : "text-foreground"}`}>
+        {formatShort(stats.nextTaskDate)}
+      </span>
+      <span
+        className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+          stats.nextTaskOverdue
+            ? "bg-overdue/15 text-overdue border border-overdue/40"
+            : "bg-green-500/15 text-green-600 border border-green-500/40"
+        }`}
+      >
+        {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+      </span>
     </div>
   );
 }
@@ -444,6 +473,7 @@ function ListView({
               <th className="px-3 py-2 font-semibold text-right">Progresso</th>
               <th className="px-3 py-2 font-semibold text-right">Tarefas</th>
               <th className="px-3 py-2 font-semibold">Prazo</th>
+              <th className="px-3 py-2 font-semibold">Próxima tarefa</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
@@ -490,6 +520,26 @@ function ListView({
                     {p.deadline ? (
                       <span className={stats.isOverdue ? "text-overdue font-medium" : "text-muted-foreground"}>
                         {formatHuman(p.deadline)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    {stats.nextTaskDate ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className={`capitalize ${stats.nextTaskOverdue ? "text-overdue font-medium" : ""}`}>
+                          {formatShort(stats.nextTaskDate)}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                            stats.nextTaskOverdue
+                              ? "bg-overdue/15 text-overdue border border-overdue/40"
+                              : "bg-green-500/15 text-green-600 border border-green-500/40"
+                          }`}
+                        >
+                          {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+                        </span>
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -704,6 +754,28 @@ function KanbanProjectCard({
               ? `${Math.abs(stats.daysRemaining)}d atraso`
               : formatHuman(project.deadline)}
           </span>
+        )}
+      </div>
+
+      <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
+        <span className="text-muted-foreground">Próx.:</span>
+        {stats.nextTaskDate ? (
+          <>
+            <span className={`capitalize ${stats.nextTaskOverdue ? "text-overdue font-medium" : "text-foreground"}`}>
+              {formatShort(stats.nextTaskDate)}
+            </span>
+            <span
+              className={`inline-flex items-center rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
+                stats.nextTaskOverdue
+                  ? "bg-overdue/15 text-overdue border border-overdue/40"
+                  : "bg-green-500/15 text-green-600 border border-green-500/40"
+              }`}
+            >
+              {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+            </span>
+          </>
+        ) : (
+          <span className="text-muted-foreground">—</span>
         )}
       </div>
 

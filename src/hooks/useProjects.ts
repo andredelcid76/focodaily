@@ -185,6 +185,8 @@ export type ProjectStats = {
   progress: number; // 0..1
   daysRemaining: number | null; // null if no deadline
   isOverdue: boolean;
+  nextTaskDate: string | null; // earliest scheduled_date among open tasks
+  nextTaskOverdue: boolean;
 };
 
 export function computeProjectStats(
@@ -213,6 +215,17 @@ export function computeProjectStats(
     isOverdue = daysRemaining < 0 && project.status !== "done" && project.status !== "archived";
   }
 
+  const openDates = tasks
+    .filter((t) => !t.completed && !!t.scheduled_date)
+    .map((t) => t.scheduled_date)
+    .sort();
+  const nextTaskDate = openDates.length > 0 ? openDates[0] : null;
+  const nextTaskOverdue =
+    nextTaskDate !== null &&
+    nextTaskDate < todayISO &&
+    project.status !== "done" &&
+    project.status !== "archived";
+
   return {
     total,
     done,
@@ -223,5 +236,7 @@ export function computeProjectStats(
     progress,
     daysRemaining,
     isOverdue,
+    nextTaskDate,
+    nextTaskOverdue,
   };
 }
