@@ -442,85 +442,145 @@ function TodayInner({ userId }: { userId: string }) {
     [timer, tasksApi],
   );
 
-  const dayLabel = isViewingToday
-    ? `Hoje · ${formatHuman(viewDate)}`
+  const weekdayLong = useMemo(() => {
+    const [y, m, d] = viewDate.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { weekday: "long" });
+  }, [viewDate]);
+  const dayNumber = useMemo(() => {
+    const [, , d] = viewDate.split("-").map(Number);
+    return d;
+  }, [viewDate]);
+  const monthLong = useMemo(() => {
+    const [y, m, d] = viewDate.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { month: "long" });
+  }, [viewDate]);
+
+  const completionPct = dayTasks.length === 0 ? 0 : Math.round((completedCount / dayTasks.length) * 100);
+  const tonePill = isViewingToday
+    ? "Hoje"
     : viewDate === addDays(today, 1)
-    ? `Amanhã · ${formatHuman(viewDate)}`
-    : formatHuman(viewDate);
+    ? "Amanhã"
+    : viewDate < today
+    ? "Passado"
+    : "Planejamento";
 
   return (
-    <div className="space-y-6">
-      
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            {isViewingToday ? "Hoje" : "Planejamento"}
-          </p>
-          <h1 className="font-display text-3xl font-bold capitalize">{dayLabel}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/60 p-1 backdrop-blur-sm">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setViewDate(addDays(viewDate, -1))}
-              aria-label="Dia anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2">
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Escolher dia</span>
+    <div className="space-y-8 content-layer">
+      {/* === Editorial Day Hero === */}
+      <section className="relative overflow-hidden rounded-[28px] glass-card hairline-gold shadow-card">
+        {/* Decorative aurora */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full bg-gradient-prestige opacity-30 blur-3xl animate-[aurora_22s_ease-in-out_infinite]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-28 -left-10 h-64 w-64 rounded-full bg-circumstantial/25 blur-3xl"
+        />
+
+        <div className="relative grid gap-6 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
+          {/* Left — Editorial date block */}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold bg-circumstantial/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-circumstantial">
+                <span className="h-1.5 w-1.5 rounded-full bg-circumstantial shadow-glow-gold animate-pulse" />
+                {tonePill}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70 capitalize">
+                {weekdayLong}
+              </span>
+            </div>
+            <h1 className="editorial text-[clamp(3.5rem,11vw,7rem)] font-light text-foreground">
+              <span className="num text-gradient-prestige italic">{dayNumber}</span>
+              <span className="text-foreground/80"> </span>
+              <span className="capitalize font-extralight text-foreground/90">{monthLong}</span>
+            </h1>
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              {dayTasks.length === 0
+                ? "Nada planejado. Que tal começar pelo essencial?"
+                : `${dayTasks.length} tarefa${dayTasks.length === 1 ? "" : "s"} · ${formatMinutes(totalMinutes)} programado${includeMeetings && meetingsMinutes > 0 ? " com reuniões" : ""}.`}
+            </p>
+
+            {/* Inline date nav + actions */}
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <div className="flex items-center rounded-full border border-border/60 bg-background/40 p-0.5 backdrop-blur-sm">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => setViewDate(addDays(viewDate, -1))}
+                  aria-label="Dia anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={(() => { const [y,m,d]=viewDate.split("-").map(Number); return new Date(y,m-1,d); })()}
-                  onSelect={(date) => { if (date) setViewDate(toISODate(date)); }}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            {!isViewingToday && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 gap-1.5 rounded-full px-3 text-xs">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Escolher</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={(() => { const [y,m,d]=viewDate.split("-").map(Number); return new Date(y,m-1,d); })()}
+                      onSelect={(date) => { if (date) setViewDate(toISODate(date)); }}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {!isViewingToday && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-xs"
+                    onClick={() => setViewDate(today)}
+                  >
+                    Hoje
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => setViewDate(addDays(viewDate, 1))}
+                  aria-label="Próximo dia"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-8 px-2"
-                onClick={() => setViewDate(today)}
+                className="h-9 rounded-full border-border/60 bg-background/30"
+                onClick={() => setBulkDialogOpen(true)}
               >
-                Hoje
+                <ListPlus className="mr-1 h-3.5 w-3.5" /> Em lote
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setViewDate(addDays(viewDate, 1))}
-              aria-label="Próximo dia"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <Button
+                onClick={() => openNew()}
+                size="sm"
+                className="h-9 rounded-full bg-gradient-prestige text-primary-foreground shadow-glow hover:opacity-95"
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Nova tarefa
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setBulkDialogOpen(true)}
-            title="Criar várias tarefas de uma vez"
-          >
-            <ListPlus className="mr-1 h-4 w-4" /> Em lote
-          </Button>
-          <Button
-            onClick={() => openNew()}
-            className="bg-gradient-prestige text-primary-foreground hover:opacity-90"
-          >
-            <Plus className="mr-1 h-4 w-4" /> Nova tarefa
-          </Button>
+
+          {/* Right — Progress ring */}
+          <div className="flex items-center justify-center md:justify-end">
+            <ProgressRing pct={completionPct} done={completedCount} total={dayTasks.length} />
+          </div>
         </div>
-      </div>
+
+        {/* Bottom stat row — premium */}
+        <div className="relative grid grid-cols-3 divide-x divide-border/40 border-t border-border/40 bg-background/20">
+          <HeroStat label="Programado" value={formatMinutes(totalMinutes)} icon={<Clock className="h-3.5 w-3.5" />} />
+          <HeroStat label="Restante" value={formatMinutes(remainingMinutes)} icon={<Zap className="h-3.5 w-3.5" />} accent />
+          <HeroStat label="Concluído" value={`${completedCount}/${dayTasks.length}`} icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
+        </div>
+      </section>
 
       <MeetingsRail
         meetings={dayMeetings}
@@ -529,15 +589,7 @@ function TodayInner({ userId }: { userId: string }) {
         onToggleInclude={setIncludeMeetings}
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard icon={<Clock className="h-4 w-4" />} label="Total programado" value={formatMinutes(totalMinutes)} />
-        <StatCard icon={<Clock className="h-4 w-4" />} label="Restante" value={formatMinutes(remainingMinutes)} accent />
-        <StatCard
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          label="Concluídas"
-          value={`${completedCount} / ${dayTasks.length}`}
-        />
-      </div>
+
 
       {/* Tarefa rápida — expansível */}
       <QuickAdd
@@ -977,6 +1029,77 @@ function StatCard({
   );
 }
 
+function HeroStat({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 px-3 py-4 text-center">
+      <div className={`flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em] ${accent ? "text-circumstantial" : "text-muted-foreground/80"}`}>
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className={`num font-display text-lg font-semibold sm:text-xl ${accent ? "text-gradient-gold" : "text-foreground"}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ProgressRing({ pct, done, total }: { pct: number; done: number; total: number }) {
+  const size = 152;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="oklch(0.66 0.14 165)" />
+            <stop offset="100%" stopColor="oklch(0.80 0.135 88)" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="oklch(0.30 0.028 168)"
+          strokeWidth={stroke}
+          fill="none"
+          opacity={0.5}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="url(#ringGrad)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.7s cubic-bezier(0.22,1,0.36,1)" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="num editorial text-[2.6rem] font-light text-gradient-prestige">{pct}<span className="text-base font-normal text-muted-foreground">%</span></div>
+        <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          {done} de {total}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
@@ -987,6 +1110,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
     </div>
   );
 }
+
 
 // MeetingsSection foi substituído por <MeetingsRail /> (aba lateral colapsável).
 
