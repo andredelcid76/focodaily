@@ -212,7 +212,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
               )}
             </div>
           </div>
-          <Button onClick={addSubtask} className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90">
+          <Button onClick={addSubtask} className="bg-gradient-prestige text-primary-foreground hover:opacity-90">
             <Plus className="mr-1 h-4 w-4" /> Subtarefa
           </Button>
         </div>

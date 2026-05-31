@@ -85,6 +85,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
       { label: "Semana", to: "/semana", icon: CalendarDays },
       { label: "Agenda", to: "/agenda", icon: CalendarDays },
       { label: "Projetos", to: "/projetos", icon: FolderKanban },
+      { label: "Caixa de entrada", to: "/inbox", icon: ListTodo },
       { label: "Papéis", to: "/papeis", icon: Users },
     ],
     []
