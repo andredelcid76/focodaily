@@ -32,9 +32,9 @@ export function BriefingCard({ scope = "day" as "day" | "week" }) {
 
   if (!content) {
     return (
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/5 to-circumstantial/5 p-4 flex items-center justify-between gap-3">
+      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card/40 to-circumstantial/10 p-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-circumstantial">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-prestige">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
@@ -50,7 +50,7 @@ export function BriefingCard({ scope = "day" as "day" | "week" }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/5 to-circumstantial/5 p-4">
+    <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-card/40 to-circumstantial/10 p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />

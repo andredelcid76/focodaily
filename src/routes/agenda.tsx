@@ -239,7 +239,7 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
               <Link2 className="mr-1.5 h-4 w-4" /> {connecting ? "Abrindo…" : "Conectar Outlook"}
             </Button>
           )}
-          <Button onClick={openNew} className="bg-gradient-to-r from-primary to-circumstantial text-primary-foreground hover:opacity-90">
+          <Button onClick={openNew} className="bg-gradient-prestige text-primary-foreground hover:opacity-90">
             <Plus className="mr-1 h-4 w-4" /> Nova reunião
           </Button>
         </div>
