@@ -1029,6 +1029,77 @@ function StatCard({
   );
 }
 
+function HeroStat({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 px-3 py-4 text-center">
+      <div className={`flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em] ${accent ? "text-circumstantial" : "text-muted-foreground/80"}`}>
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className={`num font-display text-lg font-semibold sm:text-xl ${accent ? "text-gradient-gold" : "text-foreground"}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ProgressRing({ pct, done, total }: { pct: number; done: number; total: number }) {
+  const size = 152;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="oklch(0.66 0.14 165)" />
+            <stop offset="100%" stopColor="oklch(0.80 0.135 88)" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="oklch(0.30 0.028 168)"
+          strokeWidth={stroke}
+          fill="none"
+          opacity={0.5}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="url(#ringGrad)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.7s cubic-bezier(0.22,1,0.36,1)" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="num editorial text-[2.6rem] font-light text-gradient-prestige">{pct}<span className="text-base font-normal text-muted-foreground">%</span></div>
+        <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          {done} de {total}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
@@ -1039,6 +1110,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
     </div>
   );
 }
+
 
 // MeetingsSection foi substituído por <MeetingsRail /> (aba lateral colapsável).
 
