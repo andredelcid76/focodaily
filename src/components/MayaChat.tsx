@@ -77,22 +77,29 @@ export function MayaChat() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button
-          size="lg"
-          className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full p-0 shadow-[var(--shadow-glow)] bg-gradient-to-br from-primary to-circumstantial"
+        <button
           aria-label="Abrir Maya"
+          className="group fixed bottom-6 right-6 z-40 inline-flex h-14 items-center gap-2.5 rounded-full bg-gradient-prestige px-5 text-sm font-semibold text-primary-foreground shadow-glow transition-all hover:shadow-glow-gold hover:scale-[1.03] active:scale-95"
         >
-          <Sparkles className="h-6 w-6" />
-        </Button>
+          <span className="relative flex h-6 w-6 items-center justify-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-primary-foreground/30" />
+            <Sparkles className="relative h-4 w-4" />
+          </span>
+          <span className="hidden sm:inline">Maya</span>
+        </button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0 glass-strong">
         <SheetHeader className="px-4 py-3 border-b border-border/60">
-          <SheetTitle className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-primary to-circumstantial">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+          <SheetTitle className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-prestige shadow-glow">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span>Maya</span>
-            <span className="text-xs font-normal text-muted-foreground">sua assistente do Foco</span>
+            <div className="flex flex-col items-start leading-tight">
+              <span className="font-display">Maya</span>
+              <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-normal">
+                assistente do Foco
+              </span>
+            </div>
           </SheetTitle>
         </SheetHeader>
 
