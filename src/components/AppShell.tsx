@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 import { GlobalSearch, useGlobalSearchHotkey } from "@/components/GlobalSearch";
 import { AppSidebar } from "@/components/AppSidebar";
+import { MayaChat } from "@/components/MayaChat";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
@@ -113,6 +114,7 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
 
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+        <MayaChat />
       </div>
     </SidebarProvider>
   );
