@@ -70,29 +70,25 @@ export function ActiveTaskBanner() {
 
   return (
     <div
-      className={`sticky top-[57px] z-20 border-b backdrop-blur-xl ${
+      className={`sticky top-14 z-20 border-b backdrop-blur-xl transition-colors ${
         running
-          ? "border-primary/40 bg-gradient-to-r from-primary/15 via-primary/10 to-circumstantial/15"
+          ? "border-primary/40 bg-gradient-to-r from-primary/20 via-primary/10 to-circumstantial/15"
           : "border-circumstantial/40 bg-circumstantial/10"
       }`}
     >
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
-        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
-          {running && (
-            <span className="absolute inset-0 animate-ping rounded-lg bg-primary/30" />
-          )}
+        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
+          {running && <span className="absolute inset-0 animate-ping rounded-xl bg-primary/30" />}
           <Timer className="relative h-4 w-4" />
         </div>
 
         <button
-          onClick={() =>
-            navigate({ to: "/", search: undefined as never }) /* jump to Today */
-          }
+          onClick={() => navigate({ to: "/", search: undefined as never })}
           className="min-w-0 flex-1 text-left"
           aria-label="Ir para a tarefa em execução"
           title={task.title}
         >
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <span
               className={`inline-block h-1.5 w-1.5 rounded-full ${
                 running ? "animate-pulse bg-primary" : "bg-circumstantial"
@@ -114,7 +110,7 @@ export function ActiveTaskBanner() {
           {running ? (
             <button
               onClick={handlePause}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-card hover:opacity-90 transition-opacity"
               aria-label="Pausar"
               title="Pausar"
             >
@@ -123,7 +119,7 @@ export function ActiveTaskBanner() {
           ) : (
             <button
               onClick={handleResume}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-circumstantial text-primary-foreground hover:opacity-90"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-circumstantial text-circumstantial-foreground shadow-card hover:opacity-90 transition-opacity"
               aria-label="Retomar"
               title="Retomar"
             >
@@ -132,7 +128,7 @@ export function ActiveTaskBanner() {
           )}
           <button
             onClick={handleStop}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-card/60 text-muted-foreground hover:border-destructive/50 hover:text-destructive transition-colors"
             aria-label="Parar e zerar"
             title="Parar e zerar"
           >
