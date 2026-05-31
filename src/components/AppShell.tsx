@@ -59,21 +59,21 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="min-h-dvh flex w-full">
         <AppSidebar onOpenSearch={() => setSearchOpen(true)} />
 
-        <div className="flex-1 flex flex-col min-w-0 relative content-layer">
-          <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/40 glass-strong px-3 sm:px-5">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 glass-strong px-3 sm:px-4">
             <SidebarTrigger className="shrink-0" />
 
-            <div className="hidden min-w-0 items-baseline gap-2.5 sm:flex">
+            <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <Link
                 to="/"
-                className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground hover:text-circumstantial transition-colors"
+                className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
               >
                 {meta.eyebrow}
               </Link>
               {meta.title && (
                 <>
-                  <span className="text-circumstantial/40">·</span>
-                  <span className="editorial text-xl text-foreground/95 truncate">
+                  <span className="text-muted-foreground/40">/</span>
+                  <span className="font-display text-sm font-semibold tracking-tight truncate">
                     {meta.title}
                   </span>
                 </>
@@ -83,19 +83,19 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="ml-auto flex items-center gap-1.5">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="group hidden md:inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/30 px-3.5 py-1.5 text-xs text-muted-foreground transition-all hover:border-circumstantial/50 hover:bg-background/60 hover:text-foreground"
+                className="group hidden sm:inline-flex items-center gap-2 rounded-lg border border-border/60 bg-background/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-background/70 hover:text-foreground"
                 aria-label="Buscar"
               >
                 <Search className="h-3.5 w-3.5" />
-                <span>Buscar…</span>
-                <kbd className="ml-2 rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] tracking-wider">
+                <span>Buscar tarefas, projetos…</span>
+                <kbd className="ml-2 rounded bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] tracking-wider">
                   ⌘K
                 </kbd>
               </button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden h-9 w-9 rounded-full"
+                className="sm:hidden h-9 w-9"
                 onClick={() => setSearchOpen(true)}
                 aria-label="Buscar"
               >
@@ -107,12 +107,11 @@ function Shell({ children }: { children: ReactNode }) {
           <ActiveTaskBanner />
 
           <main className="flex-1">
-            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 animate-[fade-in_0.32s_cubic-bezier(0.22,1,0.36,1)]">
+            <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8 animate-[fade-in_0.32s_cubic-bezier(0.22,1,0.36,1)]">
               {children}
             </div>
           </main>
         </div>
-
 
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <MayaChat />
