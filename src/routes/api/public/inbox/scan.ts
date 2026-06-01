@@ -366,12 +366,34 @@ async function syncPipedriveCompletionsToApp(userId: string): Promise<void> {
   }
 }
 
-async function aiExtractTasks(items: SourceItem[]): Promise<Array<{ source_index: number; suggestions: AISuggestion[] }>> {
+function normalizeTitle(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function aiExtractTasks(
+  items: SourceItem[],
+  existingContext: { openTasks: string[]; projects: string[] },
+): Promise<Array<{ source_index: number; suggestions: AISuggestion[] }>> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!lovableKey || items.length === 0) return [];
 
   const today = new Date().toISOString().slice(0, 10);
   const numbered = items.map((it, i) => `### ITEM ${i} (${it.source})\n${it.text.slice(0, 2000)}`).join("\n\n");
+
+  const existingBlock = [
+    existingContext.projects.length > 0
+      ? `PROJETOS ATIVOS DO USUÁRIO:\n${existingContext.projects.map((p) => `- ${p}`).join("\n")}`
+      : "",
+    existingContext.openTasks.length > 0
+      ? `TAREFAS JÁ CADASTRADAS (abertas, não concluídas — NÃO duplicar):\n${existingContext.openTasks.slice(0, 200).map((t) => `- ${t}`).join("\n")}`
+      : "",
+  ].filter(Boolean).join("\n\n");
 
   const r = await fetch(LOVABLE_AI_URL, {
     method: "POST",
@@ -388,11 +410,14 @@ Regras estritas:
 - Para REUNIÕES: o texto já contém apenas action items atribuídos AO USUÁRIO (host). Mesmo assim, só gere sugestão quando houver verbo de ação claro e ação concreta. Se houver dúvida sobre quem é responsável, NÃO crie sugestão.
 - Para CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
 - IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
+- DEDUPLICAÇÃO CRÍTICA: Se a ação já existe na lista de "TAREFAS JÁ CADASTRADAS" abaixo (mesmo que com palavras ligeiramente diferentes, mesmo assunto/contato/objetivo), NÃO crie sugestão. Prefira pular a duplicar.
 - Para cada item de entrada, retorne 0 ou mais sugestões.
 - Categoria: "urgent" (prazo <= 2 dias OU e-mail pendente há > 7 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
 - Duração em minutos: 15, 30, 60, 90 ou 120 (responder e-mail = 15 ou 30).
 - Data sugerida (YYYY-MM-DD): hoje ou próxima data útil razoável.
 - Título curto e acionável (verbo no infinitivo). Para e-mails: "Responder <Nome>: <tema>".
+
+${existingBlock}
 
 Retorne JSON válido:
 {"results":[{"source_index":0,"suggestions":[{"title":"...","description":"...","suggested_category":"important","suggested_duration_minutes":30,"suggested_date":"${today}","reasoning":"..."}]}]}`,
