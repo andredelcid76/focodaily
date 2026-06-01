@@ -243,8 +243,14 @@ async function getPipedriveCreds(userId: string): Promise<{ token: string; domai
     .select("api_token,domain")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!data?.api_token || !data?.domain) return null;
-  return { token: data.api_token as string, domain: data.domain as string };
+  if (data?.api_token && data?.domain) {
+    return { token: data.api_token as string, domain: data.domain as string };
+  }
+  // Fallback to project-level env credentials (single-tenant setup).
+  const token = process.env.PIPEDRIVE_API_TOKEN;
+  const domain = process.env.PIPEDRIVE_DOMAIN;
+  if (token && domain) return { token, domain };
+  return null;
 }
 
 async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
@@ -360,12 +366,34 @@ async function syncPipedriveCompletionsToApp(userId: string): Promise<void> {
   }
 }
 
-async function aiExtractTasks(items: SourceItem[]): Promise<Array<{ source_index: number; suggestions: AISuggestion[] }>> {
+function normalizeTitle(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function aiExtractTasks(
+  items: SourceItem[],
+  existingContext: { openTasks: string[]; projects: string[] },
+): Promise<Array<{ source_index: number; suggestions: AISuggestion[] }>> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!lovableKey || items.length === 0) return [];
 
   const today = new Date().toISOString().slice(0, 10);
   const numbered = items.map((it, i) => `### ITEM ${i} (${it.source})\n${it.text.slice(0, 2000)}`).join("\n\n");
+
+  const existingBlock = [
+    existingContext.projects.length > 0
+      ? `PROJETOS ATIVOS DO USUÁRIO:\n${existingContext.projects.map((p) => `- ${p}`).join("\n")}`
+      : "",
+    existingContext.openTasks.length > 0
+      ? `TAREFAS JÁ CADASTRADAS (abertas, não concluídas — NÃO duplicar):\n${existingContext.openTasks.slice(0, 200).map((t) => `- ${t}`).join("\n")}`
+      : "",
+  ].filter(Boolean).join("\n\n");
 
   const r = await fetch(LOVABLE_AI_URL, {
     method: "POST",
@@ -382,11 +410,14 @@ Regras estritas:
 - Para REUNIÕES: o texto já contém apenas action items atribuídos AO USUÁRIO (host). Mesmo assim, só gere sugestão quando houver verbo de ação claro e ação concreta. Se houver dúvida sobre quem é responsável, NÃO crie sugestão.
 - Para CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
 - IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
+- DEDUPLICAÇÃO CRÍTICA: Se a ação já existe na lista de "TAREFAS JÁ CADASTRADAS" abaixo (mesmo que com palavras ligeiramente diferentes, mesmo assunto/contato/objetivo), NÃO crie sugestão. Prefira pular a duplicar.
 - Para cada item de entrada, retorne 0 ou mais sugestões.
 - Categoria: "urgent" (prazo <= 2 dias OU e-mail pendente há > 7 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
 - Duração em minutos: 15, 30, 60, 90 ou 120 (responder e-mail = 15 ou 30).
 - Data sugerida (YYYY-MM-DD): hoje ou próxima data útil razoável.
 - Título curto e acionável (verbo no infinitivo). Para e-mails: "Responder <Nome>: <tema>".
+
+${existingBlock}
 
 Retorne JSON válido:
 {"results":[{"source_index":0,"suggestions":[{"title":"...","description":"...","suggested_category":"important","suggested_duration_minutes":30,"suggested_date":"${today}","reasoning":"..."}]}]}`,
@@ -468,8 +499,29 @@ async function scanForUser(userId: string) {
     return { user_id: userId, scanned: 0, created: 0 };
   }
 
+  // Fetch existing open tasks + active projects so the AI (and a post-filter)
+  // can avoid duplicating things the user already has on their plate.
+  const [{ data: openTasks }, { data: activeProjects }] = await Promise.all([
+    supabaseAdmin
+      .from("tasks")
+      .select("title")
+      .eq("user_id", userId)
+      .eq("completed", false)
+      .order("scheduled_date", { ascending: false })
+      .limit(300),
+    supabaseAdmin
+      .from("projects")
+      .select("name")
+      .eq("user_id", userId)
+      .in("status", ["active", "paused"])
+      .limit(100),
+  ]);
+  const openTitles = (openTasks ?? []).map((t) => (t.title as string) ?? "").filter(Boolean);
+  const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
+  const openTitleSet = new Set(openTitles.map(normalizeTitle));
+
   // AI extract
-  const results = await aiExtractTasks(fresh);
+  const results = await aiExtractTasks(fresh, { openTasks: openTitles, projects: projectNames });
 
   // Persist
   let created = 0;
@@ -477,6 +529,20 @@ async function scanForUser(userId: string) {
     const item = fresh[r.source_index];
     if (!item) continue;
     for (const s of r.suggestions ?? []) {
+      // Post-filter: drop suggestions whose title matches an existing open task.
+      const norm = normalizeTitle(s.title ?? "");
+      if (!norm) continue;
+      if (openTitleSet.has(norm)) continue;
+      // Also drop near-duplicates (one contains the other, both reasonably long).
+      let duplicate = false;
+      for (const existing of openTitleSet) {
+        if (norm.length >= 8 && existing.length >= 8 && (existing.includes(norm) || norm.includes(existing))) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (duplicate) continue;
+
       const { error } = await supabaseAdmin.from("inbox_suggestions").insert({
         user_id: userId,
         title: s.title,
@@ -491,7 +557,10 @@ async function scanForUser(userId: string) {
         suggested_date: s.suggested_date ?? new Date().toISOString().slice(0, 10),
         reasoning: s.reasoning ?? null,
       } as never);
-      if (!error) created++;
+      if (!error) {
+        created++;
+        openTitleSet.add(norm); // prevent dup within the same batch
+      }
     }
   }
 
