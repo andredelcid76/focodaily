@@ -243,8 +243,14 @@ async function getPipedriveCreds(userId: string): Promise<{ token: string; domai
     .select("api_token,domain")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!data?.api_token || !data?.domain) return null;
-  return { token: data.api_token as string, domain: data.domain as string };
+  if (data?.api_token && data?.domain) {
+    return { token: data.api_token as string, domain: data.domain as string };
+  }
+  // Fallback to project-level env credentials (single-tenant setup).
+  const token = process.env.PIPEDRIVE_API_TOKEN;
+  const domain = process.env.PIPEDRIVE_DOMAIN;
+  if (token && domain) return { token, domain };
+  return null;
 }
 
 async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
