@@ -499,8 +499,29 @@ async function scanForUser(userId: string) {
     return { user_id: userId, scanned: 0, created: 0 };
   }
 
+  // Fetch existing open tasks + active projects so the AI (and a post-filter)
+  // can avoid duplicating things the user already has on their plate.
+  const [{ data: openTasks }, { data: activeProjects }] = await Promise.all([
+    supabaseAdmin
+      .from("tasks")
+      .select("title")
+      .eq("user_id", userId)
+      .eq("completed", false)
+      .order("scheduled_date", { ascending: false })
+      .limit(300),
+    supabaseAdmin
+      .from("projects")
+      .select("name")
+      .eq("user_id", userId)
+      .in("status", ["active", "paused"])
+      .limit(100),
+  ]);
+  const openTitles = (openTasks ?? []).map((t) => (t.title as string) ?? "").filter(Boolean);
+  const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
+  const openTitleSet = new Set(openTitles.map(normalizeTitle));
+
   // AI extract
-  const results = await aiExtractTasks(fresh);
+  const results = await aiExtractTasks(fresh, { openTasks: openTitles, projects: projectNames });
 
   // Persist
   let created = 0;
@@ -508,6 +529,20 @@ async function scanForUser(userId: string) {
     const item = fresh[r.source_index];
     if (!item) continue;
     for (const s of r.suggestions ?? []) {
+      // Post-filter: drop suggestions whose title matches an existing open task.
+      const norm = normalizeTitle(s.title ?? "");
+      if (!norm) continue;
+      if (openTitleSet.has(norm)) continue;
+      // Also drop near-duplicates (one contains the other, both reasonably long).
+      let duplicate = false;
+      for (const existing of openTitleSet) {
+        if (norm.length >= 8 && existing.length >= 8 && (existing.includes(norm) || norm.includes(existing))) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (duplicate) continue;
+
       const { error } = await supabaseAdmin.from("inbox_suggestions").insert({
         user_id: userId,
         title: s.title,
@@ -522,7 +557,10 @@ async function scanForUser(userId: string) {
         suggested_date: s.suggested_date ?? new Date().toISOString().slice(0, 10),
         reasoning: s.reasoning ?? null,
       } as never);
-      if (!error) created++;
+      if (!error) {
+        created++;
+        openTitleSet.add(norm); // prevent dup within the same batch
+      }
     }
   }
 
