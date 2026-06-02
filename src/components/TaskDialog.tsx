@@ -119,6 +119,17 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
   };
 
+  const effectiveProjectId = lockedProjectId !== undefined ? lockedProjectId : projectId;
+  const fetchMembers = useServerFn(listProjectMembers);
+  const { data: membersData } = useQuery({
+    queryKey: ["project-members", effectiveProjectId],
+    queryFn: () => fetchMembers({ data: { project_id: effectiveProjectId as string } }),
+    enabled: !!effectiveProjectId && open,
+    staleTime: 60_000,
+  });
+  const members = membersData?.members ?? [];
+  const isShared = members.length > 1;
+
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
