@@ -158,6 +158,7 @@ export function ProjectTaskBoard({
           onSetStatus={onSetStatus}
           onUpdate={onUpdate}
           onToggleComplete={onToggleComplete}
+          onBulkDelete={onBulkDelete}
         />
       ) : view === "kanban" ? (
         <KanbanView
