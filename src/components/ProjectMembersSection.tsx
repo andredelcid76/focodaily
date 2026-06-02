@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Users, Mail, Trash2, Copy, Check, UserPlus, Clock, Crown, Shield, Pencil, User } from "lucide-react";
+import { Users, Mail, Trash2, Copy, Check, UserPlus, Clock, Crown, Pencil, User, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import {
   revokeInvite,
   removeProjectMember,
   updateProjectMemberRole,
+  transferProjectLeadership,
 } from "@/lib/team.functions";
 
 type Props = { projectId: string };
@@ -27,9 +28,9 @@ type Props = { projectId: string };
 type Role = "admin" | "manager" | "member";
 
 const ROLE_META: Record<"owner" | Role, { label: string; icon: typeof Crown; tone: string; hint: string }> = {
-  owner: { label: "Dono", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Criador do projeto — controle total" },
-  admin: { label: "Admin", icon: Shield, tone: "bg-rose-500/10 text-rose-600", hint: "Pode tudo, inclusive gerenciar membros" },
-  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita o projeto e qualquer tarefa" },
+  owner: { label: "Líder", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Líder do projeto — controle total" },
+  admin: { label: "Líder (legado)", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Membro com permissões de líder legadas — recomendado migrar para Gestor" },
+  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita qualquer tarefa, mas não os dados do projeto" },
   member: { label: "Membro", icon: User, tone: "bg-muted text-muted-foreground", hint: "Adiciona tarefas e mexe só nas próprias e nas delegadas" },
 };
 
@@ -40,6 +41,7 @@ export function ProjectMembersSection({ projectId }: Props) {
   const revoke = useServerFn(revokeInvite);
   const remove = useServerFn(removeProjectMember);
   const updateRole = useServerFn(updateProjectMemberRole);
+  const transferLeader = useServerFn(transferProjectLeadership);
 
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("member");
@@ -106,6 +108,17 @@ export function ProjectMembersSection({ projectId }: Props) {
       toast.error("Não consegui mudar o papel");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["project-members", projectId] }),
+  });
+
+  const transferMut = useMutation({
+    mutationFn: (newLeaderId: string) =>
+      transferLeader({ data: { project_id: projectId, new_leader_id: newLeaderId } }),
+    onSuccess: () => {
+      toast.success("Liderança transferida");
+      qc.invalidateQueries({ queryKey: ["project-members", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const copyLink = async () => {
