@@ -102,6 +102,7 @@ function Shell({ children }: { children: ReactNode }) {
               >
                 <Search className="h-4 w-4" />
               </Button>
+              <NotificationsBell />
             </div>
           </header>
 
