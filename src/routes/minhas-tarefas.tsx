@@ -65,7 +65,11 @@ function MyTasksPage() {
   }, [tasks, today]);
 
   const updateStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
-    const patch: Record<string, unknown> = { status };
+    const patch: {
+      status: MyTaskRow["status"];
+      completed?: boolean;
+      completed_at?: string | null;
+    } = { status };
     if (status === "done") {
       patch.completed = true;
       patch.completed_at = new Date().toISOString();

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
+import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -51,6 +52,11 @@ const SemanaRoute = SemanaRouteImport.update({
 const PapeisRoute = PapeisRouteImport.update({
   id: '/papeis',
   path: '/papeis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
+  id: '/minhas-tarefas',
+  path: '/minhas-tarefas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
+  '/minhas-tarefas': typeof MinhasTarefasRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
+  '/minhas-tarefas': typeof MinhasTarefasRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
+  '/minhas-tarefas': typeof MinhasTarefasRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/inbox'
+    | '/minhas-tarefas'
     | '/papeis'
     | '/semana'
     | '/.well-known/oauth-authorization-server'
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/inbox'
+    | '/minhas-tarefas'
     | '/papeis'
     | '/semana'
     | '/.well-known/oauth-authorization-server'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/inbox'
+    | '/minhas-tarefas'
     | '/papeis'
     | '/semana'
     | '/.well-known/oauth-authorization-server'
@@ -435,6 +447,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   InboxRoute: typeof InboxRoute
+  MinhasTarefasRoute: typeof MinhasTarefasRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
@@ -478,6 +491,13 @@ declare module '@tanstack/react-router' {
       path: '/papeis'
       fullPath: '/papeis'
       preLoaderRoute: typeof PapeisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minhas-tarefas': {
+      id: '/minhas-tarefas'
+      path: '/minhas-tarefas'
+      fullPath: '/minhas-tarefas'
+      preLoaderRoute: typeof MinhasTarefasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -717,6 +737,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   InboxRoute: InboxRoute,
+  MinhasTarefasRoute: MinhasTarefasRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
   DotwellKnownOauthAuthorizationServerRoute:
