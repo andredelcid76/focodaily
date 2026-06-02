@@ -268,7 +268,7 @@ function TableView({
               task={t}
               today={today}
               members={members}
-              assignee={memberById.get(t.assignee_id ?? ownerId)}
+              assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
               role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
               onEdit={() => onEdit(t)}
               onSetStatus={(s) => onSetStatus(t.id, s)}
