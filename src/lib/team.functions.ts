@@ -126,14 +126,14 @@ export const listProjectMembers = createServerFn({ method: "POST" })
     const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
     const memberRoleMap = new Map(
-      (members ?? []).map((m) => [m.user_id, (m.role ?? "editor") as "owner" | "editor" | "viewer"]),
+      (members ?? []).map((m) => [m.user_id, (m.role ?? "member") as "owner" | "admin" | "manager" | "member"]),
     );
     const memberList = Array.from(memberIds).map((uid) => {
       const profile = profileMap.get(uid);
       const isOwner = uid === project.user_id;
-      const role: "owner" | "editor" | "viewer" = isOwner
+      const role: "owner" | "admin" | "manager" | "member" = isOwner
         ? "owner"
-        : (memberRoleMap.get(uid) ?? "editor");
+        : (memberRoleMap.get(uid) ?? "member");
       return {
         user_id: uid,
         email: profile?.email ?? null,
@@ -144,17 +144,21 @@ export const listProjectMembers = createServerFn({ method: "POST" })
       };
     });
 
-    // Pending invites (only visible to owner via RLS)
     const { data: invites } = await supabase
       .from("project_invites")
       .select("id, email, expires_at, created_at, role")
       .eq("project_id", data.project_id)
       .is("accepted_at", null);
 
+    const isOwner = project.user_id === userId;
+    const myMembership = (members ?? []).find((m) => m.user_id === userId);
+    const isAdmin = isOwner || myMembership?.role === "admin";
+
     return {
       members: memberList,
       pending_invites: invites ?? [],
-      is_owner: project.user_id === userId,
+      is_owner: isOwner,
+      is_admin: isAdmin,
     };
   });
 
@@ -169,32 +173,39 @@ export const inviteToProject = createServerFn({ method: "POST" })
         project_id: z.string().uuid(),
         email: z.string().email().max(255),
         origin: z.string().url(),
-        role: z.enum(["editor", "viewer"]).default("editor"),
+        role: z.enum(["admin", "manager", "member"]).default("member"),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
-    // Check ownership
+    // Check admin (owner or project admin)
     const { data: project } = await supabaseAdmin
       .from("projects")
       .select("id, user_id, name")
       .eq("id", data.project_id)
       .maybeSingle();
     if (!project) throw new Error("Projeto não encontrado");
-    if (project.user_id !== userId) throw new Error("Apenas o dono pode convidar membros");
+
+    const { data: myMembership } = await supabaseAdmin
+      .from("project_members")
+      .select("role")
+      .eq("project_id", data.project_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const isAdmin = project.user_id === userId || myMembership?.role === "admin";
+    if (!isAdmin) throw new Error("Apenas o dono ou um admin pode convidar membros");
 
     const email = data.email.toLowerCase().trim();
 
-    // Block inviting yourself
     const { data: myProfile } = await supabaseAdmin
       .from("profiles")
       .select("email")
       .eq("user_id", userId)
       .maybeSingle();
     if (myProfile?.email?.toLowerCase() === email) {
-      throw new Error("Você já é dono do projeto");
+      throw new Error("Você já participa do projeto");
     }
 
     // If user already exists AND is already a member, no-op
@@ -303,7 +314,7 @@ export const removeProjectMember = createServerFn({ method: "POST" })
   });
 
 // ============================================================
-// Update a member's role (owner-only)
+// Update a member's role (admin-only)
 // ============================================================
 export const updateProjectMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -312,7 +323,7 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
       .object({
         project_id: z.string().uuid(),
         user_id: z.string().uuid(),
-        role: z.enum(["editor", "viewer"]),
+        role: z.enum(["admin", "manager", "member"]),
       })
       .parse(input),
   )
@@ -324,7 +335,14 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
       .eq("id", data.project_id)
       .maybeSingle();
     if (!project) throw new Error("Projeto não encontrado");
-    if (project.user_id !== userId) throw new Error("Apenas o dono pode mudar papéis");
+    const { data: myMembership } = await supabaseAdmin
+      .from("project_members")
+      .select("role")
+      .eq("project_id", data.project_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const isAdmin = project.user_id === userId || myMembership?.role === "admin";
+    if (!isAdmin) throw new Error("Apenas o dono ou um admin pode mudar papéis");
     if (data.user_id === project.user_id) throw new Error("O dono não tem papel editável");
 
     const { error } = await supabaseAdmin

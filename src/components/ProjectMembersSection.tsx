@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Users, Mail, Trash2, Copy, Check, UserPlus, Clock, Crown, Pencil, Eye } from "lucide-react";
+import { Users, Mail, Trash2, Copy, Check, UserPlus, Clock, Crown, Shield, Pencil, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,12 +24,13 @@ import {
 
 type Props = { projectId: string };
 
-type Role = "editor" | "viewer";
+type Role = "admin" | "manager" | "member";
 
 const ROLE_META: Record<"owner" | Role, { label: string; icon: typeof Crown; tone: string; hint: string }> = {
-  owner: { label: "Dono", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Tudo no projeto" },
-  editor: { label: "Editor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Cria e edita tarefas" },
-  viewer: { label: "Leitor", icon: Eye, tone: "bg-muted text-muted-foreground", hint: "Somente leitura" },
+  owner: { label: "Dono", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Criador do projeto — controle total" },
+  admin: { label: "Admin", icon: Shield, tone: "bg-rose-500/10 text-rose-600", hint: "Pode tudo, inclusive gerenciar membros" },
+  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita o projeto e qualquer tarefa" },
+  member: { label: "Membro", icon: User, tone: "bg-muted text-muted-foreground", hint: "Adiciona tarefas e mexe só nas próprias e nas delegadas" },
 };
 
 export function ProjectMembersSection({ projectId }: Props) {
@@ -41,7 +42,7 @@ export function ProjectMembersSection({ projectId }: Props) {
   const updateRole = useServerFn(updateProjectMemberRole);
 
   const [email, setEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<Role>("editor");
+  const [inviteRole, setInviteRole] = useState<Role>("member");
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
