@@ -372,7 +372,7 @@ function TableView({
 }
 
 function TaskRow({
-  task, today, members, assignee, role,
+  task, today, members, assignee, role, selected, onSelectToggle,
   onEdit, onSetStatus, onAssign, onDate, onToggleComplete,
 }: {
   task: Task;
@@ -380,6 +380,8 @@ function TaskRow({
   members: Member[];
   assignee?: Member;
   role: Role | null;
+  selected?: boolean;
+  onSelectToggle?: () => void;
   onEdit: () => void;
   onSetStatus: (s: TaskStatus) => void;
   onAssign: (uid: string | null) => void;
@@ -389,7 +391,7 @@ function TaskRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const isOverdue = !task.completed && task.scheduled_date < today;
   return (
-    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20">
+    <div className={`grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
       <button
         onClick={onToggleComplete}
         className={`text-muted-foreground/50 hover:text-emerald-500 ${task.completed ? "text-emerald-500" : ""}`}
@@ -397,6 +399,11 @@ function TaskRow({
       >
         {task.completed ? <CheckCircle2 className="h-4 w-4 fill-emerald-500/20" /> : <Circle className="h-4 w-4" />}
       </button>
+      <Checkbox
+        checked={!!selected}
+        onCheckedChange={() => onSelectToggle?.()}
+        aria-label="Selecionar"
+      />
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
