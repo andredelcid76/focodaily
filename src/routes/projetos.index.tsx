@@ -15,6 +15,9 @@ import { useTasks } from "@/hooks/useTasks";
 import { ProjectDialog } from "@/components/ProjectDialog";
 import { ProjectStatusBadge } from "@/components/ProjectChip";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   FolderKanban,
   Plus,
@@ -127,24 +130,30 @@ function ProjectsInner({ userId }: { userId: string }) {
           <ViewBtn active={view === "kanban"} onClick={() => setView("kanban")} icon={<KanbanSquare className="h-3.5 w-3.5" />} label="Kanban" />
         </div>
 
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="h-9 rounded-md border border-input bg-card/60 px-3 text-sm"
-        >
-          <option value="all">Todos os papéis</option>
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
-        <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
+        <Select value={filterRole} onValueChange={(v) => setFilterRole(v)}>
+          <SelectTrigger className="h-9 w-[180px] text-sm">
+            <SelectValue placeholder="Todos os papéis" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os papéis</SelectItem>
+            {roles.map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
+                  {r.name}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+          <Checkbox
             checked={hideArchived}
-            onChange={(e) => setHideArchived(e.target.checked)}
+            onCheckedChange={(c) => setHideArchived(c === true)}
           />
           Ocultar arquivados
-        </label>
+        </Label>
 
         {view === "kanban" && (
           <div className="ml-2 flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">

@@ -97,7 +97,7 @@ export function TaskCard({
       {...attributes}
       {...listeners}
       onClick={(e) => {
-        // Click on card body (not title, not buttons) toggles selection
+        if (!selectionMode) return;
         e.stopPropagation();
         onSelectToggle?.();
       }}

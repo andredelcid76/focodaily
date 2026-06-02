@@ -98,6 +98,13 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
   );
 
   if (!project) {
+    if (projectsApi.loading) {
+      return (
+        <div className="flex items-center justify-center rounded-2xl border border-border/60 bg-card/30 p-10 text-sm text-muted-foreground">
+          Carregando projeto…
+        </div>
+      );
+    }
     return (
       <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
         <p className="text-muted-foreground">Projeto não encontrado.</p>
