@@ -210,12 +210,12 @@ function TableView({
     if (grouping === "assignee") {
       const map = new Map<string, Task[]>();
       for (const t of tasks) {
-        const aid = (t.assignee_id ?? ownerId) as string;
+        const aid = (t.assignee_id ?? "__unassigned") as string;
         map.set(aid, [...(map.get(aid) ?? []), t]);
       }
       const arr = Array.from(map.entries()).map(([uid, ts]) => ({
         key: uid,
-        label: nameOf(memberById.get(uid)),
+        label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
         tasks: sortByDate(ts),
       }));
       arr.sort((a, b) => b.tasks.length - a.tasks.length);
@@ -268,7 +268,7 @@ function TableView({
               task={t}
               today={today}
               members={members}
-              assignee={memberById.get(t.assignee_id ?? ownerId)}
+              assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
               role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
               onEdit={() => onEdit(t)}
               onSetStatus={(s) => onSetStatus(t.id, s)}
