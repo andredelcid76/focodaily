@@ -101,11 +101,13 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       const initialProject = effectiveInitialProjectId
         ? projects.find((p) => p.id === effectiveInitialProjectId)
         : null;
-      // Em projetos pessoais (sem equipe), o responsável padrão é o dono do projeto
+      // Padrão: o criador é o responsável. Em projetos pessoais (sem equipe), usa o dono do projeto.
       const isPersonalProject = !!initialProject && !(initialProject as any).team_id;
-      const defaultAssignee = !task && isPersonalProject
-        ? ((initialProject as any).user_id as string | null) ?? user?.id ?? null
-        : (((task as any)?.assignee_id ?? null) as string | null);
+      const defaultAssignee = task
+        ? (((task as any)?.assignee_id ?? user?.id) as string | null)
+        : isPersonalProject
+          ? ((initialProject as any).user_id as string | null) ?? user?.id ?? null
+          : user?.id ?? null;
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
       setIntervalDays(task?.recurrence_interval ?? 2);
