@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  BarChart3,
   FolderKanban,
   Inbox,
   ListTodo,
@@ -53,6 +54,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: "Insights",
+    items: [
+      { title: "Análise estratégica", url: "/analise", icon: BarChart3, shortcut: "G A" },
+    ],
+  },
+  {
     label: "Sistema",
     items: [{ title: "Configurações", url: "/configuracoes", icon: Settings }],
   },
@@ -101,6 +108,7 @@ function useNavHotkeys() {
       p: "/projetos",
       e: "/equipes",
       i: "/inbox",
+      a: "/analise",
       c: "/configuracoes",
     };
     const onKey = (e: KeyboardEvent) => {
