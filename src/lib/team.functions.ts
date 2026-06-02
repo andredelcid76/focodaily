@@ -169,6 +169,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
         project_id: z.string().uuid(),
         email: z.string().email().max(255),
         origin: z.string().url(),
+        role: z.enum(["editor", "viewer"]).default("editor"),
       })
       .parse(input),
   )
@@ -223,6 +224,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
           project_id: data.project_id,
           email,
           token,
+          role: data.role,
           invited_by: userId,
           expires_at: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
           accepted_at: null,
