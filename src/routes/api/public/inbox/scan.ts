@@ -299,8 +299,12 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
       add_time?: string;
     };
     const allActs = (json?.data ?? []) as Activity[];
-    const acts = allActs.filter((a) => !!a.deal_id && (a.type ?? "").toLowerCase() === "task");
-    return acts.slice(0, 20).map((a) => ({
+    // Aceita qualquer tipo de atividade (task, call, email, meeting, whatsapp_chat,
+    // reunio_online, prospeccao, custom types, etc.) e não exige deal vinculado —
+    // antes filtrávamos só por type="task" + deal_id, o que descartava ~80% das
+    // atividades reais do usuário.
+    const acts = allActs.filter((a) => !a.done);
+    return acts.slice(0, 60).map((a) => ({
       source: "pipedrive" as const,
       source_id: `activity_${a.id}`,
       source_label: `Pipedrive: ${a.subject ?? a.type ?? "Atividade"}${a.org_name ? ` (${a.org_name})` : a.person_name ? ` (${a.person_name})` : ""}`,
