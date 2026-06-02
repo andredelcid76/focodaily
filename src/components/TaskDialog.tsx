@@ -315,6 +315,37 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               </span>
             </div>
           )}
+          {effectiveProjectId && isShared && (
+            <div>
+              <Label>Responsável</Label>
+              <Select
+                value={assigneeId ?? user?.id ?? "__none"}
+                onValueChange={(v) => setAssigneeId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">
+                    <span className="inline-flex items-center gap-2">
+                      <User className="h-3 w-3" /> Sem responsável
+                    </span>
+                  </SelectItem>
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      <span className="inline-flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        {m.display_name ?? m.email ?? "Membro"}
+                        {m.is_me ? " (você)" : ""}
+                        {m.role === "owner" ? " · dono" : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
 
           <button
             type="button"
