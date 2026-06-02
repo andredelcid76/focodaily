@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { notifyProjectTeamAccess } from "@/lib/team.functions";
 
 export type Project = Tables<"projects">;
 export type ProjectStatus = Project["status"];
@@ -36,6 +38,7 @@ export const PROJECT_COLORS = [
 export function useProjects(userId: string | undefined) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const notifyTeamAccess = useServerFn(notifyProjectTeamAccess);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -75,6 +78,11 @@ export function useProjects(userId: string | undefined) {
       if (error) throw error;
       if (inserted) {
         setProjects((prev) => [inserted, ...prev]);
+        if (inserted.team_id && typeof window !== "undefined") {
+          await notifyTeamAccess({
+            data: { project_id: inserted.id, team_id: inserted.team_id, origin: window.location.origin },
+          });
+        }
         // initial history
         await supabase.from("project_status_history").insert({
           project_id: inserted.id,
@@ -96,6 +104,11 @@ export function useProjects(userId: string | undefined) {
       setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
       const { error } = await supabase.from("projects").update(patch).eq("id", id);
       if (error) throw error;
+      if (patch.team_id && patch.team_id !== previous?.team_id && typeof window !== "undefined") {
+        await notifyTeamAccess({
+          data: { project_id: id, team_id: patch.team_id, origin: window.location.origin },
+        });
+      }
       if (patch.status && previous && previous.status !== patch.status) {
         await supabase.from("project_status_history").insert({
           project_id: id,
@@ -105,7 +118,7 @@ export function useProjects(userId: string | undefined) {
         });
       }
     },
-    [projects, userId]
+    [notifyTeamAccess, projects, userId]
   );
 
   const deleteProject = useCallback(async (id: string) => {
