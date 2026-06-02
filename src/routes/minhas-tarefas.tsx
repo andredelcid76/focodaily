@@ -38,6 +38,11 @@ import { formatShort, todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/hooks/useRoles";
+import { useProjects, type Project } from "@/hooks/useProjects";
+import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
+import type { Task } from "@/hooks/useTasks";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
@@ -68,6 +73,10 @@ const CAT_LABEL: Record<MyTaskRow["category"], string> = {
 };
 
 function MyTasksPage() {
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { roles } = useRoles(userId);
+  const { projects } = useProjects(userId);
   const fetchTasks = useServerFn(listMyAssignedTasks);
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["my-assigned-tasks"],
@@ -77,6 +86,86 @@ function MyTasksPage() {
 
   const today = todayISO();
   const tasks = data?.tasks ?? [];
+
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [opening, setOpening] = useState<string | null>(null);
+
+  const openTask = async (id: string) => {
+    setOpening(id);
+    const { data: row, error } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
+    setOpening(null);
+    if (error || !row) {
+      toast.error(error?.message ?? "Não foi possível abrir a tarefa.");
+      return;
+    }
+    setEditingTask(row as Task);
+    setDialogOpen(true);
+  };
+
+  // Ensure the task's project is available in the dialog selector even when
+  // the user is only an assignee (not the owner) of the project.
+  const projectsForDialog = useMemo<Project[]>(() => {
+    if (!editingTask?.project_id) return projects;
+    if (projects.some((p) => p.id === editingTask.project_id)) return projects;
+    const fromRow = tasks.find((t) => t.id === editingTask.id);
+    const proj = fromRow?.project;
+    if (!proj) return projects;
+    return [
+      ...projects,
+      {
+        id: proj.id,
+        name: proj.name,
+        color: proj.color ?? "#8b5cf6",
+        icon: proj.icon ?? "folder",
+      } as Project,
+    ];
+  }, [projects, editingTask, tasks]);
+
+  const handleSave = async (
+    patch: Partial<Task>,
+    _scope?: RecurrenceScope,
+  ) => {
+    if (!editingTask) return;
+    const { error } = await supabase.from("tasks").update(patch).eq("id", editingTask.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Tarefa atualizada");
+    refetch();
+  };
+
+  const handleDelete = async () => {
+    if (!editingTask) return;
+    const { error } = await supabase.from("tasks").delete().eq("id", editingTask.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Tarefa excluída");
+    setDialogOpen(false);
+    refetch();
+  };
+
+  const handleDialogToggleComplete = async () => {
+    if (!editingTask) return;
+    const next = !editingTask.completed;
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        completed: next,
+        completed_at: next ? new Date().toISOString() : null,
+        status: next ? "done" : "todo",
+      })
+      .eq("id", editingTask.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    refetch();
+  };
+
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | MyTaskRow["status"]>("all");
@@ -546,15 +635,17 @@ function MyTasksPage() {
                         {t.non_negotiable && !t.completed && (
                           <Lock className="h-3 w-3 shrink-0 text-overdue" />
                         )}
-                        <Link
-                          to={t.project_id ? "/projetos/$id" : "/hoje"}
-                          params={t.project_id ? { id: t.project_id } : undefined}
-                          className={`truncate text-sm hover:underline ${
+                        <button
+                          type="button"
+                          onClick={() => openTask(t.id)}
+                          disabled={opening === t.id}
+                          className={`truncate text-left text-sm hover:underline disabled:opacity-60 ${
                             t.completed ? "text-muted-foreground line-through" : ""
                           }`}
+                          title="Abrir tarefa"
                         >
                           {t.title}
-                        </Link>
+                        </button>
                       </div>
                       {t.delegated_by_name && (
                         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
@@ -645,6 +736,21 @@ function MyTasksPage() {
           </TableBody>
         </Table>
       </div>
+
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) setEditingTask(null);
+        }}
+        defaultDate={editingTask?.scheduled_date ?? today}
+        task={editingTask}
+        roles={roles}
+        projects={projectsForDialog}
+        onSave={handleSave}
+        onDelete={editingTask ? handleDelete : undefined}
+        onToggleComplete={editingTask ? handleDialogToggleComplete : undefined}
+      />
     </div>
   );
 }
