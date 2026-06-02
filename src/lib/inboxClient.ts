@@ -34,8 +34,30 @@ export async function fetchInboxSuggestions(userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  return { suggestions: (data ?? []) as InboxSuggestion[], state: state ?? null };
+  const { data: history } = await supabase
+    .from("inbox_suggestions")
+    .select("*")
+    .eq("user_id", userId)
+    .neq("status", "pending")
+    .order("acted_at", { ascending: false })
+    .limit(5);
+
+  return {
+    suggestions: (data ?? []) as InboxSuggestion[],
+    history: (history ?? []) as (InboxSuggestion & { status: string; acted_at: string | null })[],
+    state: state ?? null,
+  };
 }
+
+export async function reactivateSuggestion(id: string, userId: string) {
+  const { error } = await supabase
+    .from("inbox_suggestions")
+    .update({ status: "pending", acted_at: null, accepted_task_id: null })
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+}
+
 
 export async function dismissSuggestion(id: string, userId: string) {
   const { error } = await supabase
