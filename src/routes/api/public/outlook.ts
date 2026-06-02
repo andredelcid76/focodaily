@@ -194,7 +194,7 @@ async function refreshAccessToken(refreshToken: string) {
   };
 }
 
-async function syncOutlookCalendar(userId: string) {
+export async function syncOutlookCalendar(userId: string) {
   const { data: conn, error: connErr } = await supabaseAdmin
     .from("outlook_connections")
     .select("*")

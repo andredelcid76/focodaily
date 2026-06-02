@@ -441,7 +441,7 @@ Retorne JSON válido:
   }
 }
 
-async function scanForUser(userId: string) {
+export async function scanForUser(userId: string) {
   // Bidirectional sync: pull Pipedrive completions into the app first
   await syncPipedriveCompletionsToApp(userId);
   // Look up the user's email/name (used to attribute Fireflies action items).
