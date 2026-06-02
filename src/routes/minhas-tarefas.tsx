@@ -736,6 +736,21 @@ function MyTasksPage() {
           </TableBody>
         </Table>
       </div>
+
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) setEditingTask(null);
+        }}
+        defaultDate={editingTask?.scheduled_date ?? today}
+        task={editingTask}
+        roles={roles}
+        projects={projectsForDialog}
+        onSave={handleSave}
+        onDelete={editingTask ? handleDelete : undefined}
+        onToggleComplete={editingTask ? handleDialogToggleComplete : undefined}
+      />
     </div>
   );
 }
