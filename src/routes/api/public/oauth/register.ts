@@ -3,6 +3,56 @@ import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CORS_HEADERS, randomId } from "@/lib/oauth";
 
+// Allowlist of redirect URI hosts/schemes for known MCP clients.
+// Prevents an attacker from registering a malicious client pointing at
+// attacker.com and phishing a victim's auth code (account-takeover risk).
+const ALLOWED_HOSTS = new Set<string>([
+  "localhost",
+  "127.0.0.1",
+  "::1",
+  "claude.ai",
+  "claude.com",
+  "anthropic.com",
+  "cursor.sh",
+  "cursor.com",
+  "chatgpt.com",
+  "openai.com",
+]);
+const ALLOWED_HOST_SUFFIXES = [
+  ".claude.ai",
+  ".claude.com",
+  ".anthropic.com",
+  ".cursor.sh",
+  ".cursor.com",
+  ".chatgpt.com",
+  ".openai.com",
+];
+const ALLOWED_CUSTOM_SCHEMES = new Set<string>([
+  "cursor:",
+  "vscode:",
+  "vscode-insiders:",
+  "code:",
+  "claude:",
+]);
+
+function isAllowedRedirectUri(uri: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(uri);
+  } catch {
+    return false;
+  }
+  if (ALLOWED_CUSTOM_SCHEMES.has(u.protocol)) return true;
+  if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+  // http only for loopback addresses
+  if (u.protocol === "http:") {
+    return u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname === "::1";
+  }
+  const host = u.hostname.toLowerCase();
+  if (ALLOWED_HOSTS.has(host)) return true;
+  return ALLOWED_HOST_SUFFIXES.some((s) => host.endsWith(s));
+}
+
 const RegisterBody = z.object({
   client_name: z.string().min(1).max(200).optional(),
   redirect_uris: z.array(z.string().url()).min(1).max(10),
