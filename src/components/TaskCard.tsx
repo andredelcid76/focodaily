@@ -73,6 +73,7 @@ export function TaskCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
+    disabled: !!selectionMode,
   });
 
   const style = {
@@ -89,13 +90,14 @@ export function TaskCard({
   const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
   const followupNumber = task.followup_count ?? 0;
 
+  const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       data-task-card="true"
-      {...attributes}
-      {...listeners}
+      {...dragProps}
       onClick={(e) => {
         if (!selectionMode) return;
         e.stopPropagation();
