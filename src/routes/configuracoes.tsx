@@ -78,6 +78,14 @@ export const Route = createFileRoute("/configuracoes")({
 });
 
 function IntegracoesPage() {
+  return (
+    <AppShell>
+      <IntegracoesInner />
+    </AppShell>
+  );
+}
+
+function IntegracoesInner() {
   const qc = useQueryClient();
   const fetchStatus = useServerFn(getIntegrationsStatus);
   const { user } = useAuth();
@@ -100,8 +108,7 @@ function IntegracoesPage() {
   ];
 
   return (
-    <AppShell>
-      <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
+    <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Configurações</h1>
           <p className="text-sm text-muted-foreground">
@@ -152,7 +159,6 @@ function IntegracoesPage() {
           </AnimatePresence>
         </Tabs>
       </div>
-    </AppShell>
   );
 }
 
