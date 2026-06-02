@@ -65,7 +65,17 @@ function InboxPage() {
   });
 
   const suggestions = data?.suggestions ?? [];
+  const history = (data as { history?: (InboxSuggestion & { status: string; acted_at: string | null })[] })?.history ?? [];
   const lastScan = data?.state?.last_scan_at;
+
+  const reactivateMut = useMutation({
+    mutationFn: (id: string) => reactivateSuggestion(id, userId!),
+    onSuccess: () => {
+      toast.success("Sugestão reativada");
+      qc.invalidateQueries({ queryKey: ["inbox-suggestions"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
 
   const counts = useMemo(() => {
     const c: Record<SourceKey, number> = { email: 0, meeting: 0, pipedrive: 0 };
