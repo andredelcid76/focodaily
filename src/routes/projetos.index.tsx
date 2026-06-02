@@ -15,6 +15,9 @@ import { useTasks } from "@/hooks/useTasks";
 import { ProjectDialog } from "@/components/ProjectDialog";
 import { ProjectStatusBadge } from "@/components/ProjectChip";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   FolderKanban,
   Plus,
