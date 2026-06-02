@@ -486,14 +486,16 @@ function RoleChip({ role }: { role: { name: string; color: string } }) {
 // ============== LIST VIEW ==============
 
 function ListView({
-  projects, rolesById, tasksByProject, today, onEdit,
+  projects, rolesById, tasksByProject, today, onEdit, canEdit,
 }: {
   projects: Project[];
   rolesById: Map<string, { name: string; color: string }>;
   tasksByProject: Map<string, any[]>;
   today: string;
   onEdit: (p: Project) => void;
+  canEdit: (p: Project) => boolean;
 }) {
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm overflow-hidden">
       <div className="overflow-x-auto">
