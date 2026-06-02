@@ -176,9 +176,6 @@ export function ProjectMembersSection({ projectId }: Props) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">
-                        <span className="flex items-center gap-2"><Shield className="h-3 w-3" /> Admin</span>
-                      </SelectItem>
                       <SelectItem value="manager">
                         <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Gestor</span>
                       </SelectItem>
@@ -191,6 +188,25 @@ export function ProjectMembersSection({ projectId }: Props) {
                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.tone}`} title={meta.hint}>
                     <Icon className="h-3 w-3" /> {meta.label}
                   </span>
+                )}
+                {isOwner && m.role !== "owner" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-amber-600"
+                    title="Transferir liderança para este membro"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Transferir a liderança do projeto para ${m.display_name ?? m.email ?? "este membro"}? Você passará a ser Gestor.`,
+                        )
+                      ) {
+                        transferMut.mutate(m.user_id);
+                      }
+                    }}
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                  </Button>
                 )}
                 {canRemove && (
                   <Button
@@ -271,9 +287,6 @@ export function ProjectMembersSection({ projectId }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">
-                  <span className="flex items-center gap-2"><Shield className="h-3 w-3" /> Admin</span>
-                </SelectItem>
                 <SelectItem value="manager">
                   <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Gestor</span>
                 </SelectItem>
@@ -291,7 +304,7 @@ export function ProjectMembersSection({ projectId }: Props) {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            <strong>Admin</strong> faz tudo. <strong>Gestor</strong> edita projeto e qualquer tarefa. <strong>Membro</strong> mexe nas próprias e nas delegadas.
+            <strong>Gestor</strong> edita qualquer tarefa, mas não os dados do projeto. <strong>Membro</strong> só mexe nas próprias e nas delegadas. O <strong>Líder</strong> é o dono do projeto — você pode transferir a liderança usando o botão <ArrowRightLeft className="inline h-3 w-3" /> ao lado de cada membro.
           </p>
           {lastInviteUrl && (
             <div className="space-y-1.5">
