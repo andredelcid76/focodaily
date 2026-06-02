@@ -244,6 +244,21 @@ export function TaskFiltersBar({
             ))}
           </FilterSection>
 
+          <FilterSection title="Responsável">
+            {(["all", "mine", "delegated", "unassigned"] as AssigneeMode[]).map((m) => (
+              <Chip
+                key={m}
+                active={filters.assigneeMode === m}
+                onClick={() => update({ assigneeMode: m })}
+                label={
+                  m === "all" ? "Todas" :
+                  m === "mine" ? "Minhas" :
+                  m === "delegated" ? "Delegadas" : "Sem responsável"
+                }
+              />
+            ))}
+          </FilterSection>
+
           <FilterSection title="Especiais">
             <Chip
               active={filters.nonNegotiableOnly}
