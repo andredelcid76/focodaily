@@ -187,7 +187,7 @@ export function ProjectTaskBoard({
 ============================================================ */
 function TableView({
   tasks, grouping, members, memberById, rolesById, ownerId,
-  onEdit, onSetStatus, onUpdate, onToggleComplete,
+  onEdit, onSetStatus, onUpdate, onToggleComplete, onBulkDelete,
 }: {
   tasks: Task[];
   grouping: Grouping;
@@ -199,8 +199,48 @@ function TableView({
   onSetStatus: (id: string, status: TaskStatus) => Promise<void> | void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
   onToggleComplete: (t: Task) => Promise<void> | void;
+  onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
   const today = todayISO();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSel = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const clearSel = () => setSelected(new Set());
+  const allIds = tasks.map((t) => t.id);
+  const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(allIds));
+
+  const ids = Array.from(selected);
+  const hasSelection = ids.length > 0;
+
+  const bulkStatus = async (s: TaskStatus) => {
+    await Promise.all(ids.map((id) => onSetStatus(id, s)));
+    toast.success(`${ids.length} tarefa(s) atualizada(s)`);
+    clearSel();
+  };
+  const bulkAssign = async (uid: string | null) => {
+    await Promise.all(ids.map((id) => onUpdate(id, { assignee_id: uid } as any)));
+    toast.success(uid ? "Responsável atualizado" : "Responsável removido");
+    clearSel();
+  };
+  const bulkDate = async (date: string) => {
+    if (!date) return;
+    await Promise.all(ids.map((id) => onUpdate(id, { scheduled_date: date } as any)));
+    toast.success("Datas atualizadas");
+    clearSel();
+  };
+  const bulkDelete = async () => {
+    if (!onBulkDelete) return;
+    if (!window.confirm(`Excluir ${ids.length} subtarefa(s)?`)) return;
+    await onBulkDelete(ids);
+    toast.success("Excluídas");
+    clearSel();
+  };
 
   const groups = useMemo(() => {
     if (grouping === "none") return [{ key: "all", label: "", tasks: sortByDate(tasks) }];
