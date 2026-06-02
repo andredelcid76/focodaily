@@ -635,15 +635,17 @@ function MyTasksPage() {
                         {t.non_negotiable && !t.completed && (
                           <Lock className="h-3 w-3 shrink-0 text-overdue" />
                         )}
-                        <Link
-                          to={t.project_id ? "/projetos/$id" : "/hoje"}
-                          params={t.project_id ? { id: t.project_id } : undefined}
-                          className={`truncate text-sm hover:underline ${
+                        <button
+                          type="button"
+                          onClick={() => openTask(t.id)}
+                          disabled={opening === t.id}
+                          className={`truncate text-left text-sm hover:underline disabled:opacity-60 ${
                             t.completed ? "text-muted-foreground line-through" : ""
                           }`}
+                          title="Abrir tarefa"
                         >
                           {t.title}
-                        </Link>
+                        </button>
                       </div>
                       {t.delegated_by_name && (
                         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
