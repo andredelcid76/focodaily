@@ -188,7 +188,8 @@ function TodayInner({ userId }: { userId: string }) {
         dayTasks
           .filter((t) => (showCompleted ? true : !t.completed))
           .filter(matchesQuery),
-        filters
+        filters,
+        userId
       ),
     [dayTasks, showCompleted, normalizedQuery, filters]
   );
