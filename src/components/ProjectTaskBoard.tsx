@@ -63,6 +63,7 @@ export function ProjectTaskBoard({
   onSetStatus,
   onUpdate,
   onToggleComplete,
+  onBulkDelete,
 }: {
   projectId: string;
   tasks: Task[];
@@ -73,6 +74,7 @@ export function ProjectTaskBoard({
   onSetStatus: (id: string, status: TaskStatus) => Promise<void> | void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
   onToggleComplete: (t: Task) => Promise<void> | void;
+  onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
   const [view, setView] = useState<View>("table");
   const [grouping, setGrouping] = useState<Grouping>("none");
