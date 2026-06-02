@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,9 +15,10 @@ import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
-import { FolderKanban, Lock, CheckCircle2, RotateCcw } from "lucide-react";
+import { FolderKanban, Lock, CheckCircle2, RotateCcw, User } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
 import { useAuth } from "@/lib/auth";
+import { listProjectMembers } from "@/lib/team.functions";
 
 type Props = {
   open: boolean;
