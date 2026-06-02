@@ -72,6 +72,7 @@ function ProjectsInner({ userId }: { userId: string }) {
   const [editing, setEditing] = useState<Project | null>(null);
   const [filterRole, setFilterRole] = useState<string | "all">("all");
   const [scope, setScope] = useState<"all" | "personal" | "team">("all");
+  const [ownership, setOwnership] = useState<"all" | "mine" | "invited">("all");
   const [hideArchived, setHideArchived] = useState(true);
   const [view, setView] = useState<ViewMode>("cards");
   const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
@@ -94,9 +95,11 @@ function ProjectsInner({ userId }: { userId: string }) {
       if (hideArchived && p.status === "archived") return false;
       if (scope === "personal" && p.team_id) return false;
       if (scope === "team" && !p.team_id) return false;
+      if (ownership === "mine" && p.user_id !== userId) return false;
+      if (ownership === "invited" && p.user_id === userId) return false;
       return true;
     });
-  }, [projectsApi.projects, filterRole, hideArchived, scope]);
+  }, [projectsApi.projects, filterRole, hideArchived, scope, ownership, userId]);
 
   const canEdit = useCallback((p: Project) => p.user_id === userId, [userId]);
 
@@ -119,7 +122,7 @@ function ProjectsInner({ userId }: { userId: string }) {
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Projetos</p>
           <h1 className="font-display text-3xl font-bold">
             <FolderKanban className="inline h-7 w-7 text-primary mr-2 -mt-1" />
-            Seus projetos
+            Projetos
           </h1>
         </div>
         <Button
@@ -142,6 +145,12 @@ function ProjectsInner({ userId }: { userId: string }) {
           <ViewBtn active={scope === "all"} onClick={() => setScope("all")} icon={<Layers className="h-3.5 w-3.5" />} label="Todos" />
           <ViewBtn active={scope === "personal"} onClick={() => setScope("personal")} icon={<FolderKanban className="h-3.5 w-3.5" />} label="Pessoais" />
           <ViewBtn active={scope === "team"} onClick={() => setScope("team")} icon={<UsersIcon className="h-3.5 w-3.5" />} label="Equipe" />
+        </div>
+
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
+          <ViewBtn active={ownership === "all"} onClick={() => setOwnership("all")} icon={<Layers className="h-3.5 w-3.5" />} label="Todos" />
+          <ViewBtn active={ownership === "mine"} onClick={() => setOwnership("mine")} icon={<FolderKanban className="h-3.5 w-3.5" />} label="Meus" />
+          <ViewBtn active={ownership === "invited"} onClick={() => setOwnership("invited")} icon={<UsersIcon className="h-3.5 w-3.5" />} label="Convidado" />
         </div>
 
 
