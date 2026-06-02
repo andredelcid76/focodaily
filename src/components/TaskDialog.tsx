@@ -95,8 +95,18 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       setDate(task?.scheduled_date ?? defaultDate);
       setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
-      setProjectId(((task as any)?.project_id ?? defaultProjectId ?? null) as string | null);
-      setAssigneeId(((task as any)?.assignee_id ?? null) as string | null);
+      const initialProjectId = ((task as any)?.project_id ?? defaultProjectId ?? null) as string | null;
+      setProjectId(initialProjectId);
+      const effectiveInitialProjectId = lockedProjectId !== undefined ? lockedProjectId : initialProjectId;
+      const initialProject = effectiveInitialProjectId
+        ? projects.find((p) => p.id === effectiveInitialProjectId)
+        : null;
+      // Em projetos pessoais (sem equipe), o responsável padrão é o dono do projeto
+      const isPersonalProject = !!initialProject && !(initialProject as any).team_id;
+      const defaultAssignee = !task && isPersonalProject
+        ? ((initialProject as any).user_id as string | null) ?? user?.id ?? null
+        : (((task as any)?.assignee_id ?? null) as string | null);
+      setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
@@ -113,7 +123,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         setMonthlyWeekday(1);
       }
     }
-  }, [open, task, defaultDate]);
+  }, [open, task, defaultDate, defaultProjectId, lockedProjectId, projects, user?.id]);
 
   const toggleWeekday = (v: number) => {
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
