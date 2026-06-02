@@ -136,6 +136,14 @@ function ProjectsInner({ userId }: { userId: string }) {
           <ViewBtn active={view === "kanban"} onClick={() => setView("kanban")} icon={<KanbanSquare className="h-3.5 w-3.5" />} label="Kanban" />
         </div>
 
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
+          <ViewBtn active={scope === "all"} onClick={() => setScope("all")} icon={<Layers className="h-3.5 w-3.5" />} label="Todos" />
+          <ViewBtn active={scope === "personal"} onClick={() => setScope("personal")} icon={<FolderKanban className="h-3.5 w-3.5" />} label="Pessoais" />
+          <ViewBtn active={scope === "team"} onClick={() => setScope("team")} icon={<UsersIcon className="h-3.5 w-3.5" />} label="Equipe" />
+        </div>
+
+
+
         <Select value={filterRole} onValueChange={(v) => setFilterRole(v)}>
           <SelectTrigger className="h-9 w-[180px] text-sm">
             <SelectValue placeholder="Todos os papéis" />
