@@ -246,153 +246,121 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Main */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-1 border-b border-border/60 overflow-x-auto">
-            <TabBtn active={tab === "tasks"} onClick={() => setTab("tasks")} icon={<ListTodo className="h-3.5 w-3.5" />}>
-              Subtarefas ({projectTasks.length})
-            </TabBtn>
-            <TabBtn active={tab === "milestones"} onClick={() => setTab("milestones")} icon={<Flag className="h-3.5 w-3.5" />}>
-              Marcos ({milestonesApi.milestones.length})
-            </TabBtn>
-            <TabBtn active={tab === "meetings"} onClick={() => setTab("meetings")} icon={<CalendarClock className="h-3.5 w-3.5" />}>
-              Reuniões ({projectMeetings.length})
-            </TabBtn>
-            <TabBtn active={tab === "comments"} onClick={() => setTab("comments")} icon={<MessageSquare className="h-3.5 w-3.5" />}>
-              Comentários ({comments.comments.length})
-            </TabBtn>
-            <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
-              Atividade
-            </TabBtn>
-          </div>
+      {/* Briefing / Links collapsible */}
+      <BriefingHeader
+        contextDraft={contextDraft}
+        setContextDraft={setContextDraft}
+        onSave={saveContext}
+        saving={contextSaving}
+        linksApi={linksApi}
+      />
 
-          {tab === "tasks" && (
-            <div className="space-y-5">
-              {projectTasks.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-8 text-center">
-                  <p className="text-sm text-muted-foreground">Nenhuma subtarefa ainda.</p>
-                  <Button variant="outline" className="mt-3" onClick={addSubtask}>
-                    <Plus className="mr-1 h-4 w-4" /> Adicionar subtarefa
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <TaskGroup title="Atrasadas" tasks={grouped.overdue} tasksApi={tasksApi} roles={roles} onEdit={openEditTask} overdue />
-                  <TaskGroup title="Hoje" tasks={grouped.today} tasksApi={tasksApi} roles={roles} onEdit={openEditTask} />
-                  <TaskGroup title="Próximos 7 dias" tasks={grouped.upcoming} tasksApi={tasksApi} roles={roles} onEdit={openEditTask} />
-                  <TaskGroup title="Mais tarde" tasks={grouped.later} tasksApi={tasksApi} roles={roles} onEdit={openEditTask} />
-                  <TaskGroup title="Concluídas" tasks={grouped.done} tasksApi={tasksApi} roles={roles} onEdit={openEditTask} muted />
-                </>
-              )}
-            </div>
-          )}
-
-          {tab === "milestones" && (
-            <MilestonesPanel api={milestonesApi} today={today} color={project.color} />
-          )}
-
-          {tab === "meetings" && (
-            <div className="space-y-3">
-              {projectMeetings.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma reunião vinculada.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {projectMeetings.slice().sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map((m) => (
-                    <li key={m.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/60 p-3">
-                      <div className="min-w-0">
-                        <div className="font-medium leading-tight truncate">{m.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(m.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · {formatMinutes(meetingDurationMinutes(m))}
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => unlinkMeeting(m.id)}>
-                        <Link2Off className="h-3.5 w-3.5 mr-1" /> Desvincular
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {otherMeetings.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vincular reunião existente</h3>
-                  <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-border/60 bg-card/40 p-2">
-                    {otherMeetings.slice(0, 30).map((m) => (
-                      <button key={m.id} onClick={() => linkMeeting(m.id)} className="flex w-full items-center justify-between gap-2 rounded-lg p-2 text-left text-xs hover:bg-accent/40">
-                        <span className="truncate">
-                          <span className="font-medium">{m.title}</span>{" "}
-                          <span className="text-muted-foreground">· {new Date(m.starts_at).toLocaleDateString("pt-BR")}</span>
-                        </span>
-                        <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {tab === "comments" && (
-            <CommentsPanel api={comments} />
-          )}
-
-          {tab === "history" && (
-            <div className="space-y-2">
-              {history.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sem atividade ainda.</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {history.map((h) => (
-                    <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs">
-                      <History className="h-3 w-3 text-muted-foreground" />
-                      <span>
-                        {h.from_status
-                          ? <>De <strong>{PROJECT_STATUS_LABEL[h.from_status]}</strong> para <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>
-                          : <>Status inicial: <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>}
-                        {h.note && <span className="ml-1 text-muted-foreground">— {h.note}</span>}
-                      </span>
-                      <span className="ml-auto text-muted-foreground">
-                        {new Date(h.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+      <div className="space-y-4">
+        <div className="flex items-center gap-1 border-b border-border/60 overflow-x-auto">
+          <TabBtn active={tab === "tasks"} onClick={() => setTab("tasks")} icon={<ListTodo className="h-3.5 w-3.5" />}>
+            Tarefas ({projectTasks.length})
+          </TabBtn>
+          <TabBtn active={tab === "milestones"} onClick={() => setTab("milestones")} icon={<Flag className="h-3.5 w-3.5" />}>
+            Marcos ({milestonesApi.milestones.length})
+          </TabBtn>
+          <TabBtn active={tab === "meetings"} onClick={() => setTab("meetings")} icon={<CalendarClock className="h-3.5 w-3.5" />}>
+            Reuniões ({projectMeetings.length})
+          </TabBtn>
+          <TabBtn active={tab === "comments"} onClick={() => setTab("comments")} icon={<MessageSquare className="h-3.5 w-3.5" />}>
+            Comentários ({comments.comments.length})
+          </TabBtn>
+          <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
+            Atividade
+          </TabBtn>
         </div>
 
-        {/* Sidebar */}
-        <aside className="space-y-3">
-          <div className="rounded-2xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <FileText className="h-3.5 w-3.5" /> Contexto / Briefing
-            </div>
-            <Textarea
-              value={contextDraft ?? ""}
-              onChange={(e) => setContextDraft(e.target.value)}
-              onBlur={saveContext}
-              rows={8}
-              placeholder="Objetivos, escopo, decisões importantes…"
-              className="resize-none text-sm"
-            />
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {contextSaving ? "Salvando…" : "Salvo automaticamente ao sair do campo"}
-            </p>
-          </div>
-
-          <LinksPanel api={linksApi} />
-
-          <PlannerPanel
+        {tab === "tasks" && (
+          <ProjectTaskBoard
             projectId={project.id}
-            planId={(project as any).planner_plan_id ?? null}
-            syncedAt={(project as any).planner_synced_at ?? null}
-            accessToken={accessToken}
-            onChanged={projectsApi.refresh}
+            tasks={projectTasks}
+            roles={roles}
+            ownerId={(project as any).user_id ?? userId}
+            onAdd={addSubtask}
+            onEdit={openEditTask}
+            onSetStatus={(id, status) => tasksApi.setStatus(id, status)}
+            onUpdate={(id, patch) => tasksApi.updateTask(id, patch as any)}
+            onToggleComplete={(t) => tasksApi.toggleComplete(t)}
           />
-        </aside>
+        )}
+
+        {tab === "milestones" && (
+          <MilestonesPanel api={milestonesApi} today={today} color={project.color} />
+        )}
+
+        {tab === "meetings" && (
+          <div className="space-y-3">
+            {projectMeetings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma reunião vinculada.</p>
+            ) : (
+              <ul className="space-y-2">
+                {projectMeetings.slice().sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map((m) => (
+                  <li key={m.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/60 p-3">
+                    <div className="min-w-0">
+                      <div className="font-medium leading-tight truncate">{m.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(m.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} · {formatMinutes(meetingDurationMinutes(m))}
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => unlinkMeeting(m.id)}>
+                      Desvincular
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {otherMeetings.length > 0 && (
+              <div className="mt-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vincular reunião existente</h3>
+                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-border/60 bg-card/40 p-2">
+                  {otherMeetings.slice(0, 30).map((m) => (
+                    <button key={m.id} onClick={() => linkMeeting(m.id)} className="flex w-full items-center justify-between gap-2 rounded-lg p-2 text-left text-xs hover:bg-accent/40">
+                      <span className="truncate">
+                        <span className="font-medium">{m.title}</span>{" "}
+                        <span className="text-muted-foreground">· {new Date(m.starts_at).toLocaleDateString("pt-BR")}</span>
+                      </span>
+                      <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "comments" && <CommentsPanel api={comments} />}
+
+        {tab === "history" && (
+          <div className="space-y-2">
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sem atividade ainda.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {history.map((h) => (
+                  <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs">
+                    <History className="h-3 w-3 text-muted-foreground" />
+                    <span>
+                      {h.from_status
+                        ? <>De <strong>{PROJECT_STATUS_LABEL[h.from_status]}</strong> para <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>
+                        : <>Status inicial: <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>}
+                      {h.note && <span className="ml-1 text-muted-foreground">— {h.note}</span>}
+                    </span>
+                    <span className="ml-auto text-muted-foreground">
+                      {new Date(h.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
+
 
       <TaskDialog
         open={taskDialogOpen}
