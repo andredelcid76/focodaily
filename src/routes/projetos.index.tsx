@@ -70,6 +70,7 @@ function ProjectsInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [filterRole, setFilterRole] = useState<string | "all">("all");
+  const [scope, setScope] = useState<"all" | "personal" | "team">("all");
   const [hideArchived, setHideArchived] = useState(true);
   const [view, setView] = useState<ViewMode>("cards");
   const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
@@ -90,9 +91,14 @@ function ProjectsInner({ userId }: { userId: string }) {
     return projectsApi.projects.filter((p) => {
       if (filterRole !== "all" && p.role_id !== filterRole) return false;
       if (hideArchived && p.status === "archived") return false;
+      if (scope === "personal" && p.team_id) return false;
+      if (scope === "team" && !p.team_id) return false;
       return true;
     });
-  }, [projectsApi.projects, filterRole, hideArchived]);
+  }, [projectsApi.projects, filterRole, hideArchived, scope]);
+
+  const canEdit = useCallback((p: Project) => p.user_id === userId, [userId]);
+
 
   const openNew = () => {
     setEditing(null);
