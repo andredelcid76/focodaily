@@ -1,7 +1,73 @@
 import { createServerFn } from "@tanstack/react-start";
+import * as React from "react";
+import { render } from "@react-email/components";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { CollaborationNoticeEmail } from "@/lib/email-templates/collaboration-notice";
+
+const SITE_NAME = "Focou";
+const FROM_DOMAIN = "anpla.com.br";
+const SENDER_DOMAIN = "notify.anpla.com.br";
+
+async function enqueueCollaborationEmail(input: {
+  to: string;
+  label: string;
+  subject: string;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+}) {
+  const messageId = crypto.randomUUID();
+  try {
+    const element = React.createElement(CollaborationNoticeEmail, {
+      siteName: SITE_NAME,
+      title: input.title,
+      body: input.body,
+      ctaLabel: input.ctaLabel,
+      ctaUrl: input.ctaUrl,
+    });
+    const html = await render(element);
+    const text = await render(element, { plainText: true });
+
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: input.label,
+      recipient_email: input.to,
+      status: "pending",
+    });
+
+    const { error } = await supabaseAdmin.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        message_id: messageId,
+        to: input.to,
+        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject: input.subject,
+        html,
+        text,
+        purpose: "transactional",
+        label: input.label,
+        idempotency_key: messageId,
+        queued_at: new Date().toISOString(),
+      },
+    });
+
+    if (error) {
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: input.label,
+        recipient_email: input.to,
+        status: "failed",
+        error_message: error.message,
+      });
+    }
+  } catch (error) {
+    console.error("Failed to enqueue collaboration email", { label: input.label, to: input.to, error });
+  }
+}
 
 // ============================================================
 // List teams the current user owns or is a member of
@@ -244,6 +310,27 @@ export const inviteToTeam = createServerFn({ method: "POST" })
         { onConflict: "team_id,email" },
       );
     if (error) throw new Error(error.message);
+
+    if (existingProfile?.user_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: existingProfile.user_id,
+        type: "team_invite",
+        title: "Você recebeu um convite para equipe",
+        body: `Você foi convidado para participar da equipe ${team.name}.`,
+        actor_id: userId,
+        link: `/convite-equipe/${token}`,
+      });
+    }
+
+    await enqueueCollaborationEmail({
+      to: email,
+      label: "team_invite",
+      subject: `Convite para a equipe ${team.name}`,
+      title: `Você foi convidado para a equipe ${team.name}`,
+      body: `Abra o convite para entrar na equipe ${team.name} no Focou.`,
+      ctaLabel: "Abrir convite",
+      ctaUrl: `${data.origin}/convite-equipe/${token}`,
+    });
 
     return {
       invite_url: `${data.origin}/convite-equipe/${token}`,
