@@ -5,7 +5,7 @@ import { CategoryIcon } from "./CategoryBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks, User,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
