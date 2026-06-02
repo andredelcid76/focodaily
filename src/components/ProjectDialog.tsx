@@ -175,8 +175,12 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
               <Label>Prazo final</Label>
               <DatePickerField value={deadline} onChange={setDeadline} />
             </div>
+          </div>
+
           {project?.id && <ProjectMembersSection projectId={project.id} />}
         </div>
+
+
 
 
 
