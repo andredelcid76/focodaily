@@ -210,9 +210,14 @@ function TableView({
     if (grouping === "assignee") {
       const map = new Map<string, Task[]>();
       for (const t of tasks) {
-        const aid = (t.assignee_id ?? ownerId) as string;
+        const aid = (t.assignee_id ?? "__unassigned") as string;
         map.set(aid, [...(map.get(aid) ?? []), t]);
       }
+      const arr = Array.from(map.entries()).map(([uid, ts]) => ({
+        key: uid,
+        label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
+        tasks: sortByDate(ts),
+      }));
       const arr = Array.from(map.entries()).map(([uid, ts]) => ({
         key: uid,
         label: nameOf(memberById.get(uid)),
