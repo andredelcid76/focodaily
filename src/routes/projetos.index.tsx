@@ -212,6 +212,7 @@ function ProjectsInner({ userId }: { userId: string }) {
           tasksByProject={tasksByProject}
           today={today}
           onEdit={openEdit}
+          canEdit={canEdit}
         />
       ) : view === "list" ? (
         <ListView
@@ -220,8 +221,10 @@ function ProjectsInner({ userId }: { userId: string }) {
           tasksByProject={tasksByProject}
           today={today}
           onEdit={openEdit}
+          canEdit={canEdit}
         />
       ) : (
+
         <KanbanView
           projects={filtered}
           roles={roles}
