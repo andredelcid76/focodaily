@@ -89,25 +89,8 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
   const role = roles.find((r) => r.id === project?.role_id) ?? null;
   const stats = project ? computeProjectStats(project, projectTasks, today) : null;
 
-  const grouped = useMemo(() => {
-    const overdue: Task[] = [], todayList: Task[] = [], upcoming: Task[] = [], later: Task[] = [], done: Task[] = [];
-    const sevenDays = addDays(today, 7);
-    for (const t of projectTasks) {
-      if (t.completed) { done.push(t); continue; }
-      if (t.scheduled_date < today) overdue.push(t);
-      else if (t.scheduled_date === today) todayList.push(t);
-      else if (t.scheduled_date <= sevenDays) upcoming.push(t);
-      else later.push(t);
-    }
-    const byDate = (a: Task, b: Task) => a.scheduled_date.localeCompare(b.scheduled_date) || a.position - b.position;
-    return {
-      overdue: overdue.sort(byDate),
-      today: todayList.sort(byDate),
-      upcoming: upcoming.sort(byDate),
-      later: later.sort(byDate),
-      done: done.sort(byDate),
-    };
-  }, [projectTasks, today]);
+
+
 
   const otherMeetings = useMemo(
     () => meetingsApi.meetings.filter((m) => !(m as any).project_id),
