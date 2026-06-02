@@ -161,9 +161,11 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-display text-3xl font-bold leading-tight">{project.name}</h1>
-              <button onClick={() => setEditOpen(true)} className="text-muted-foreground hover:text-foreground" title="Editar">
-                <Pencil className="h-4 w-4" />
-              </button>
+              {project.user_id === userId && (
+                <button onClick={() => setEditOpen(true)} className="text-muted-foreground hover:text-foreground" title="Editar">
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Select value={project.status} onValueChange={(v) => changeStatus(v as ProjectStatus)}>
