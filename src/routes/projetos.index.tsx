@@ -225,6 +225,13 @@ function ProjectsInner({ userId }: { userId: string }) {
           onEdit={openEdit}
           canEdit={canEdit}
         />
+      ) : view === "timeline" ? (
+        <ProjectsTimelineView
+          projects={filtered}
+          rolesById={rolesById}
+          tasksByProject={tasksByProject}
+          today={today}
+        />
       ) : (
 
         <KanbanView
