@@ -156,3 +156,56 @@ export const disconnectFireflies = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ------------- Test connections -------------
+export const testPipedriveConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: conn } = await supabaseAdmin
+      .from("pipedrive_connections")
+      .select("domain,api_token")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!conn) throw new Error("Pipedrive não está conectado");
+    const r = await fetch(
+      `https://${conn.domain}.pipedrive.com/api/v1/users/me?api_token=${encodeURIComponent(conn.api_token as string)}`,
+    );
+    if (!r.ok) throw new Error(`Falha (HTTP ${r.status}). Token pode estar inválido.`);
+    const json = await r.json();
+    if (!json?.data?.id) throw new Error("Resposta inesperada do Pipedrive");
+    return {
+      ok: true,
+      name: json.data.name as string | undefined,
+      email: json.data.email as string | undefined,
+    };
+  });
+
+export const testFirefliesConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: conn } = await supabaseAdmin
+      .from("fireflies_connections")
+      .select("api_key")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!conn) throw new Error("Fireflies não está conectado");
+    const r = await fetch(FIREFLIES_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${conn.api_key}`,
+      },
+      body: JSON.stringify({ query: "{ users { user_id name email } }" }),
+    });
+    if (!r.ok) throw new Error(`Falha (HTTP ${r.status}). Chave pode estar inválida.`);
+    const json = await r.json();
+    if (json?.errors) throw new Error(`Fireflies recusou: ${JSON.stringify(json.errors).slice(0, 200)}`);
+    const user = json?.data?.users?.[0];
+    return {
+      ok: true,
+      name: user?.name as string | undefined,
+      email: user?.email as string | undefined,
+    };
+  });
