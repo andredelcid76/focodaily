@@ -290,13 +290,16 @@ function CardsView({
   tasksByProject,
   today,
   onEdit,
+  canEdit,
 }: {
   projects: Project[];
   rolesById: Map<string, { name: string; color: string }>;
   tasksByProject: Map<string, any[]>;
   today: string;
   onEdit: (p: Project) => void;
+  canEdit: (p: Project) => boolean;
 }) {
+
   const grouped = useMemo(() => {
     const out: Record<ProjectStatus, Project[]> = {
       active: [], draft: [], paused: [], done: [], archived: [],
