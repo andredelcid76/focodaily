@@ -30,6 +30,7 @@ import {
   KanbanSquare,
   Users as UsersIcon,
   Layers,
+  GanttChart,
 } from "lucide-react";
 import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/projetos/")({
   ),
 });
 
-type ViewMode = "cards" | "list" | "kanban";
+type ViewMode = "cards" | "list" | "kanban" | "timeline";
 type KanbanGroup = "status" | "role";
 
 function ProjectsPage() {
@@ -132,8 +133,9 @@ function ProjectsInner({ userId }: { userId: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
           <ViewBtn active={view === "cards"} onClick={() => setView("cards")} icon={<LayoutGrid className="h-3.5 w-3.5" />} label="Cards" />
-          <ViewBtn active={view === "list"} onClick={() => setView("list")} icon={<List className="h-3.5 w-3.5" />} label="Lista" />
+          <ViewBtn active={view === "list"} onClick={() => setView("list")} icon={<List className="h-3.5 w-3.5" />} label="Tabela" />
           <ViewBtn active={view === "kanban"} onClick={() => setView("kanban")} icon={<KanbanSquare className="h-3.5 w-3.5" />} label="Kanban" />
+          <ViewBtn active={view === "timeline"} onClick={() => setView("timeline")} icon={<GanttChart className="h-3.5 w-3.5" />} label="Cronograma" />
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
@@ -222,6 +224,13 @@ function ProjectsInner({ userId }: { userId: string }) {
           today={today}
           onEdit={openEdit}
           canEdit={canEdit}
+        />
+      ) : view === "timeline" ? (
+        <ProjectsTimelineView
+          projects={filtered}
+          rolesById={rolesById}
+          tasksByProject={tasksByProject}
+          today={today}
         />
       ) : (
 
@@ -822,6 +831,104 @@ function KanbanProjectCard({
           <AlertTriangle className="h-2.5 w-2.5" /> {stats.overdueTasks} atrasada{stats.overdueTasks === 1 ? "" : "s"}
         </div>
       )}
+    </div>
+  );
+}
+
+// ============== TIMELINE / GANTT VIEW ==============
+function ProjectsTimelineView({
+  projects, rolesById, tasksByProject, today,
+}: {
+  projects: Project[];
+  rolesById: Map<string, { name: string; color: string }>;
+  tasksByProject: Map<string, any[]>;
+  today: string;
+}) {
+  const items = useMemo(() => {
+    return projects
+      .map((p) => {
+        const start = p.starts_on ?? (p as any).created_at?.slice(0, 10) ?? today;
+        const end = p.deadline ?? start;
+        return { project: p, start, end };
+      })
+      .filter((it) => !!it.start)
+      .sort((a, b) => a.start.localeCompare(b.start));
+  }, [projects, today]);
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
+        <p className="text-sm text-muted-foreground">Nenhum projeto com datas para exibir no cronograma.</p>
+      </div>
+    );
+  }
+
+  const allDates = items.flatMap((it) => [it.start, it.end]);
+  const min = allDates.reduce((a, b) => (a < b ? a : b));
+  const max = allDates.reduce((a, b) => (a > b ? a : b));
+  const minT = new Date(min + "T00:00:00").getTime();
+  const maxT = new Date(max + "T00:00:00").getTime();
+  const span = Math.max(1, (maxT - minT) / 86400000);
+  const todayT = new Date(today + "T00:00:00").getTime();
+  const todayPct = ((todayT - minT) / 86400000 / span) * 100;
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm">
+      <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span>{formatShort(min)}</span>
+        <span>{items.length} projetos</span>
+        <span>{formatShort(max)}</span>
+      </div>
+      <div className="relative space-y-2">
+        {todayPct >= 0 && todayPct <= 100 && (
+          <div className="pointer-events-none absolute inset-y-0 z-10 w-px bg-primary/60" style={{ left: `${todayPct}%` }}>
+            <span className="absolute -top-3 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[9px] font-semibold text-primary-foreground">hoje</span>
+          </div>
+        )}
+        {items.map(({ project, start, end }) => {
+          const sT = new Date(start + "T00:00:00").getTime();
+          const eT = new Date(end + "T00:00:00").getTime();
+          const left = ((sT - minT) / 86400000 / span) * 100;
+          const width = Math.max(1.5, ((eT - sT) / 86400000 / span) * 100);
+          const stats = computeProjectStats(project, tasksByProject.get(project.id) ?? [], today);
+          const role = project.role_id ? rolesById.get(project.role_id) ?? null : null;
+          const isOverdue = stats.isOverdue;
+          return (
+            <Link
+              key={project.id}
+              to="/projetos/$id"
+              params={{ id: project.id }}
+              className="group relative flex h-10 w-full items-center rounded-md border border-border/40 bg-background/40 hover:border-primary/50"
+              title={`${project.name} · ${formatShort(start)} → ${formatShort(end)}`}
+            >
+              <span
+                className={`absolute inset-y-2 rounded-md shadow-sm ${isOverdue ? "ring-1 ring-overdue/60" : ""}`}
+                style={{
+                  left: `${left}%`,
+                  width: `${width}%`,
+                  backgroundColor: `${project.color}33`,
+                  borderLeft: `3px solid ${project.color}`,
+                }}
+              />
+              <span
+                className="relative z-[1] flex items-center gap-1.5 truncate px-2 text-xs"
+                style={{ paddingLeft: `calc(${left}% + 10px)`, maxWidth: "70%" }}
+              >
+                <span className="truncate font-medium">{project.name}</span>
+                {role && <RoleChip role={role} />}
+              </span>
+              <span className="ml-auto flex items-center gap-2 pr-3 text-[10px] text-muted-foreground">
+                <span className="tabular-nums">{Math.round(stats.progress * 100)}%</span>
+                {project.deadline && (
+                  <span className={isOverdue ? "text-overdue font-medium" : ""}>
+                    {formatShort(project.deadline)}
+                  </span>
+                )}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfiles, profileInitials } from "@/hooks/useProfiles";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type NavItem = {
   title: string;
@@ -136,13 +138,17 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const inboxCount = useInboxCount(user?.id);
   useNavHotkeys();
 
+  const profiles = useProfiles(user?.id ? [user.id] : []);
+  const profile = user?.id ? profiles.get(user.id) : null;
+  const displayName =
+    profile?.display_name?.trim() ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "Você";
+  const avatarUrl = profile?.avatar_url || (user?.user_metadata?.avatar_url as string | undefined) || null;
+
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
-
-  const initials = (user?.email ?? "?")
-    .split("@")[0]
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <Sidebar collapsible="icon">
@@ -237,14 +243,17 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                 collapsed ? "justify-center" : ""
               }`}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-prestige text-[11px] font-semibold text-primary-foreground shadow-card">
-                {initials}
-              </div>
+              <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-border/60 shadow-card">
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+                <AvatarFallback className="bg-gradient-prestige text-[11px] font-semibold text-primary-foreground">
+                  {profileInitials(profile) || displayName.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               {!collapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">{user?.email?.split("@")[0]}</p>
+                  <p className="truncate text-xs font-medium">{displayName}</p>
                   <p className="truncate text-[10px] text-muted-foreground">
-                    {user?.email?.split("@")[1] ?? ""}
+                    {user?.email ?? ""}
                   </p>
                 </div>
               )}

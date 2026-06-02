@@ -3,17 +3,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2, Circle, Clock, Table as TableIcon, KanbanSquare, GanttChart,
-  Plus, Lock, AlertCircle, Layers, Pencil,
+  Plus, Lock, AlertCircle, Layers, Pencil, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
 import { CategoryIcon } from "./CategoryBadge";
 import { formatShort, todayISO, addDays } from "@/lib/date";
 import { listProjectMembers } from "@/lib/team.functions";
 import type { Task, TaskStatus } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
+import { toast } from "sonner";
 
 type View = "table" | "kanban" | "timeline";
 type Grouping = "none" | "assignee" | "status" | "due";
@@ -61,6 +63,7 @@ export function ProjectTaskBoard({
   onSetStatus,
   onUpdate,
   onToggleComplete,
+  onBulkDelete,
 }: {
   projectId: string;
   tasks: Task[];
@@ -71,6 +74,7 @@ export function ProjectTaskBoard({
   onSetStatus: (id: string, status: TaskStatus) => Promise<void> | void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
   onToggleComplete: (t: Task) => Promise<void> | void;
+  onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
   const [view, setView] = useState<View>("table");
   const [grouping, setGrouping] = useState<Grouping>("none");
@@ -154,6 +158,7 @@ export function ProjectTaskBoard({
           onSetStatus={onSetStatus}
           onUpdate={onUpdate}
           onToggleComplete={onToggleComplete}
+          onBulkDelete={onBulkDelete}
         />
       ) : view === "kanban" ? (
         <KanbanView
@@ -182,7 +187,7 @@ export function ProjectTaskBoard({
 ============================================================ */
 function TableView({
   tasks, grouping, members, memberById, rolesById, ownerId,
-  onEdit, onSetStatus, onUpdate, onToggleComplete,
+  onEdit, onSetStatus, onUpdate, onToggleComplete, onBulkDelete,
 }: {
   tasks: Task[];
   grouping: Grouping;
@@ -194,8 +199,48 @@ function TableView({
   onSetStatus: (id: string, status: TaskStatus) => Promise<void> | void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
   onToggleComplete: (t: Task) => Promise<void> | void;
+  onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
   const today = todayISO();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSel = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const clearSel = () => setSelected(new Set());
+  const allIds = tasks.map((t) => t.id);
+  const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(allIds));
+
+  const ids = Array.from(selected);
+  const hasSelection = ids.length > 0;
+
+  const bulkStatus = async (s: TaskStatus) => {
+    await Promise.all(ids.map((id) => onSetStatus(id, s)));
+    toast.success(`${ids.length} tarefa(s) atualizada(s)`);
+    clearSel();
+  };
+  const bulkAssign = async (uid: string | null) => {
+    await Promise.all(ids.map((id) => onUpdate(id, { assignee_id: uid } as any)));
+    toast.success(uid ? "Responsável atualizado" : "Responsável removido");
+    clearSel();
+  };
+  const bulkDate = async (date: string) => {
+    if (!date) return;
+    await Promise.all(ids.map((id) => onUpdate(id, { scheduled_date: date } as any)));
+    toast.success("Datas atualizadas");
+    clearSel();
+  };
+  const bulkDelete = async () => {
+    if (!onBulkDelete) return;
+    if (!window.confirm(`Excluir ${ids.length} subtarefa(s)?`)) return;
+    await onBulkDelete(ids);
+    toast.success("Excluídas");
+    clearSel();
+  };
 
   const groups = useMemo(() => {
     if (grouping === "none") return [{ key: "all", label: "", tasks: sortByDate(tasks) }];
@@ -241,50 +286,93 @@ function TableView({
   }, [tasks, grouping, ownerId, memberById, today]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-      <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <span />
-        <span>Tarefa</span>
-        <span>Vencimento</span>
-        <span>Responsável</span>
-        <span>Status</span>
-        <span />
-      </div>
-
-      {groups.map((g) => (
-        <div key={g.key}>
-          {g.label && (
-            <div className="flex items-center gap-2 border-b border-border/40 bg-background/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {grouping === "assignee" && (
-                <Avatar name={g.label} />
-              )}
-              <span>{g.label}</span>
-              <span className="text-muted-foreground/60">· {g.tasks.length}</span>
-            </div>
+    <div className="space-y-2">
+      {hasSelection && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
+          <span className="font-semibold text-primary">{ids.length} selecionada(s)</span>
+          <span className="text-muted-foreground">·</span>
+          <Select onValueChange={(v) => bulkStatus(v as TaskStatus)}>
+            <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Mudar status" /></SelectTrigger>
+            <SelectContent>
+              {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select onValueChange={(v) => bulkAssign(v === "__none" ? null : v)}>
+            <SelectTrigger className="h-7 w-44 text-xs"><SelectValue placeholder="Atribuir a…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Sem responsável</SelectItem>
+              {members.map((m) => (
+                <SelectItem key={m.user_id} value={m.user_id}>{nameOf(m)}{m.is_me ? " (você)" : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            onChange={(e) => bulkDate(e.target.value)}
+            className="h-7 w-36 text-xs"
+            title="Mover vencimento"
+          />
+          {onBulkDelete && (
+            <Button size="sm" variant="ghost" onClick={bulkDelete} className="h-7 text-destructive hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+            </Button>
           )}
-          {g.tasks.map((t) => (
-            <TaskRow
-              key={t.id}
-              task={t}
-              today={today}
-              members={members}
-              assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
-              role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
-              onEdit={() => onEdit(t)}
-              onSetStatus={(s) => onSetStatus(t.id, s)}
-              onAssign={(uid) => onUpdate(t.id, { assignee_id: uid })}
-              onDate={(d) => onUpdate(t.id, { scheduled_date: d })}
-              onToggleComplete={() => onToggleComplete(t)}
-            />
-          ))}
+          <Button size="sm" variant="ghost" onClick={clearSel} className="ml-auto h-7">
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar
+          </Button>
         </div>
-      ))}
+      )}
+
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+        <div className="grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span />
+          <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
+          <span>Tarefa</span>
+          <span>Vencimento</span>
+          <span>Responsável</span>
+          <span>Status</span>
+          <span />
+        </div>
+
+        {groups.map((g) => (
+          <div key={g.key}>
+            {g.label && (
+              <div className="flex items-center gap-2 border-b border-border/40 bg-background/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {grouping === "assignee" && (
+                  <Avatar name={g.label} />
+                )}
+                <span>{g.label}</span>
+                <span className="text-muted-foreground/60">· {g.tasks.length}</span>
+              </div>
+            )}
+            {g.tasks.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                today={today}
+                members={members}
+                assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
+                role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                selected={selected.has(t.id)}
+                onSelectToggle={() => toggleSel(t.id)}
+                onEdit={() => onEdit(t)}
+                onSetStatus={(s) => onSetStatus(t.id, s)}
+                onAssign={(uid) => onUpdate(t.id, { assignee_id: uid })}
+                onDate={(d) => onUpdate(t.id, { scheduled_date: d })}
+                onToggleComplete={() => onToggleComplete(t)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function TaskRow({
-  task, today, members, assignee, role,
+  task, today, members, assignee, role, selected, onSelectToggle,
   onEdit, onSetStatus, onAssign, onDate, onToggleComplete,
 }: {
   task: Task;
@@ -292,6 +380,8 @@ function TaskRow({
   members: Member[];
   assignee?: Member;
   role: Role | null;
+  selected?: boolean;
+  onSelectToggle?: () => void;
   onEdit: () => void;
   onSetStatus: (s: TaskStatus) => void;
   onAssign: (uid: string | null) => void;
@@ -301,7 +391,7 @@ function TaskRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const isOverdue = !task.completed && task.scheduled_date < today;
   return (
-    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20">
+    <div className={`grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
       <button
         onClick={onToggleComplete}
         className={`text-muted-foreground/50 hover:text-emerald-500 ${task.completed ? "text-emerald-500" : ""}`}
@@ -309,6 +399,11 @@ function TaskRow({
       >
         {task.completed ? <CheckCircle2 className="h-4 w-4 fill-emerald-500/20" /> : <Circle className="h-4 w-4" />}
       </button>
+      <Checkbox
+        checked={!!selected}
+        onCheckedChange={() => onSelectToggle?.()}
+        aria-label="Selecionar"
+      />
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
