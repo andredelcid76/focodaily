@@ -314,7 +314,7 @@ export const removeProjectMember = createServerFn({ method: "POST" })
   });
 
 // ============================================================
-// Update a member's role (owner-only)
+// Update a member's role (admin-only)
 // ============================================================
 export const updateProjectMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -323,7 +323,7 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
       .object({
         project_id: z.string().uuid(),
         user_id: z.string().uuid(),
-        role: z.enum(["editor", "viewer"]),
+        role: z.enum(["admin", "manager", "member"]),
       })
       .parse(input),
   )
@@ -335,7 +335,14 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
       .eq("id", data.project_id)
       .maybeSingle();
     if (!project) throw new Error("Projeto não encontrado");
-    if (project.user_id !== userId) throw new Error("Apenas o dono pode mudar papéis");
+    const { data: myMembership } = await supabaseAdmin
+      .from("project_members")
+      .select("role")
+      .eq("project_id", data.project_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const isAdmin = project.user_id === userId || myMembership?.role === "admin";
+    if (!isAdmin) throw new Error("Apenas o dono ou um admin pode mudar papéis");
     if (data.user_id === project.user_id) throw new Error("O dono não tem papel editável");
 
     const { error } = await supabaseAdmin
