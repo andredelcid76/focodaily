@@ -2,13 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus } from "lucide-react";
+import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus, RotateCcw, History, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan, type InboxSuggestion } from "@/lib/inboxClient";
+import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan, reactivateSuggestion, type InboxSuggestion } from "@/lib/inboxClient";
 import { useAuth } from "@/lib/auth";
 import { useProjects } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
@@ -65,7 +65,17 @@ function InboxPage() {
   });
 
   const suggestions = data?.suggestions ?? [];
+  const history = (data as { history?: (InboxSuggestion & { status: string; acted_at: string | null })[] })?.history ?? [];
   const lastScan = data?.state?.last_scan_at;
+
+  const reactivateMut = useMutation({
+    mutationFn: (id: string) => reactivateSuggestion(id, userId!),
+    onSuccess: () => {
+      toast.success("Sugestão reativada");
+      qc.invalidateQueries({ queryKey: ["inbox-suggestions"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  });
 
   const counts = useMemo(() => {
     const c: Record<SourceKey, number> = { email: 0, meeting: 0, pipedrive: 0 };
@@ -161,6 +171,70 @@ function InboxPage() {
             </div>
           </TabsContent>
         </Tabs>
+      )}
+
+      {history.length > 0 && (
+        <div className="pt-2 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <History className="h-4 w-4" /> Histórico recente
+            <span className="text-xs text-muted-foreground/70 font-normal">(últimas {history.length})</span>
+          </div>
+          <div className="space-y-2">
+            {history.map((h) => {
+              const meta = SOURCE_META[h.source];
+              const Icon = meta.icon;
+              const isAccepted = h.status === "accepted";
+              return (
+                <Card key={h.id} className="p-3 flex items-start justify-between gap-3 opacity-75 hover:opacity-100 transition-opacity">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className={meta.color}>
+                        <Icon className="h-3 w-3 mr-1" /> {meta.label}
+                      </Badge>
+                      {isAccepted ? (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Aceita
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">
+                          <X className="h-3 w-3 mr-1" /> Descartada
+                        </Badge>
+                      )}
+                      {h.acted_at && (
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(h.acted_at), { addSuffix: true, locale: ptBR })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium truncate mt-1">{h.title}</div>
+                    {h.source_label && (
+                      <div className="text-xs text-muted-foreground truncate">{h.source_label}</div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {h.source_url && (
+                      <Button asChild variant="ghost" size="sm">
+                        <a href={h.source_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    )}
+                    {!isAccepted && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => reactivateMut.mutate(h.id)}
+                        disabled={reactivateMut.isPending}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reativar
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {editing && userId && (

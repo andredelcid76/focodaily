@@ -293,19 +293,38 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
       due_date?: string | null;
       due_time?: string | null;
       done?: boolean;
+      org_id?: number | null;
       org_name?: string | null;
+      person_id?: number | null;
       person_name?: string | null;
       deal_title?: string | null;
       deal_id?: number | null;
+      user_id?: number | null;
+      assigned_to_user_id?: number | null;
       update_time?: string;
       add_time?: string;
     };
     const allActs = (json?.data ?? []) as Activity[];
-    // Aceita qualquer tipo de atividade (task, call, email, meeting, whatsapp_chat,
-    // reunio_online, prospeccao, custom types, etc.) e não exige deal vinculado —
-    // antes filtrávamos só por type="task" + deal_id, o que descartava ~80% das
-    // atividades reais do usuário.
-    const acts = allActs.filter((a) => !a.done);
+    // Filtros: (1) pendente, (2) atribuída ao usuário conectado, (3) vinculada
+    // a deal/org/pessoa, (4) tipo diferente de reunião presencial/online.
+    const EXCLUDED_TYPES = new Set([
+      "meeting",
+      "reunio_online",
+      "reuniao_online",
+      "reunião_online",
+      "reuniao_presencial",
+      "reunião_presencial",
+      "reunio_presencial",
+    ]);
+    const acts = allActs.filter((a) => {
+      if (a.done) return false;
+      const owner = a.assigned_to_user_id ?? a.user_id;
+      if (owner !== pdUserId) return false;
+      if (!(a.deal_id || a.org_id || a.person_id)) return false;
+      const t = (a.type ?? "").toLowerCase();
+      if (EXCLUDED_TYPES.has(t)) return false;
+      return true;
+    });
     return acts.slice(0, 60).map((a) => ({
       source: "pipedrive" as const,
       source_id: `activity_${a.id}`,
