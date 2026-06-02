@@ -39,6 +39,25 @@ function Shell({ children }: { children: ReactNode }) {
     }
   }, [loading, user, location.pathname, router]);
 
+  // Onboarding redirect: if signed-in user hasn't completed onboarding, send them there.
+  useEffect(() => {
+    if (!user) return;
+    if (location.pathname === "/onboarding" || location.pathname === "/auth") return;
+    let cancelled = false;
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("profiles")
+        .select("onboarded_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!cancelled && data && !data.onboarded_at) {
+        router.navigate({ to: "/onboarding" });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, location.pathname, router]);
+
   if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center text-muted-foreground">

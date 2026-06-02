@@ -61,6 +61,8 @@ import {
 } from "@/lib/integrations.functions";
 import { getOutlookAuthUrl, disconnectOutlook } from "@/lib/outlook.functions";
 
+import { ProfileCard } from "@/components/ProfileCard";
+
 const PUBLISHED_MCP_URL = "https://focodaily.lovable.app/api/public/mcp";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -83,11 +85,13 @@ function IntegracoesPage() {
     <AppShell>
       <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Integrações</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Configurações</h1>
           <p className="text-sm text-muted-foreground">
-            Conecte suas contas externas. Cada integração usa apenas suas credenciais — outros usuários do Foco não têm acesso.
+            Seu perfil e suas integrações externas. Cada integração usa apenas suas credenciais — outros usuários do Foco não têm acesso.
           </p>
         </div>
+
+        <ProfileCard />
 
         <OutlookCard
           status={status?.outlook}
