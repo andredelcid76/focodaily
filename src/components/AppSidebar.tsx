@@ -138,13 +138,17 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const inboxCount = useInboxCount(user?.id);
   useNavHotkeys();
 
+  const profiles = useProfiles(user?.id ? [user.id] : []);
+  const profile = user?.id ? profiles.get(user.id) : null;
+  const displayName =
+    profile?.display_name?.trim() ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "Você";
+  const avatarUrl = profile?.avatar_url || (user?.user_metadata?.avatar_url as string | undefined) || null;
+
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
-
-  const initials = (user?.email ?? "?")
-    .split("@")[0]
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <Sidebar collapsible="icon">
