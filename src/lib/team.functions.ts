@@ -126,14 +126,14 @@ export const listProjectMembers = createServerFn({ method: "POST" })
     const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
     const memberRoleMap = new Map(
-      (members ?? []).map((m) => [m.user_id, (m.role ?? "editor") as "owner" | "editor" | "viewer"]),
+      (members ?? []).map((m) => [m.user_id, (m.role ?? "member") as "owner" | "admin" | "manager" | "member"]),
     );
     const memberList = Array.from(memberIds).map((uid) => {
       const profile = profileMap.get(uid);
       const isOwner = uid === project.user_id;
-      const role: "owner" | "editor" | "viewer" = isOwner
+      const role: "owner" | "admin" | "manager" | "member" = isOwner
         ? "owner"
-        : (memberRoleMap.get(uid) ?? "editor");
+        : (memberRoleMap.get(uid) ?? "member");
       return {
         user_id: uid,
         email: profile?.email ?? null,
@@ -144,17 +144,21 @@ export const listProjectMembers = createServerFn({ method: "POST" })
       };
     });
 
-    // Pending invites (only visible to owner via RLS)
     const { data: invites } = await supabase
       .from("project_invites")
       .select("id, email, expires_at, created_at, role")
       .eq("project_id", data.project_id)
       .is("accepted_at", null);
 
+    const isOwner = project.user_id === userId;
+    const myMembership = (members ?? []).find((m) => m.user_id === userId);
+    const isAdmin = isOwner || myMembership?.role === "admin";
+
     return {
       members: memberList,
       pending_invites: invites ?? [],
-      is_owner: project.user_id === userId,
+      is_owner: isOwner,
+      is_admin: isAdmin,
     };
   });
 
