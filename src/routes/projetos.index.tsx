@@ -31,7 +31,9 @@ import {
   Users as UsersIcon,
   Layers,
   GanttChart,
+  Crown,
 } from "lucide-react";
+import { useProfiles } from "@/hooks/useProfiles";
 import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 import {
@@ -317,6 +319,8 @@ function CardsView({
   onEdit: (p: Project) => void;
   canEdit: (p: Project) => boolean;
 }) {
+  const ownerIds = useMemo(() => projects.map((p) => p.user_id), [projects]);
+  const profiles = useProfiles(ownerIds);
 
   const grouped = useMemo(() => {
     const out: Record<ProjectStatus, Project[]> = {
@@ -337,17 +341,22 @@ function CardsView({
               {PROJECT_STATUS_LABEL[status]} · {group.length}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {group.map((p) => (
-                <ProjectCard
-                  key={p.id}
-                  project={p}
-                  role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
-                  tasks={tasksByProject.get(p.id) ?? []}
-                  today={today}
-                  onEdit={canEdit(p) ? () => onEdit(p) : null}
-                />
-
-              ))}
+              {group.map((p) => {
+                const leader = profiles.get(p.user_id);
+                const leaderName =
+                  leader?.display_name?.trim() || leader?.email?.split("@")[0] || "—";
+                return (
+                  <ProjectCard
+                    key={p.id}
+                    project={p}
+                    role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
+                    tasks={tasksByProject.get(p.id) ?? []}
+                    today={today}
+                    leaderName={leaderName}
+                    onEdit={canEdit(p) ? () => onEdit(p) : null}
+                  />
+                );
+              })}
             </div>
           </section>
         );
@@ -357,12 +366,13 @@ function CardsView({
 }
 
 function ProjectCard({
-  project, role, tasks, today, onEdit,
+  project, role, tasks, today, leaderName, onEdit,
 }: {
   project: Project;
   role: { name: string; color: string } | null;
   tasks: any[];
   today: string;
+  leaderName: string;
   onEdit: (() => void) | null;
 }) {
   const stats = computeProjectStats(project, tasks, today);
@@ -385,6 +395,12 @@ function ProjectCard({
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <ProjectStatusBadge status={project.status} />
             {role && <RoleChip role={role} />}
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-600"
+              title="Líder do projeto"
+            >
+              <Crown className="h-2.5 w-2.5" /> {leaderName}
+            </span>
           </div>
         </div>
         {onEdit && (
