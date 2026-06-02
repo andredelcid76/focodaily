@@ -20,20 +20,20 @@ import {
 import { useRoles } from "@/hooks/useRoles";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
-import { TaskCard } from "@/components/TaskCard";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { ProjectDialog } from "@/components/ProjectDialog";
 import { ProjectStatusBadge } from "@/components/ProjectChip";
+import { ProjectTaskBoard } from "@/components/ProjectTaskBoard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, AlertTriangle, Plus, Pencil, FileText, ListTodo,
-  CalendarClock, History, Link2, Link2Off, MessageSquare, Flag, ExternalLink, Trash2, RefreshCw,
-  Sparkles, Loader2,
+  CalendarClock, History, Link2, MessageSquare, Flag, ExternalLink, Trash2,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
-import { todayISO, addDays, formatHuman, formatShort, formatMinutes } from "@/lib/date";
+import { todayISO, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projetos/$id")({
