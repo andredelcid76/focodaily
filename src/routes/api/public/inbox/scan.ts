@@ -35,6 +35,8 @@ type SourceItem = {
   source_url?: string | null;
   source_date?: string | null;
   text: string;
+  /** When set, overrides the AI-generated title (used for Pipedrive). */
+  title_override?: string | null;
 };
 
 type AISuggestion = {
