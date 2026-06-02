@@ -206,7 +206,8 @@ function TodayInner({ userId }: { userId: string }) {
         tasksApi.overdueTasks
           .filter((t) => (showCompleted ? true : !t.completed))
           .filter(matchesQuery),
-        filters
+        filters,
+        userId
       ),
     [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters]
   );
