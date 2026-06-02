@@ -722,6 +722,7 @@ export function useTasks(userId: string | undefined) {
 
     const payload: TablesInsert<"tasks"> = {
       user_id: userId,
+      assignee_id: task.assignee_id ?? userId,
       title: task.title,
       description: task.description,
       category: task.category,
