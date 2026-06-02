@@ -147,7 +147,7 @@ export const listProjectMembers = createServerFn({ method: "POST" })
     // Pending invites (only visible to owner via RLS)
     const { data: invites } = await supabase
       .from("project_invites")
-      .select("id, email, expires_at, created_at")
+      .select("id, email, expires_at, created_at, role")
       .eq("project_id", data.project_id)
       .is("accepted_at", null);
 
