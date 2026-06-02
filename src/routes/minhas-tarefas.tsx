@@ -413,6 +413,40 @@ function MyTasksPage() {
           </SelectContent>
         </Select>
 
+        <Select value={dateRange} onValueChange={(v) => setDateRange(v as typeof dateRange)}>
+          <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer data</SelectItem>
+            <SelectItem value="overdue">Atrasadas</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="tomorrow">Amanhã</SelectItem>
+            <SelectItem value="week">Esta semana</SelectItem>
+            <SelectItem value="next7">Próximos 7 dias</SelectItem>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="next30">Próximos 30 dias</SelectItem>
+            <SelectItem value="no_date">Sem data</SelectItem>
+            <SelectItem value="custom">Personalizado…</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {dateRange === "custom" && (
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="h-9 w-[140px] text-xs"
+            />
+            <span className="text-xs text-muted-foreground">até</span>
+            <Input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="h-9 w-[140px] text-xs"
+            />
+          </div>
+        )}
+
         <button
           onClick={() => setHideDone((v) => !v)}
           className={`h-9 rounded-md border px-3 text-xs font-medium transition-colors ${
