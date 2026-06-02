@@ -66,8 +66,10 @@ import {
   disconnectPipedrive,
   saveFirefliesConnection,
   disconnectFireflies,
+  testPipedriveConnection,
+  testFirefliesConnection,
 } from "@/lib/integrations.functions";
-import { getOutlookAuthUrl, disconnectOutlook } from "@/lib/outlook.functions";
+import { getOutlookAuthUrl, disconnectOutlook, testOutlookConnection } from "@/lib/outlook.functions";
 
 import { ProfileCard } from "@/components/ProfileCard";
 
@@ -174,7 +176,13 @@ function OutlookCard({
 }) {
   const getAuthUrl = useServerFn(getOutlookAuthUrl);
   const disconnect = useServerFn(disconnectOutlook);
+  const test = useServerFn(testOutlookConnection);
   const [connecting, setConnecting] = useState(false);
+  const testMut = useMutation({
+    mutationFn: () => test({ data: {} }),
+    onSuccess: (r) => toast.success(`Conexão OK${r.email ? ` — ${r.email}` : ""}`),
+    onError: (e: Error) => toast.error(`Falhou: ${e.message}`),
+  });
 
   const onConnect = async () => {
     setConnecting(true);
@@ -232,9 +240,14 @@ function OutlookCard({
                 </span>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={onDisconnect}>
-              <Unlink className="mr-1.5 h-4 w-4" /> Desconectar
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
+                {testMut.isPending ? "Testando…" : "Testar conexão"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={onDisconnect}>
+                <Unlink className="mr-1.5 h-4 w-4" /> Desconectar
+              </Button>
+            </div>
           </>
         ) : (
           <Button onClick={onConnect} disabled={connecting}>
@@ -258,9 +271,15 @@ function PipedriveCard({
 }) {
   const save = useServerFn(savePipedriveConnection);
   const disconnect = useServerFn(disconnectPipedrive);
+  const test = useServerFn(testPipedriveConnection);
   const [open, setOpen] = useState(false);
   const [domain, setDomain] = useState("");
   const [token, setToken] = useState("");
+  const testMut = useMutation({
+    mutationFn: () => test({ data: undefined }),
+    onSuccess: (r) => toast.success(`Conexão OK${r.email ? ` — ${r.email}` : r.name ? ` — ${r.name}` : ""}`),
+    onError: (e: Error) => toast.error(`Falhou: ${e.message}`),
+  });
 
   const saveMut = useMutation({
     mutationFn: () => save({ data: { domain: domain.trim(), api_token: token.trim() } }),
@@ -314,7 +333,10 @@ function PipedriveCard({
             <div className="text-sm">
               Domínio: <span className="font-mono">{status.domain}.pipedrive.com</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
+                {testMut.isPending ? "Testando…" : "Testar conexão"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
                 Atualizar token
               </Button>
@@ -398,8 +420,14 @@ function FirefliesCard({
 }) {
   const save = useServerFn(saveFirefliesConnection);
   const disconnect = useServerFn(disconnectFireflies);
+  const test = useServerFn(testFirefliesConnection);
   const [open, setOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const testMut = useMutation({
+    mutationFn: () => test({ data: undefined }),
+    onSuccess: (r) => toast.success(`Conexão OK${r.email ? ` — ${r.email}` : r.name ? ` — ${r.name}` : ""}`),
+    onError: (e: Error) => toast.error(`Falhou: ${e.message}`),
+  });
 
   const saveMut = useMutation({
     mutationFn: () => save({ data: { api_key: apiKey.trim() } }),
@@ -452,7 +480,10 @@ function FirefliesCard({
             <div className="text-sm text-muted-foreground">
               Chave salva em {status.updated_at ? new Date(status.updated_at).toLocaleDateString("pt-BR") : "—"}.
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
+                {testMut.isPending ? "Testando…" : "Testar conexão"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
                 Atualizar chave
               </Button>
