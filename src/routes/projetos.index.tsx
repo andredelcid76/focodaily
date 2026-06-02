@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
@@ -70,6 +70,7 @@ function ProjectsInner({ userId }: { userId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [filterRole, setFilterRole] = useState<string | "all">("all");
+  const [scope, setScope] = useState<"all" | "personal" | "team">("all");
   const [hideArchived, setHideArchived] = useState(true);
   const [view, setView] = useState<ViewMode>("cards");
   const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
@@ -90,9 +91,14 @@ function ProjectsInner({ userId }: { userId: string }) {
     return projectsApi.projects.filter((p) => {
       if (filterRole !== "all" && p.role_id !== filterRole) return false;
       if (hideArchived && p.status === "archived") return false;
+      if (scope === "personal" && p.team_id) return false;
+      if (scope === "team" && !p.team_id) return false;
       return true;
     });
-  }, [projectsApi.projects, filterRole, hideArchived]);
+  }, [projectsApi.projects, filterRole, hideArchived, scope]);
+
+  const canEdit = useCallback((p: Project) => p.user_id === userId, [userId]);
+
 
   const openNew = () => {
     setEditing(null);
@@ -129,6 +135,14 @@ function ProjectsInner({ userId }: { userId: string }) {
           <ViewBtn active={view === "list"} onClick={() => setView("list")} icon={<List className="h-3.5 w-3.5" />} label="Lista" />
           <ViewBtn active={view === "kanban"} onClick={() => setView("kanban")} icon={<KanbanSquare className="h-3.5 w-3.5" />} label="Kanban" />
         </div>
+
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
+          <ViewBtn active={scope === "all"} onClick={() => setScope("all")} icon={<Layers className="h-3.5 w-3.5" />} label="Todos" />
+          <ViewBtn active={scope === "personal"} onClick={() => setScope("personal")} icon={<FolderKanban className="h-3.5 w-3.5" />} label="Pessoais" />
+          <ViewBtn active={scope === "team"} onClick={() => setScope("team")} icon={<UsersIcon className="h-3.5 w-3.5" />} label="Equipe" />
+        </div>
+
+
 
         <Select value={filterRole} onValueChange={(v) => setFilterRole(v)}>
           <SelectTrigger className="h-9 w-[180px] text-sm">
@@ -198,6 +212,7 @@ function ProjectsInner({ userId }: { userId: string }) {
           tasksByProject={tasksByProject}
           today={today}
           onEdit={openEdit}
+          canEdit={canEdit}
         />
       ) : view === "list" ? (
         <ListView
@@ -206,8 +221,10 @@ function ProjectsInner({ userId }: { userId: string }) {
           tasksByProject={tasksByProject}
           today={today}
           onEdit={openEdit}
+          canEdit={canEdit}
         />
       ) : (
+
         <KanbanView
           projects={filtered}
           roles={roles}
@@ -273,13 +290,16 @@ function CardsView({
   tasksByProject,
   today,
   onEdit,
+  canEdit,
 }: {
   projects: Project[];
   rolesById: Map<string, { name: string; color: string }>;
   tasksByProject: Map<string, any[]>;
   today: string;
   onEdit: (p: Project) => void;
+  canEdit: (p: Project) => boolean;
 }) {
+
   const grouped = useMemo(() => {
     const out: Record<ProjectStatus, Project[]> = {
       active: [], draft: [], paused: [], done: [], archived: [],
@@ -306,8 +326,9 @@ function CardsView({
                   role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
                   tasks={tasksByProject.get(p.id) ?? []}
                   today={today}
-                  onEdit={() => onEdit(p)}
+                  onEdit={canEdit(p) ? () => onEdit(p) : null}
                 />
+
               ))}
             </div>
           </section>
@@ -324,7 +345,7 @@ function ProjectCard({
   role: { name: string; color: string } | null;
   tasks: any[];
   today: string;
-  onEdit: () => void;
+  onEdit: (() => void) | null;
 }) {
   const stats = computeProjectStats(project, tasks, today);
   const pct = Math.round(stats.progress * 100);
@@ -348,10 +369,13 @@ function ProjectCard({
             {role && <RoleChip role={role} />}
           </div>
         </div>
-        <button onClick={onEdit} className="text-xs text-muted-foreground hover:text-foreground" title="Editar">
-          Editar
-        </button>
+        {onEdit && (
+          <button onClick={onEdit} className="text-xs text-muted-foreground hover:text-foreground" title="Editar">
+            Editar
+          </button>
+        )}
       </div>
+
 
       {project.description && (
         <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{project.description}</p>
@@ -462,14 +486,16 @@ function RoleChip({ role }: { role: { name: string; color: string } }) {
 // ============== LIST VIEW ==============
 
 function ListView({
-  projects, rolesById, tasksByProject, today, onEdit,
+  projects, rolesById, tasksByProject, today, onEdit, canEdit,
 }: {
   projects: Project[];
   rolesById: Map<string, { name: string; color: string }>;
   tasksByProject: Map<string, any[]>;
   today: string;
   onEdit: (p: Project) => void;
+  canEdit: (p: Project) => boolean;
 }) {
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -555,10 +581,13 @@ function ListView({
                     )}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
-                      Editar
-                    </button>
+                    {canEdit(p) && (
+                      <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
+                        Editar
+                      </button>
+                    )}
                   </td>
+
                 </tr>
               );
             })}
