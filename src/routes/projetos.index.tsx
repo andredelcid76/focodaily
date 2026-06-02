@@ -154,6 +154,8 @@ function ProjectsInner({ userId }: { userId: string }) {
           />
           Ocultar arquivados
         </Label>
+
+        {view === "kanban" && (
           <div className="ml-2 flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
             <button
               onClick={() => setKanbanGroup("status")}
