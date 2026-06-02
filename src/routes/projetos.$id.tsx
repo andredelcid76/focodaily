@@ -419,50 +419,62 @@ function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick:
   );
 }
 
-function TaskGroup({
-  title, tasks, tasksApi, roles, onEdit, overdue, muted,
+function BriefingHeader({
+  contextDraft, setContextDraft, onSave, saving, linksApi,
 }: {
-  title: string; tasks: Task[]; tasksApi: ReturnType<typeof useTasks>;
-  roles: ReturnType<typeof useRoles>["roles"]; onEdit: (t: Task) => void;
-  overdue?: boolean; muted?: boolean;
+  contextDraft: string | null;
+  setContextDraft: (s: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  linksApi: ReturnType<typeof useProjectLinks>;
 }) {
-  if (tasks.length === 0) return null;
-  const rolesById = new Map(roles.map((r) => [r.id, r]));
+  const [open, setOpen] = useState(false);
+  const linksCount = linksApi.links.length;
+  const hasContext = !!(contextDraft && contextDraft.trim());
+
   return (
-    <section className={muted ? "opacity-70" : ""}>
-      <h3 className={`mb-2 text-xs font-semibold uppercase tracking-wider ${overdue ? "text-overdue" : "text-muted-foreground"}`}>
-        {title} · {tasks.length}
-      </h3>
-      <div className="space-y-2">
-        {tasks.map((t) => {
-          const isLate = !t.completed && t.scheduled_date < todayISO();
-          return (
-            <div key={t.id} className="space-y-1">
-              <div className="flex items-center gap-1.5 pl-1 text-[10px]">
-                <Calendar className="h-3 w-3 text-muted-foreground" />
-                <span className={`capitalize ${isLate ? "text-overdue font-medium" : "text-muted-foreground"}`}>
-                  {formatShort(t.scheduled_date)}
-                </span>
-                {isLate && (
-                  <span className="inline-flex items-center rounded px-1 py-0.5 text-[9px] font-semibold uppercase bg-overdue/15 text-overdue border border-overdue/40">
-                    Atrasada
-                  </span>
-                )}
-              </div>
-              <TaskCard
-                task={t}
-                role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
-                onToggle={() => tasksApi.toggleComplete(t)}
-                onEdit={() => onEdit(t)}
-                isOverdue={overdue || isLate}
-              />
+    <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-accent/20"
+      >
+        <div className="flex items-center gap-2 text-sm">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold">Briefing & contexto</span>
+          <span className="text-xs text-muted-foreground">
+            {hasContext ? "preenchido" : "vazio"} · {linksCount} link{linksCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="grid gap-4 border-t border-border/60 p-4 lg:grid-cols-[1fr_320px]">
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Contexto / Briefing
             </div>
-          );
-        })}
-      </div>
-    </section>
+            <Textarea
+              value={contextDraft ?? ""}
+              onChange={(e) => setContextDraft(e.target.value)}
+              onBlur={onSave}
+              rows={6}
+              placeholder="Objetivos, escopo, decisões importantes…"
+              className="resize-y text-sm"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {saving ? "Salvando…" : "Salvo automaticamente ao sair do campo"}
+            </p>
+          </div>
+          <div>
+            <LinksPanel api={linksApi} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
+
 
 // ---------------- Comments Panel ----------------
 function CommentsPanel({ api }: { api: ReturnType<typeof useProjectComments> }) {
