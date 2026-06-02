@@ -218,11 +218,6 @@ function TableView({
         label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
         tasks: sortByDate(ts),
       }));
-      const arr = Array.from(map.entries()).map(([uid, ts]) => ({
-        key: uid,
-        label: nameOf(memberById.get(uid)),
-        tasks: sortByDate(ts),
-      }));
       arr.sort((a, b) => b.tasks.length - a.tasks.length);
       return arr;
     }
