@@ -32,23 +32,6 @@ const ROLE_META: Record<"owner" | Role, { label: string; icon: typeof Crown; ton
   manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita o projeto e qualquer tarefa" },
   member: { label: "Membro", icon: User, tone: "bg-muted text-muted-foreground", hint: "Adiciona tarefas e mexe só nas próprias e nas delegadas" },
 };
-import {
-  listProjectMembers,
-  inviteToProject,
-  revokeInvite,
-  removeProjectMember,
-  updateProjectMemberRole,
-} from "@/lib/team.functions";
-
-type Props = { projectId: string };
-
-type Role = "editor" | "viewer";
-
-const ROLE_META: Record<"owner" | Role, { label: string; icon: typeof Crown; tone: string; hint: string }> = {
-  owner: { label: "Dono", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Tudo no projeto" },
-  editor: { label: "Editor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Cria e edita tarefas" },
-  viewer: { label: "Leitor", icon: Eye, tone: "bg-muted text-muted-foreground", hint: "Somente leitura" },
-};
 
 export function ProjectMembersSection({ projectId }: Props) {
   const qc = useQueryClient();
