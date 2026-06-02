@@ -176,7 +176,13 @@ function OutlookCard({
 }) {
   const getAuthUrl = useServerFn(getOutlookAuthUrl);
   const disconnect = useServerFn(disconnectOutlook);
+  const test = useServerFn(testOutlookConnection);
   const [connecting, setConnecting] = useState(false);
+  const testMut = useMutation({
+    mutationFn: () => test({ data: {} }),
+    onSuccess: (r) => toast.success(`Conexão OK${r.email ? ` — ${r.email}` : ""}`),
+    onError: (e: Error) => toast.error(`Falhou: ${e.message}`),
+  });
 
   const onConnect = async () => {
     setConnecting(true);
