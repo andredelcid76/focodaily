@@ -549,9 +549,10 @@ export async function scanForUser(userId: string) {
       }
       if (duplicate) continue;
 
+      const finalTitle = item.title_override?.trim() || s.title;
       const { error } = await supabaseAdmin.from("inbox_suggestions").insert({
         user_id: userId,
-        title: s.title,
+        title: finalTitle,
         description: s.description ?? null,
         source: item.source,
         source_id: item.source_id,
