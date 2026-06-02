@@ -310,9 +310,11 @@ export function useTasks(userId: string | undefined) {
 
   const createTask = async (data: Omit<TablesInsert<"tasks">, "user_id">) => {
     if (!userId) return;
+    // Padrão: criador é o responsável quando nenhum responsável for informado
+    const payload = { ...data, user_id: userId, assignee_id: data.assignee_id ?? userId };
     const { data: inserted, error } = await supabase
       .from("tasks")
-      .insert({ ...data, user_id: userId })
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;
