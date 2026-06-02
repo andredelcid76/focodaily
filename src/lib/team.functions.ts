@@ -15,7 +15,7 @@ export const listProjectMembers = createServerFn({ method: "POST" })
     // RLS will ensure user can see this project
     const { data: project, error: pErr } = await supabase
       .from("projects")
-      .select("id, user_id")
+      .select("id, user_id, team_id")
       .eq("id", data.project_id)
       .maybeSingle();
     if (pErr) throw new Error(pErr.message);
@@ -29,6 +29,22 @@ export const listProjectMembers = createServerFn({ method: "POST" })
     // Always include the owner
     const memberIds = new Set<string>([project.user_id]);
     (members ?? []).forEach((m) => memberIds.add(m.user_id));
+
+    // If project belongs to a team, include team owner + members too
+    if ((project as any).team_id) {
+      const teamId = (project as any).team_id as string;
+      const { data: team } = await supabase
+        .from("teams")
+        .select("owner_id")
+        .eq("id", teamId)
+        .maybeSingle();
+      if (team?.owner_id) memberIds.add(team.owner_id);
+      const { data: teamMembers } = await supabase
+        .from("team_members")
+        .select("user_id")
+        .eq("team_id", teamId);
+      (teamMembers ?? []).forEach((m) => memberIds.add(m.user_id));
+    }
 
     const { data: profiles } = await supabase
       .from("profiles")
