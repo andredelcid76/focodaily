@@ -173,32 +173,39 @@ export const inviteToProject = createServerFn({ method: "POST" })
         project_id: z.string().uuid(),
         email: z.string().email().max(255),
         origin: z.string().url(),
-        role: z.enum(["editor", "viewer"]).default("editor"),
+        role: z.enum(["admin", "manager", "member"]).default("member"),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
-    // Check ownership
+    // Check admin (owner or project admin)
     const { data: project } = await supabaseAdmin
       .from("projects")
       .select("id, user_id, name")
       .eq("id", data.project_id)
       .maybeSingle();
     if (!project) throw new Error("Projeto não encontrado");
-    if (project.user_id !== userId) throw new Error("Apenas o dono pode convidar membros");
+
+    const { data: myMembership } = await supabaseAdmin
+      .from("project_members")
+      .select("role")
+      .eq("project_id", data.project_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const isAdmin = project.user_id === userId || myMembership?.role === "admin";
+    if (!isAdmin) throw new Error("Apenas o dono ou um admin pode convidar membros");
 
     const email = data.email.toLowerCase().trim();
 
-    // Block inviting yourself
     const { data: myProfile } = await supabaseAdmin
       .from("profiles")
       .select("email")
       .eq("user_id", userId)
       .maybeSingle();
     if (myProfile?.email?.toLowerCase() === email) {
-      throw new Error("Você já é dono do projeto");
+      throw new Error("Você já participa do projeto");
     }
 
     // If user already exists AND is already a member, no-op
