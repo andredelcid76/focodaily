@@ -303,6 +303,40 @@ export const removeProjectMember = createServerFn({ method: "POST" })
   });
 
 // ============================================================
+// Update a member's role (owner-only)
+// ============================================================
+export const updateProjectMemberRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        user_id: z.string().uuid(),
+        role: z.enum(["editor", "viewer"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: project } = await supabaseAdmin
+      .from("projects")
+      .select("user_id")
+      .eq("id", data.project_id)
+      .maybeSingle();
+    if (!project) throw new Error("Projeto não encontrado");
+    if (project.user_id !== userId) throw new Error("Apenas o dono pode mudar papéis");
+    if (data.user_id === project.user_id) throw new Error("O dono não tem papel editável");
+
+    const { error } = await supabaseAdmin
+      .from("project_members")
+      .update({ role: data.role } as never)
+      .eq("project_id", data.project_id)
+      .eq("user_id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+// ============================================================
 // Accept invite (token-based)
 // ============================================================
 export const acceptProjectInvite = createServerFn({ method: "POST" })
