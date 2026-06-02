@@ -53,7 +53,7 @@ export const Route = createFileRoute("/projetos/")({
   ),
 });
 
-type ViewMode = "cards" | "list" | "kanban";
+type ViewMode = "cards" | "list" | "kanban" | "timeline";
 type KanbanGroup = "status" | "role";
 
 function ProjectsPage() {
