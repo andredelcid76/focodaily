@@ -66,8 +66,10 @@ import {
   disconnectPipedrive,
   saveFirefliesConnection,
   disconnectFireflies,
+  testPipedriveConnection,
+  testFirefliesConnection,
 } from "@/lib/integrations.functions";
-import { getOutlookAuthUrl, disconnectOutlook } from "@/lib/outlook.functions";
+import { getOutlookAuthUrl, disconnectOutlook, testOutlookConnection } from "@/lib/outlook.functions";
 
 import { ProfileCard } from "@/components/ProfileCard";
 
