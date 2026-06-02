@@ -243,14 +243,17 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                 collapsed ? "justify-center" : ""
               }`}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-prestige text-[11px] font-semibold text-primary-foreground shadow-card">
-                {initials}
-              </div>
+              <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-border/60 shadow-card">
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+                <AvatarFallback className="bg-gradient-prestige text-[11px] font-semibold text-primary-foreground">
+                  {profileInitials(profile) || displayName.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               {!collapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">{user?.email?.split("@")[0]}</p>
+                  <p className="truncate text-xs font-medium">{displayName}</p>
                   <p className="truncate text-[10px] text-muted-foreground">
-                    {user?.email?.split("@")[1] ?? ""}
+                    {user?.email ?? ""}
                   </p>
                 </div>
               )}
