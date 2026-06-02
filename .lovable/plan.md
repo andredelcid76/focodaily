@@ -1,107 +1,56 @@
+## 1. Tela "Hoje" — esconder responsável
 
-## 1. Onboarding sem projeto obrigatório
+`TaskCard` ganha prop opcional `hideAssignee`. Na rota `/` (Hoje), passa `hideAssignee` em todas as instâncias. O chip do responsável continua aparecendo em projetos, agenda, semana e Tarefas.
 
-- Passo de criar projeto vira **opcional** (botão "Pular" claro, sem fricção).
-- Após onboarding (com ou sem projeto), usuário cai em **nova tela de boas-vindas** (`/bem-vindo`) com atalhos:
-  - Criar tarefa rápida
-  - Criar projeto
-  - Conectar Outlook / Fireflies / Pipedrive
-  - Ir para Hoje
-- Tela aparece só enquanto `onboarded_at` é recente OU não há tarefas/projetos. Dispensável com "Não mostrar de novo".
+## 2. Menu "Minhas tarefas" → "Tarefas"
 
-## 2. Hierarquia de papéis no projeto: Owner / Editor / Viewer
+- `AppSidebar`: renomear label.
+- `src/routes/minhas-tarefas.tsx`: título + meta = "Tarefas". (Manter URL `/minhas-tarefas` para não quebrar links/atalho.)
+- Substituir o filtro atual `kindFilter` por um **toggle principal** com 3 opções: **Todas** · **Minhas** (criadas por mim ou onde sou responsável) · **De outros** (tarefas em projetos compartilhados onde o dono e o responsável não sou eu). Mantém demais filtros.
+- Backend `listMyAssignedTasks` já retorna own + delegadas. Para "de outros" precisamos também trazer tarefas de projetos compartilhados onde eu **não** sou owner nem assignee. Vou ampliar o serverFn para incluir tarefas dos projetos onde sou membro/equipe, marcando `kind: 'shared'`.
 
-Modelo:
-- **Owner** — criador do projeto. Tudo: editar projeto, excluir, gerenciar membros, mudar papéis.
-- **Editor** — cria/edita/exclui tarefas, milestones, comentários, links. Não mexe em membros nem nas configs do projeto.
-- **Viewer** — somente leitura. Vê tarefas, comentários, milestones, mas não cria nem edita nada.
+## 3. Card de projeto mostra o Líder
 
-Mudanças de banco (migration):
-- `project_members.role` aceita `owner | editor | viewer` (atualmente `member`). Migrar `member → editor`.
-- Funções auxiliares: `is_project_editor(_project_id, _user_id)` e `can_edit_project(_project_id, _user_id)` (owner OR editor).
-- RLS reescrita em `tasks`, `task_subtasks`, `project_milestones`, `project_comments`, `project_links`:
-  - SELECT: owner OR member (qualquer papel)
-  - INSERT/UPDATE/DELETE: owner OR editor (viewer NÃO escreve)
-- `team_invites` / `project_invites` ganham coluna `role` (default `editor`).
-- UI de membros: dropdown de papel ao convidar e ao lado de cada membro (apenas owner muda).
+`ProjectCard` (em `projetos.index.tsx`) exibe um chip "Líder: Nome" usando `useProfiles` para resolver o `project.user_id`. Também aparece na visão Tabela.
 
-## 3. Reformulação UX (Hoje, Projetos, Inbox + formulários + transições)
+## 4. Renomear "Admin" → "Líder"
 
-### Princípios aplicados
-- **Optimistic updates em toda mutação** via TanStack Query (`onMutate` → `setQueryData` → `onError` rollback). Status, conclusão, atribuição, papel, reordenação, comentários — tudo atualiza na hora.
-- **Autosave inline**: nada de botão "Salvar" em campos isolados. Debounce de 400ms com indicador discreto ("Salvo" no canto).
-- **View Transitions API** (`document.startViewTransition`) nas trocas de rota e mudanças de layout (kanban ↔ lista ↔ cronograma).
-- **Skeletons consistentes** (não spinners) em toda lista; estados de empty/erro padronizados via componente único `<EmptyState>` / `<ErrorState>`.
-- **Microinterações**: `framer-motion` para entrada/saída de itens (`AnimatePresence`), checkmark animado ao concluir tarefa, ripple sutil em botões primários, drag-and-drop fluido com placeholder.
-- **Feedback contextual**: toasts com ação "Desfazer" em ações destrutivas (excluir tarefa, remover membro). Atalho `Z` para desfazer.
-- **Comando-K global** (já existe parcial) reforçado: ir para projeto, criar tarefa, mudar status, alternar visão.
+Conceito: **Líder = `projects.user_id`** (quem criou, por padrão). Manager e member continuam em `project_members`. Renomeação é **UI-only**:
 
-### Telas reformuladas
+- `ProjectMembersSection`, helpers e labels: trocar todos os "Admin"/"admin (papel)" exibidos → "Líder". O valor `role='admin'` em `project_members` continua existindo no banco, mas não é mais oferecido na UI (líder é único e definido pelo `user_id` do projeto).
+- Adicionar ação **"Transferir liderança"** no `ProjectDialog` (visível só para o líder atual): seleciona um membro existente, e via `updateProject({ user_id: novoLider })`. Inclui confirmação. RLS atual já permite manager+ atualizar projeto, então a transferência funciona; depois da troca o ex-líder vira manager automaticamente (insert em `project_members`).
 
-**Hoje (`/hoje`)**
-- Editar título da tarefa inline (click → input no lugar, blur salva).
-- Checkbox com animação de risco no título + slide-out suave do item.
-- Mudar status/prioridade direto na linha via popovers leves, sem abrir diálogo.
-- Reordenar com `dnd-kit` + spring animation; persistência otimista.
+## 5. Modelo de permissões (confirmar/explicitar)
 
-**Projetos (`/projetos/$id`)**
-- Header já reformulado mantém-se; melhorias:
-  - Tabs (Lista / Kanban / Cronograma) com `<motion.div layoutId>` na transição.
-  - Edição inline de nome do projeto, deadline, status.
-  - Filtros (responsável, status) com chips removíveis.
-- Lista de tarefas: linhas com inputs inline, mudança de responsável via Combobox de avatares.
-- Kanban: drag entre colunas com placeholder ghost + spring; otimista.
-- Lista de membros mostra papel e dropdown de mudança (só owner).
+Já está mapeado nas RLS atuais — só precisamos garantir consistência na UI:
 
-**Inbox (`/inbox`)**
-- Tabs por origem mantidas; transições entre abas com fade+slide.
-- Card de sugestão: ações (Aceitar/Recusar) inline com confirmação otimista + desfazer.
-- "Buscar agora" com loader não bloqueante + count de novidades animado.
+- **Líder** (`projects.user_id`): tudo — edita projeto, qualquer tarefa, gerencia membros, transfere liderança.
+- **Manager** (`project_members.role = 'manager'` ou `team_members.role='manager'`): edita qualquer tarefa do projeto (já permitido por `is_project_manager_or_above`), **mas não edita dados do projeto**. Vou ajustar a RLS de UPDATE em `projects` para exigir **líder apenas** (hoje aceita manager+) e ajustar `ProjectDialog` para esconder campos para não-líder.
+- **Member**: só edita tarefas onde é `user_id` ou `assignee_id` (já garantido pelo trigger `enforce_member_task_constraints` + RLS `Tasks update own assigned or as manager`).
 
-### Formulários (todos)
-- `TaskDialog`, `ProjectDialog`, `ProfileCard`, convites:
-  - Validação inline com mensagens curtas abaixo do campo.
-  - Campos relacionados aparecem/somem com transição (`AnimatePresence`).
-  - Submit com estado loading no botão e desabilita só o necessário.
-  - Esc fecha, Cmd+Enter salva.
+### Migração necessária
 
-### Transições globais
-- Hook `useViewTransition()` envolve `router.navigate` para rotas chave.
-- Rotas com `<motion.main>` aplicando fade+rise (12px) em mount.
-- Sidebar: indicador ativo desliza entre itens (`layoutId="sidebar-active"`).
+```sql
+-- Restringir UPDATE de projects ao líder (owner)
+DROP POLICY "Project update by manager or above" ON public.projects;
+CREATE POLICY "Project update by leader only"
+ON public.projects FOR UPDATE TO authenticated
+USING (auth.uid() = user_id);
 
-## 4. Entrega faseada (mesmo PR, mas em blocos)
+-- Quando o líder transfere a liderança, garantir que o antigo líder vire manager:
+-- feito via código (insert em project_members) no fluxo de transferência.
+```
 
-1. **Bloco DB**: migration de papéis (owner/editor/viewer) + RLS + invites com role.
-2. **Bloco Onboarding**: passo de projeto opcional + `/bem-vindo`.
-3. **Bloco UX core**: utilitários (`useViewTransition`, `<EmptyState>`, `<ErrorState>`, toast undo), motion wrappers, padrão optimistic.
-4. **Bloco Hoje**: inline edit, animações, drag.
-5. **Bloco Projetos**: tabs animadas, membros com papéis, inline edit, kanban otimista.
-6. **Bloco Inbox**: ações otimistas, transições de aba.
-7. **Bloco Formulários**: autosave/validação nos diálogos principais.
+## Arquivos afetados
 
-## Detalhes técnicos (referência)
+- `src/components/TaskCard.tsx` (prop `hideAssignee`)
+- `src/routes/index.tsx` (passar prop)
+- `src/components/AppSidebar.tsx` (rename label)
+- `src/routes/minhas-tarefas.tsx` (título + toggle)
+- `src/lib/myTasks.functions.ts` (incluir tarefas "de outros" em projetos compartilhados)
+- `src/routes/projetos.index.tsx` (chip Líder no card/tabela)
+- `src/components/ProjectMembersSection.tsx` (rename Admin → Líder na UI)
+- `src/components/ProjectDialog.tsx` (botão "Transferir liderança"; esconder edição p/ não-líder)
+- Migração RLS em `projects`.
 
-- Mutations TanStack Query padrão:
-  ```ts
-  onMutate: async (vars) => {
-    await qc.cancelQueries({ queryKey });
-    const prev = qc.getQueryData(queryKey);
-    qc.setQueryData(queryKey, (old) => apply(old, vars));
-    return { prev };
-  },
-  onError: (_e, _v, ctx) => qc.setQueryData(queryKey, ctx?.prev),
-  onSettled: () => qc.invalidateQueries({ queryKey }),
-  ```
-- View Transitions: feature-detect (`if ('startViewTransition' in document)`).
-- `framer-motion` já presente; usar `AnimatePresence` + `motion.li layout`.
-- `dnd-kit` para drag.
-- Toast undo: sonner `toast(...).action({ label: 'Desfazer', onClick })`.
-
-## Riscos
-
-- Migração de `member → editor` em `project_members` exige UPDATE em dados existentes (tudo vira editor, owner permanece).
-- View Transitions API não funciona em Firefox antigo — degrada silenciosamente para troca normal.
-- Optimistic updates exigem cuidado em queries com filtros — usaremos `invalidateQueries` no `onSettled` como rede de segurança.
-
-Posso seguir com a implementação assim?
+Pronto para implementar?
