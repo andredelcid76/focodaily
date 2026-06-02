@@ -17,6 +17,7 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as BemVindoRouteImport } from './routes/bem-vindo'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AnaliseRouteImport } from './routes/analise'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
@@ -85,6 +86,11 @@ const BemVindoRoute = BemVindoRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnaliseRoute = AnaliseRouteImport.update({
+  id: '/analise',
+  path: '/analise',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendaRoute = AgendaRouteImport.update({
@@ -242,6 +248,7 @@ const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/analise': typeof AnaliseRoute
   '/auth': typeof AuthRoute
   '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/analise': typeof AnaliseRoute
   '/auth': typeof AuthRoute
   '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -321,6 +329,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/analise': typeof AnaliseRoute
   '/auth': typeof AuthRoute
   '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -362,6 +371,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agenda'
+    | '/analise'
     | '/auth'
     | '/bem-vindo'
     | '/configuracoes'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agenda'
+    | '/analise'
     | '/auth'
     | '/bem-vindo'
     | '/configuracoes'
@@ -440,6 +451,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/agenda'
+    | '/analise'
     | '/auth'
     | '/bem-vindo'
     | '/configuracoes'
@@ -480,6 +492,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
+  AnaliseRoute: typeof AnaliseRoute
   AuthRoute: typeof AuthRoute
   BemVindoRoute: typeof BemVindoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
@@ -572,6 +585,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analise': {
+      id: '/analise'
+      path: '/analise'
+      fullPath: '/analise'
+      preLoaderRoute: typeof AnaliseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agenda': {
@@ -794,6 +814,7 @@ const ApiPublicOutlookRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
+  AnaliseRoute: AnaliseRoute,
   AuthRoute: AuthRoute,
   BemVindoRoute: BemVindoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
