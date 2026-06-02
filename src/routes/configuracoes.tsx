@@ -480,7 +480,10 @@ function FirefliesCard({
             <div className="text-sm text-muted-foreground">
               Chave salva em {status.updated_at ? new Date(status.updated_at).toLocaleDateString("pt-BR") : "—"}.
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
+                {testMut.isPending ? "Testando…" : "Testar conexão"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
                 Atualizar chave
               </Button>
