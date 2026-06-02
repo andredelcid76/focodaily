@@ -42,7 +42,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Planejar",
     items: [
       { title: "Hoje", url: "/", icon: ListTodo, shortcut: "G H" },
-      { title: "Minhas tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
+      { title: "Tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
     ],
   },
   {
