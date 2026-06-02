@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2, Circle, Clock, Table as TableIcon, KanbanSquare, GanttChart,
-  Plus, Lock, AlertCircle, Layers, User as UserIcon, Pencil,
+  Plus, Lock, AlertCircle, Layers, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
