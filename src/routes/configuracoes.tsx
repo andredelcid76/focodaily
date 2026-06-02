@@ -240,9 +240,14 @@ function OutlookCard({
                 </span>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={onDisconnect}>
-              <Unlink className="mr-1.5 h-4 w-4" /> Desconectar
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
+                {testMut.isPending ? "Testando…" : "Testar conexão"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={onDisconnect}>
+                <Unlink className="mr-1.5 h-4 w-4" /> Desconectar
+              </Button>
+            </div>
           </>
         ) : (
           <Button onClick={onConnect} disabled={connecting}>
