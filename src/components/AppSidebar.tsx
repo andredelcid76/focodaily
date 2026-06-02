@@ -43,6 +43,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { title: "Hoje", url: "/", icon: ListTodo, shortcut: "G H" },
       { title: "Semana", url: "/semana", icon: CalendarDays, shortcut: "G S" },
       { title: "Agenda", url: "/agenda", icon: CalendarClock, shortcut: "G A" },
+      { title: "Minhas tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
     ],
   },
   {
@@ -101,6 +102,7 @@ function useNavHotkeys() {
       h: "/",
       s: "/semana",
       a: "/agenda",
+      m: "/minhas-tarefas",
       p: "/projetos",
       e: "/equipes",
       i: "/inbox",

@@ -129,6 +129,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   });
   const members = membersData?.members ?? [];
   const isShared = members.length > 1;
+  const delegatedToOther = !!(isShared && effectiveProjectId && assigneeId && assigneeId !== user?.id);
 
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
@@ -145,7 +146,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           duration_minutes: Math.max(5, Math.min(600, duration)),
           scheduled_date: date,
           recurrence,
-          role_id: roleId,
+          role_id: delegatedToOther ? null : roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           assignee_id: (lockedProjectId !== undefined ? lockedProjectId : projectId) ? assigneeId : null,
           non_negotiable: nonNegotiable,
@@ -228,7 +229,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             <Textarea id="t-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${delegatedToOther ? "grid-cols-1" : "grid-cols-2"}`}>
             <div>
               <Label>Categoria</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
@@ -252,33 +253,35 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Papel</Label>
-              <Select
-                value={roleId ?? "__none"}
-                onValueChange={(v) => setRoleId(v === "__none" ? null : v)}
-              >
-                <SelectTrigger><SelectValue placeholder="Sem papel" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">Sem papel</SelectItem>
-                  {roles.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
-                        {r.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {roles.length === 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  <Link to="/papeis" className="underline hover:text-foreground" onClick={() => onOpenChange(false)}>
-                    Criar papéis →
-                  </Link>
-                </p>
-              )}
-            </div>
+            {!delegatedToOther && (
+              <div>
+                <Label>Papel</Label>
+                <Select
+                  value={roleId ?? "__none"}
+                  onValueChange={(v) => setRoleId(v === "__none" ? null : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Sem papel" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Sem papel</SelectItem>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: r.color }} />
+                          {r.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {roles.length === 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <Link to="/papeis" className="underline hover:text-foreground" onClick={() => onOpenChange(false)}>
+                      Criar papéis →
+                    </Link>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {lockedProjectId === undefined && projects.length > 0 && (
