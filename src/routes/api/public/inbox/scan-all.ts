@@ -10,8 +10,12 @@ export const Route = createFileRoute("/api/public/inbox/scan-all")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = request.headers.get("apikey") ?? request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-        if (!apiKey || apiKey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
+        // Authenticate cron callers with the service role key (server-only,
+        // never bundled to client JS). The previous anon-key check was
+        // ineffective because the anon key is public.
+        const provided = request.headers.get("apikey") ?? request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+        const expected = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!provided || !expected || provided !== expected) {
           return new Response("Unauthorized", { status: 401 });
         }
 
