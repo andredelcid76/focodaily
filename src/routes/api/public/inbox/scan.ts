@@ -35,6 +35,8 @@ type SourceItem = {
   source_url?: string | null;
   source_date?: string | null;
   text: string;
+  /** When set, overrides the AI-generated title (used for Pipedrive). */
+  title_override?: string | null;
 };
 
 type AISuggestion = {
@@ -311,6 +313,7 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
       source_url: `https://${domain}.pipedrive.com/activities/list#dialog/activity/${a.id}`,
       source_date: a.due_date ?? a.update_time ?? a.add_time ?? null,
       text: `Atividade: ${a.subject ?? "—"}\nTipo: ${a.type ?? "—"}\nVencimento: ${a.due_date ?? "—"} ${a.due_time ?? ""}\nDeal: ${a.deal_title ?? "—"}\nOrganização: ${a.org_name ?? "—"}\nPessoa: ${a.person_name ?? "—"}\nNota: ${(a.note ?? a.public_description ?? "").replace(/<[^>]+>/g, "").slice(0, 800)}`,
+      title_override: (a.subject ?? "").trim() || null,
     }));
   } catch (e) {
     console.error("pipedrive", e);
@@ -546,9 +549,10 @@ export async function scanForUser(userId: string) {
       }
       if (duplicate) continue;
 
+      const finalTitle = item.title_override?.trim() || s.title;
       const { error } = await supabaseAdmin.from("inbox_suggestions").insert({
         user_id: userId,
-        title: s.title,
+        title: finalTitle,
         description: s.description ?? null,
         source: item.source,
         source_id: item.source_id,
