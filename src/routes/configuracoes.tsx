@@ -134,6 +134,7 @@ function IntegracoesPage() {
             >
               <TabsContent value="perfil" className="mt-0 space-y-5">
                 <ProfileCard />
+                <AppearanceCard />
               </TabsContent>
 
               <TabsContent value="papeis" className="mt-0 space-y-5">
