@@ -2,9 +2,36 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CheckCircle2, Circle, Clock, FolderKanban, Layers, ListTodo, Lock, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CheckCircle2,
+  Circle,
+  ListTodo,
+  Lock,
+  Search,
+  Trash2,
+  User as UserIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { AppShell } from "@/components/AppShell";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { formatShort, todayISO } from "@/lib/date";
@@ -18,22 +45,26 @@ export const Route = createFileRoute("/minhas-tarefas")({
       <MyTasksPage />
     </AppShell>
   ),
-  head: () => ({
-    meta: [{ title: "Minhas tarefas · Focou" }],
-  }),
+  head: () => ({ meta: [{ title: "Minhas tarefas · Focou" }] }),
 });
 
-type Grouping = "project" | "due" | "status" | "none";
+type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category";
+type SortDir = "asc" | "desc";
 
 const STATUS_LABEL: Record<MyTaskRow["status"], string> = {
   todo: "A fazer",
   doing: "Em andamento",
   done: "Concluída",
 };
-const STATUS_COLOR: Record<MyTaskRow["status"], string> = {
+const STATUS_CLS: Record<MyTaskRow["status"], string> = {
   todo: "bg-muted text-muted-foreground border-border",
   doing: "bg-primary/10 text-primary border-primary/30",
   done: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+};
+const CAT_LABEL: Record<MyTaskRow["category"], string> = {
+  urgent: "Urgente",
+  important: "Importante",
+  circumstantial: "Circunstancial",
 };
 
 function MyTasksPage() {
@@ -44,37 +75,135 @@ function MyTasksPage() {
     staleTime: 30_000,
   });
 
-  const [search, setSearch] = useState("");
-  const [grouping, setGrouping] = useState<Grouping>("project");
-  const [hideDone, setHideDone] = useState(true);
-
   const today = todayISO();
   const tasks = data?.tasks ?? [];
 
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | MyTaskRow["status"]>("all");
+  const [kindFilter, setKindFilter] = useState<"all" | "own" | "delegated" | "personal" | "project">("all");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
+  const [hideDone, setHideDone] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const projectOptions = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; color: string | null }>();
+    for (const t of tasks) if (t.project) m.set(t.project.id, t.project);
+    return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks]);
+
+  const roleOptions = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; color: string }>();
+    for (const t of tasks) if (t.role) m.set(t.role.id, t.role);
+    return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let arr = tasks;
-    if (hideDone) arr = arr.filter((t) => !t.completed);
-    if (q) arr = arr.filter((t) => t.title.toLowerCase().includes(q) || (t.project?.name ?? "").toLowerCase().includes(q));
-    return arr;
-  }, [tasks, search, hideDone]);
+    return tasks.filter((t) => {
+      if (hideDone && t.completed) return false;
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+      if (kindFilter === "own" && t.kind !== "own") return false;
+      if (kindFilter === "delegated" && t.kind !== "delegated") return false;
+      if (kindFilter === "personal" && t.project_id) return false;
+      if (kindFilter === "project" && !t.project_id) return false;
+      if (projectFilter !== "all") {
+        if (projectFilter === "__none" ? !!t.project_id : t.project?.id !== projectFilter) return false;
+      }
+      if (roleFilter !== "all") {
+        if (roleFilter === "__none" ? !!t.role_id : t.role?.id !== roleFilter) return false;
+      }
+      if (q && !t.title.toLowerCase().includes(q) && !(t.project?.name ?? "").toLowerCase().includes(q))
+        return false;
+      return true;
+    });
+  }, [tasks, search, statusFilter, categoryFilter, kindFilter, projectFilter, roleFilter, hideDone]);
 
-  const groups = useMemo(() => buildGroups(filtered, grouping, today), [filtered, grouping, today]);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      const v = (() => {
+        switch (sortKey) {
+          case "title":
+            return a.title.localeCompare(b.title);
+          case "kind":
+            return a.kind.localeCompare(b.kind);
+          case "project":
+            return (a.project?.name ?? "~").localeCompare(b.project?.name ?? "~");
+          case "role":
+            return (a.role?.name ?? "~").localeCompare(b.role?.name ?? "~");
+          case "scheduled_date":
+            return a.scheduled_date.localeCompare(b.scheduled_date);
+          case "status":
+            return a.status.localeCompare(b.status);
+          case "category":
+            return a.category.localeCompare(b.category);
+        }
+      })();
+      return v * dir;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
 
   const stats = useMemo(() => {
     const open = tasks.filter((t) => !t.completed);
-    const overdue = open.filter((t) => t.scheduled_date < today).length;
-    const due = open.filter((t) => t.scheduled_date === today).length;
-    const projects = new Set(tasks.filter((t) => t.project).map((t) => t.project!.id)).size;
-    return { open: open.length, overdue, due, projects };
+    return {
+      total: tasks.length,
+      open: open.length,
+      overdue: open.filter((t) => t.scheduled_date < today).length,
+      due: open.filter((t) => t.scheduled_date === today).length,
+      delegated: tasks.filter((t) => t.kind === "delegated").length,
+    };
   }, [tasks, today]);
 
-  const updateStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
-    const patch: {
-      status: MyTaskRow["status"];
-      completed?: boolean;
-      completed_at?: string | null;
-    } = { status };
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const allVisibleSelected = sorted.length > 0 && sorted.every((t) => selected.has(t.id));
+  const someVisibleSelected = sorted.some((t) => selected.has(t.id));
+
+  const toggleSelectAll = () => {
+    const next = new Set(selected);
+    if (allVisibleSelected) sorted.forEach((t) => next.delete(t.id));
+    else sorted.forEach((t) => next.add(t.id));
+    setSelected(next);
+  };
+  const toggleOne = (id: string) => {
+    const next = new Set(selected);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelected(next);
+  };
+
+  const updateOne = async (
+    id: string,
+    patch: { status?: MyTaskRow["status"]; completed?: boolean; completed_at?: string | null },
+  ) => {
+    const { error } = await supabase.from("tasks").update(patch).eq("id", id);
+    if (error) toast.error(error.message);
+  };
+
+  const toggleComplete = async (t: MyTaskRow) => {
+    const next = !t.completed;
+    await updateOne(t.id, {
+      completed: next,
+      completed_at: next ? new Date().toISOString() : null,
+      status: next ? "done" : "todo",
+    });
+    refetch();
+  };
+
+  const setStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
+    const patch: Parameters<typeof updateOne>[1] = { status };
     if (status === "done") {
       patch.completed = true;
       patch.completed_at = new Date().toISOString();
@@ -82,27 +211,45 @@ function MyTasksPage() {
       patch.completed = false;
       patch.completed_at = null;
     }
-    const { error } = await supabase.from("tasks").update(patch).eq("id", t.id);
-    if (error) toast.error(error.message);
-    else refetch();
+    await updateOne(t.id, patch);
+    refetch();
   };
 
-  const toggleComplete = async (t: MyTaskRow) => {
-    const next = !t.completed;
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        completed: next,
-        completed_at: next ? new Date().toISOString() : null,
-        status: next ? "done" : "todo",
-      })
-      .eq("id", t.id);
+  const bulkStatus = async (status: MyTaskRow["status"]) => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const patch: Parameters<typeof updateOne>[1] = { status };
+    if (status === "done") {
+      patch.completed = true;
+      patch.completed_at = new Date().toISOString();
+    } else {
+      patch.completed = false;
+      patch.completed_at = null;
+    }
+    const { error } = await supabase.from("tasks").update(patch).in("id", ids);
     if (error) toast.error(error.message);
-    else refetch();
+    else {
+      toast.success(`${ids.length} tarefa(s) atualizada(s)`);
+      setSelected(new Set());
+      refetch();
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Excluir ${selected.size} tarefa(s)? Apenas as suas serão removidas.`)) return;
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("tasks").delete().in("id", ids);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Tarefas excluídas");
+      setSelected(new Set());
+      refetch();
+    }
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-7xl space-y-4 p-4 md:p-6">
       <header className="space-y-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
           <ListTodo className="h-3.5 w-3.5" /> Visão macro
@@ -111,19 +258,21 @@ function MyTasksPage() {
           <div>
             <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Minhas tarefas</h1>
             <p className="text-sm text-muted-foreground">
-              Tarefas delegadas a você em todos os projetos.
+              Tudo que é seu — pessoais e em projetos — em uma única tabela.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <StatCard label="Total" value={stats.total} />
             <StatCard label="Abertas" value={stats.open} />
-            <StatCard label="Vencem hoje" value={stats.due} tone={stats.due > 0 ? "primary" : "default"} />
+            <StatCard label="Hoje" value={stats.due} tone={stats.due > 0 ? "primary" : "default"} />
             <StatCard label="Atrasadas" value={stats.overdue} tone={stats.overdue > 0 ? "danger" : "default"} />
-            <StatCard label="Projetos" value={stats.projects} />
+            <StatCard label="Delegadas" value={stats.delegated} />
           </div>
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/40 px-3 py-2 backdrop-blur-sm">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/40 px-3 py-2">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -133,18 +282,60 @@ function MyTasksPage() {
             className="h-9 pl-8 text-sm"
           />
         </div>
-        <Select value={grouping} onValueChange={(v) => setGrouping(v as Grouping)}>
-          <SelectTrigger className="h-9 w-44 text-xs">
-            <Layers className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
-            <SelectValue />
-          </SelectTrigger>
+
+        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as typeof kindFilter)}>
+          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="project">Por projeto</SelectItem>
-            <SelectItem value="due">Por prazo</SelectItem>
-            <SelectItem value="status">Por status</SelectItem>
-            <SelectItem value="none">Sem agrupamento</SelectItem>
+            <SelectItem value="all">Todas origens</SelectItem>
+            <SelectItem value="own">Criadas por mim</SelectItem>
+            <SelectItem value="delegated">Delegadas a mim</SelectItem>
+            <SelectItem value="personal">Pessoais</SelectItem>
+            <SelectItem value="project">De projeto</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Projeto" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos projetos</SelectItem>
+            <SelectItem value="__none">Sem projeto</SelectItem>
+            {projectOptions.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue placeholder="Papel" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos papéis</SelectItem>
+            <SelectItem value="__none">Sem papel</SelectItem>
+            {roleOptions.map((r) => (
+              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos status</SelectItem>
+            <SelectItem value="todo">A fazer</SelectItem>
+            <SelectItem value="doing">Em andamento</SelectItem>
+            <SelectItem value="done">Concluída</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as typeof categoryFilter)}>
+          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas categorias</SelectItem>
+            <SelectItem value="urgent">Urgente</SelectItem>
+            <SelectItem value="important">Importante</SelectItem>
+            <SelectItem value="circumstantial">Circunstancial</SelectItem>
+          </SelectContent>
+        </Select>
+
         <button
           onClick={() => setHideDone((v) => !v)}
           className={`h-9 rounded-md border px-3 text-xs font-medium transition-colors ${
@@ -157,156 +348,230 @@ function MyTasksPage() {
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center text-sm text-muted-foreground">
-          Carregando…
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            {tasks.length === 0
-              ? "Nenhuma tarefa delegada a você ainda."
-              : "Nenhum resultado com os filtros atuais."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {groups.map((g) => (
-            <section
-              key={g.key}
-              className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm"
-            >
-              <header className="flex items-center justify-between gap-2 border-b border-border/60 bg-muted/30 px-3 py-2 text-xs">
-                <div className="flex items-center gap-2 font-semibold uppercase tracking-wider text-muted-foreground">
-                  {g.projectColor && (
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: g.projectColor }}
-                    />
-                  )}
-                  <span>{g.label}</span>
-                  <span className="text-muted-foreground/60">· {g.tasks.length}</span>
-                </div>
-                {g.projectId && (
-                  <Link
-                    to="/projetos/$id"
-                    params={{ id: g.projectId }}
-                    className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                  >
-                    <FolderKanban className="h-3 w-3" />
-                    Abrir projeto
-                  </Link>
-                )}
-              </header>
-              <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_8rem_10rem_8.5rem] items-center gap-3 border-b border-border/60 bg-background/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <span />
-                <span>Tarefa</span>
-                <span>Vencimento</span>
-                <span>Projeto</span>
-                <span>Status</span>
-              </div>
-              {g.tasks.map((t) => (
-                <Row
-                  key={t.id}
-                  task={t}
-                  today={today}
-                  onToggle={() => toggleComplete(t)}
-                  onStatus={(s) => updateStatus(t, s)}
-                />
-              ))}
-            </section>
-          ))}
+      {/* Bulk actions */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+          <span className="font-medium text-primary">{selected.size} selecionada(s)</span>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("todo")}>
+              A fazer
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("doing")}>
+              Em andamento
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("done")}>
+              <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
+            </Button>
+            <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={bulkDelete}>
+              <Trash2 className="mr-1 h-3 w-3" /> Excluir
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelected(new Set())}>
+              Limpar
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8">
+                <Checkbox
+                  checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </TableHead>
+              <TableHead className="w-8"></TableHead>
+              <SortHead label="Tarefa" k="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead label="Origem" k="kind" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead label="Projeto" k="project" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead label="Papel" k="role" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead label="Categoria" k="category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead label="Vencimento" k="scheduled_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <SortHead label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
+                  Carregando…
+                </TableCell>
+              </TableRow>
+            ) : sorted.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
+                  {tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhum resultado com os filtros atuais."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              sorted.map((t) => {
+                const overdue = !t.completed && t.scheduled_date < today;
+                const isSelected = selected.has(t.id);
+                return (
+                  <TableRow key={t.id} data-state={isSelected ? "selected" : undefined}>
+                    <TableCell>
+                      <Checkbox checked={isSelected} onCheckedChange={() => toggleOne(t.id)} />
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => toggleComplete(t)}
+                        className={`text-muted-foreground/60 hover:text-emerald-500 ${
+                          t.completed ? "text-emerald-500" : ""
+                        }`}
+                        title={t.completed ? "Reabrir" : "Concluir"}
+                      >
+                        {t.completed ? (
+                          <CheckCircle2 className="h-4 w-4 fill-emerald-500/20" />
+                        ) : (
+                          <Circle className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableCell>
+                    <TableCell className="max-w-[280px]">
+                      <div className="flex items-center gap-1.5">
+                        {t.non_negotiable && !t.completed && (
+                          <Lock className="h-3 w-3 shrink-0 text-overdue" />
+                        )}
+                        <Link
+                          to={t.project_id ? "/projetos/$id" : "/hoje"}
+                          params={t.project_id ? { id: t.project_id } : undefined}
+                          className={`truncate text-sm hover:underline ${
+                            t.completed ? "text-muted-foreground line-through" : ""
+                          }`}
+                        >
+                          {t.title}
+                        </Link>
+                      </div>
+                      {t.delegated_by_name && (
+                        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                          delegada por {t.delegated_by_name}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+                          t.kind === "delegated"
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            : "border-border/60 bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        <UserIcon className="h-2.5 w-2.5" />
+                        {t.kind === "delegated" ? "Delegada" : "Minha"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {t.project ? (
+                        <Link
+                          to="/projetos/$id"
+                          params={{ id: t.project.id }}
+                          className="inline-flex items-center gap-1.5 text-xs hover:underline"
+                        >
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: t.project.color ?? "#888" }}
+                          />
+                          <span className="truncate">{t.project.name}</span>
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Pessoal</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {t.role ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
+                          style={{
+                            backgroundColor: `${t.role.color}20`,
+                            borderColor: `${t.role.color}55`,
+                            color: t.role.color,
+                          }}
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: t.role.color }}
+                          />
+                          {t.role.name}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1 text-xs">
+                        <CategoryIcon category={t.category} className="h-3 w-3" />
+                        {CAT_LABEL[t.category]}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`tabular-nums text-xs ${
+                          overdue ? "font-medium text-overdue" : "text-muted-foreground"
+                        }`}
+                      >
+                        {formatShort(t.scheduled_date)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Select value={t.status} onValueChange={(v) => setStatus(t, v as MyTaskRow["status"])}>
+                        <SelectTrigger className={`h-7 w-[130px] text-xs ${STATUS_CLS[t.status]}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(STATUS_LABEL) as MyTaskRow["status"][]).map((s) => (
+                            <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
 
-function Row({
-  task,
-  today,
-  onToggle,
-  onStatus,
+function SortHead({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onSort,
 }: {
-  task: MyTaskRow;
-  today: string;
-  onToggle: () => void;
-  onStatus: (s: MyTaskRow["status"]) => void;
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
 }) {
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const active = sortKey === k;
   return (
-    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_8rem_10rem_8.5rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20">
+    <TableHead>
       <button
-        onClick={onToggle}
-        className={`text-muted-foreground/50 hover:text-emerald-500 ${task.completed ? "text-emerald-500" : ""}`}
-        title={task.completed ? "Reabrir" : "Concluir"}
-      >
-        {task.completed ? (
-          <CheckCircle2 className="h-4 w-4 fill-emerald-500/20" />
-        ) : (
-          <Circle className="h-4 w-4" />
-        )}
-      </button>
-
-      <Link
-        to="/projetos/$id"
-        params={{ id: task.project_id ?? "" }}
-        className="min-w-0 text-left"
-      >
-        <div className="flex items-center gap-1.5">
-          <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
-          {task.non_negotiable && !task.completed && <Lock className="h-3 w-3 shrink-0 text-overdue" />}
-          <span className={`truncate text-sm ${task.completed ? "text-muted-foreground line-through" : ""}`}>
-            {task.title}
-          </span>
-        </div>
-        <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-          {task.duration_minutes > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-2.5 w-2.5" /> {task.duration_minutes}min
-            </span>
-          )}
-          {task.delegated_by_name && (
-            <span className="truncate">delegada por {task.delegated_by_name}</span>
-          )}
-        </div>
-      </Link>
-
-      <span
-        className={`tabular-nums text-xs ${
-          isOverdue ? "font-medium text-overdue" : "text-muted-foreground"
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+          active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
         }`}
       >
-        {formatShort(task.scheduled_date)}
-      </span>
-
-      <div className="flex min-w-0 items-center gap-1.5 text-xs">
-        {task.project ? (
-          <>
-            <span
-              className="inline-block h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: task.project.color ?? "#888" }}
-            />
-            <span className="truncate">{task.project.name}</span>
-          </>
+        {label}
+        {active ? (
+          sortDir === "asc" ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <ArrowUpDown className="h-3 w-3 opacity-50" />
         )}
-      </div>
-
-      <Select value={task.status} onValueChange={(v) => onStatus(v as MyTaskRow["status"])}>
-        <SelectTrigger className={`h-7 text-xs ${STATUS_COLOR[task.status]}`}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {(Object.keys(STATUS_LABEL) as MyTaskRow["status"][]).map((s) => (
-            <SelectItem key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+      </button>
+    </TableHead>
   );
 }
 
@@ -331,81 +596,4 @@ function StatCard({
       <div className="font-display text-xl font-semibold tabular-nums">{value}</div>
     </div>
   );
-}
-
-type Group = {
-  key: string;
-  label: string;
-  tasks: MyTaskRow[];
-  projectId?: string;
-  projectColor?: string | null;
-};
-
-function buildGroups(tasks: MyTaskRow[], grouping: Grouping, today: string): Group[] {
-  if (grouping === "none") {
-    return [{ key: "all", label: "Todas", tasks: sortTasks(tasks) }];
-  }
-  if (grouping === "project") {
-    const map = new Map<string, Group>();
-    for (const t of tasks) {
-      const key = t.project?.id ?? "__none";
-      const label = t.project?.name ?? "Sem projeto";
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          label,
-          tasks: [],
-          projectId: t.project?.id,
-          projectColor: t.project?.color,
-        });
-      }
-      map.get(key)!.tasks.push(t);
-    }
-    return Array.from(map.values())
-      .map((g) => ({ ...g, tasks: sortTasks(g.tasks) }))
-      .sort((a, b) => b.tasks.length - a.tasks.length);
-  }
-  if (grouping === "status") {
-    const order: MyTaskRow["status"][] = ["doing", "todo", "done"];
-    return order
-      .map((s) => ({
-        key: s,
-        label: STATUS_LABEL[s],
-        tasks: sortTasks(tasks.filter((t) => t.status === s)),
-      }))
-      .filter((g) => g.tasks.length > 0);
-  }
-  // due
-  const buckets: Record<string, MyTaskRow[]> = {
-    overdue: [],
-    today: [],
-    week: [],
-    later: [],
-    done: [],
-  };
-  const week = addDaysISO(today, 7);
-  for (const t of tasks) {
-    if (t.completed) buckets.done.push(t);
-    else if (t.scheduled_date < today) buckets.overdue.push(t);
-    else if (t.scheduled_date === today) buckets.today.push(t);
-    else if (t.scheduled_date <= week) buckets.week.push(t);
-    else buckets.later.push(t);
-  }
-  return [
-    { key: "overdue", label: "Atrasadas", tasks: sortTasks(buckets.overdue) },
-    { key: "today", label: "Hoje", tasks: sortTasks(buckets.today) },
-    { key: "week", label: "Próximos 7 dias", tasks: sortTasks(buckets.week) },
-    { key: "later", label: "Mais tarde", tasks: sortTasks(buckets.later) },
-    { key: "done", label: "Concluídas", tasks: sortTasks(buckets.done) },
-  ].filter((g) => g.tasks.length > 0);
-}
-
-function sortTasks(arr: MyTaskRow[]) {
-  return [...arr].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
-}
-
-function addDaysISO(iso: string, days: number) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d + days);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
 }
