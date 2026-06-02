@@ -96,9 +96,7 @@ function ConvitePage() {
         </CardHeader>
         <CardContent className="flex gap-2">
           <Button asChild>
-            <Link to="/auth" search={{ redirect: `/convite/${token}` }}>
-              Entrar para aceitar
-            </Link>
+            <Link to="/auth">Entrar para aceitar</Link>
           </Button>
         </CardContent>
       </CenteredCard>
