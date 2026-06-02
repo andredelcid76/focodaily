@@ -114,6 +114,47 @@ async function refreshAccessToken(refreshToken: string) {
   };
 }
 
+/** Test the Outlook connection by hitting /me on Graph. Refreshes token if needed. */
+export const testOutlookConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: Record<string, never> | undefined) => data ?? {})
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: conn } = await supabaseAdmin
+      .from("outlook_connections")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!conn) throw new Error("Outlook não está conectado");
+
+    let accessToken = conn.access_token as string;
+    const expiresAt = new Date(conn.expires_at as string).getTime();
+    if (expiresAt - Date.now() < 120_000) {
+      const refreshed = await refreshAccessToken(conn.refresh_token as string);
+      accessToken = refreshed.access_token;
+      await supabaseAdmin
+        .from("outlook_connections")
+        .update({
+          access_token: accessToken,
+          refresh_token: refreshed.refresh_token ?? conn.refresh_token,
+          expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+          scope: refreshed.scope ?? conn.scope,
+        })
+        .eq("user_id", userId);
+    }
+
+    const res = await fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(`Falha (HTTP ${res.status}): ${json?.error?.message ?? "erro"}`);
+    return {
+      ok: true,
+      email: (json.mail ?? json.userPrincipalName) as string | undefined,
+      name: json.displayName as string | undefined,
+    };
+  });
+
 /** Sync calendar events from Outlook into meetings table. */
 export const syncOutlookCalendar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
