@@ -85,9 +85,48 @@ function MyTasksPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
   const [hideDone, setHideDone] = useState(true);
+  const [dateRange, setDateRange] = useState<
+    "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
+  >("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const dateBounds = useMemo(() => {
+    const [y, m, d] = today.split("-").map(Number);
+    const base = new Date(y, m - 1, d);
+    const fmt = (dt: Date) => {
+      const yy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getDate()).padStart(2, "0");
+      return `${yy}-${mm}-${dd}`;
+    };
+    const addD = (n: number) => {
+      const dt = new Date(base);
+      dt.setDate(dt.getDate() + n);
+      return fmt(dt);
+    };
+    const day = base.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const monday = new Date(base);
+    monday.setDate(monday.getDate() + diffToMon);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const monthStart = new Date(base.getFullYear(), base.getMonth(), 1);
+    const monthEnd = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+    return {
+      today,
+      tomorrow: addD(1),
+      next7: addD(7),
+      next30: addD(30),
+      weekStart: fmt(monday),
+      weekEnd: fmt(sunday),
+      monthStart: fmt(monthStart),
+      monthEnd: fmt(monthEnd),
+    };
+  }, [today]);
 
   const projectOptions = useMemo(() => {
     const m = new Map<string, { id: string; name: string; color: string | null }>();
