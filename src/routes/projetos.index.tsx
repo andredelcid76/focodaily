@@ -581,10 +581,13 @@ function ListView({
                     )}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
-                      Editar
-                    </button>
+                    {canEdit(p) && (
+                      <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
+                        Editar
+                      </button>
+                    )}
                   </td>
+
                 </tr>
               );
             })}
