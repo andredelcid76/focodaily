@@ -25,8 +25,13 @@ export const syncTaskCompletionToPipedrive = createServerFn({ method: "POST" })
     if (!m) return { ok: false, reason: "no-activity-id" };
     const activityId = m[1];
 
-    const token = process.env.PIPEDRIVE_API_TOKEN;
-    const domain = process.env.PIPEDRIVE_DOMAIN;
+    const { data: conn } = await supabase
+      .from("pipedrive_connections")
+      .select("api_token,domain")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const token = conn?.api_token as string | undefined;
+    const domain = conn?.domain as string | undefined;
     if (!token || !domain) return { ok: false, reason: "no-credentials" };
 
     const r = await fetch(
