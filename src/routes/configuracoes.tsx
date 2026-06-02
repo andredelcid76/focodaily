@@ -18,7 +18,10 @@ import {
   UserCircle,
   Plug,
   Settings2,
+  ShieldCheck,
 } from "lucide-react";
+import { RolesInner } from "@/routes/papeis";
+import { useAuth } from "@/lib/auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -77,6 +80,7 @@ export const Route = createFileRoute("/configuracoes")({
 function IntegracoesPage() {
   const qc = useQueryClient();
   const fetchStatus = useServerFn(getIntegrationsStatus);
+  const { user } = useAuth();
 
   const { data: status, isLoading: statusLoading } = useQuery({
     queryKey: ["integrations-status"],
@@ -90,6 +94,7 @@ function IntegracoesPage() {
 
   const tabs = [
     { value: "perfil", label: "Perfil", icon: UserCircle },
+    { value: "papeis", label: "Papéis", icon: ShieldCheck },
     { value: "integracoes", label: "Integrações", icon: Plug },
     { value: "avancado", label: "Avançado", icon: Settings2 },
   ];
@@ -100,12 +105,12 @@ function IntegracoesPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Configurações</h1>
           <p className="text-sm text-muted-foreground">
-            Seu perfil, integrações externas e acessos avançados. Tudo isolado por usuário.
+            Seu perfil, papéis, integrações e acessos avançados. Tudo isolado por usuário.
           </p>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-5">
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
+          <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-grid">
             {tabs.map((t) => {
               const Icon = t.icon;
               return (
@@ -128,6 +133,10 @@ function IntegracoesPage() {
             >
               <TabsContent value="perfil" className="mt-0 space-y-5">
                 <ProfileCard />
+              </TabsContent>
+
+              <TabsContent value="papeis" className="mt-0 space-y-5">
+                {user ? <RolesInner userId={user.id} /> : null}
               </TabsContent>
 
               <TabsContent value="integracoes" className="mt-0 space-y-5">
