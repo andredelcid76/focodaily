@@ -26,7 +26,7 @@ async function authenticateRequest(request: Request): Promise<string> {
 }
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
+const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
 type SourceItem = {
   source: "email" | "meeting" | "pipedrive";
@@ -155,17 +155,20 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   }));
 }
 
-async function fetchFireflies(userEmail: string | null, userName: string | null): Promise<SourceItem[]> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const ffKey = process.env.FIREFLIES_API_KEY;
-  if (!lovableKey || !ffKey) return [];
+async function fetchFireflies(userId: string, userEmail: string | null, userName: string | null): Promise<SourceItem[]> {
+  const { data: conn } = await supabaseAdmin
+    .from("fireflies_connections")
+    .select("api_key")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const ffKey = conn?.api_key as string | undefined;
+  if (!ffKey) return [];
   try {
     const r = await fetch(FIREFLIES_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": ffKey,
+        Authorization: `Bearer ${ffKey}`,
       },
       body: JSON.stringify({
         // Pull more transcripts and the participants list so we can match action
@@ -246,10 +249,6 @@ async function getPipedriveCreds(userId: string): Promise<{ token: string; domai
   if (data?.api_token && data?.domain) {
     return { token: data.api_token as string, domain: data.domain as string };
   }
-  // Fallback to project-level env credentials (single-tenant setup).
-  const token = process.env.PIPEDRIVE_API_TOKEN;
-  const domain = process.env.PIPEDRIVE_DOMAIN;
-  if (token && domain) return { token, domain };
   return null;
 }
 
@@ -457,7 +456,7 @@ async function scanForUser(userId: string) {
   // Collect sources
   const [emails, meetings, deals] = await Promise.all([
     fetchOutlookEmails(userId),
-    fetchFireflies(userEmail, userName),
+    fetchFireflies(userId, userEmail, userName),
     fetchPipedrive(userId),
   ]);
   const all = [...emails, ...meetings, ...deals];
