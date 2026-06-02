@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Circle, Clock, FolderKanban, Layers, ListTodo, Lock, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AppShell } from "@/components/AppShell";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { formatShort, todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
@@ -12,7 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minhas-tarefas")({
-  component: MyTasksPage,
+  component: () => (
+    <AppShell>
+      <MyTasksPage />
+    </AppShell>
+  ),
   head: () => ({
     meta: [{ title: "Minhas tarefas · Focou" }],
   }),
