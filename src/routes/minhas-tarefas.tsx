@@ -158,9 +158,47 @@ function MyTasksPage() {
       }
       if (q && !t.title.toLowerCase().includes(q) && !(t.project?.name ?? "").toLowerCase().includes(q))
         return false;
+      // date range
+      if (dateRange !== "all") {
+        const sd = t.scheduled_date;
+        if (dateRange === "no_date") {
+          if (sd) return false;
+        } else if (!sd) {
+          return false;
+        } else {
+          const b = dateBounds;
+          switch (dateRange) {
+            case "overdue":
+              if (!(sd < b.today && !t.completed)) return false;
+              break;
+            case "today":
+              if (sd !== b.today) return false;
+              break;
+            case "tomorrow":
+              if (sd !== b.tomorrow) return false;
+              break;
+            case "week":
+              if (sd < b.weekStart || sd > b.weekEnd) return false;
+              break;
+            case "next7":
+              if (sd < b.today || sd > b.next7) return false;
+              break;
+            case "month":
+              if (sd < b.monthStart || sd > b.monthEnd) return false;
+              break;
+            case "next30":
+              if (sd < b.today || sd > b.next30) return false;
+              break;
+            case "custom":
+              if (customFrom && sd < customFrom) return false;
+              if (customTo && sd > customTo) return false;
+              break;
+          }
+        }
+      }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, kindFilter, projectFilter, roleFilter, hideDone]);
+  }, [tasks, search, statusFilter, categoryFilter, kindFilter, projectFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
