@@ -3,17 +3,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2, Circle, Clock, Table as TableIcon, KanbanSquare, GanttChart,
-  Plus, Lock, AlertCircle, Layers, Pencil,
+  Plus, Lock, AlertCircle, Layers, Pencil, Trash2, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
 import { CategoryIcon } from "./CategoryBadge";
 import { formatShort, todayISO, addDays } from "@/lib/date";
 import { listProjectMembers } from "@/lib/team.functions";
 import type { Task, TaskStatus } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
+import { toast } from "sonner";
 
 type View = "table" | "kanban" | "timeline";
 type Grouping = "none" | "assignee" | "status" | "due";
