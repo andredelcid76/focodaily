@@ -1,7 +1,79 @@
 import { createServerFn } from "@tanstack/react-start";
+import * as React from "react";
+import { render } from "@react-email/components";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { CollaborationNoticeEmail } from "@/lib/email-templates/collaboration-notice";
+
+const SITE_NAME = "Focou";
+const FROM_DOMAIN = "anpla.com.br";
+const SENDER_DOMAIN = "notify.anpla.com.br";
+
+async function enqueueCollaborationEmail(input: {
+  to: string;
+  label: string;
+  subject: string;
+  title: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+}) {
+  const messageId = crypto.randomUUID();
+
+  try {
+    const element = React.createElement(CollaborationNoticeEmail, {
+      siteName: SITE_NAME,
+      title: input.title,
+      body: input.body,
+      ctaLabel: input.ctaLabel,
+      ctaUrl: input.ctaUrl,
+    });
+
+    const html = await render(element);
+    const text = await render(element, { plainText: true });
+
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: input.label,
+      recipient_email: input.to,
+      status: "pending",
+    });
+
+    const { error } = await supabaseAdmin.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        message_id: messageId,
+        to: input.to,
+        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject: input.subject,
+        html,
+        text,
+        purpose: "transactional",
+        label: input.label,
+        idempotency_key: messageId,
+        queued_at: new Date().toISOString(),
+      },
+    });
+
+    if (error) {
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: input.label,
+        recipient_email: input.to,
+        status: "failed",
+        error_message: error.message,
+      });
+    }
+  } catch (error) {
+    console.error("Failed to enqueue collaboration email", {
+      label: input.label,
+      to: input.to,
+      error,
+    });
+  }
+}
 
 // ============================================================
 // List members of a project (owner + members)
@@ -156,6 +228,28 @@ export const inviteToProject = createServerFn({ method: "POST" })
 
     const inviteUrl = `${data.origin}/convite/${token}`;
 
+    if (existingProfile?.user_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: existingProfile.user_id,
+        type: "project_invite",
+        title: "Você recebeu um convite para projeto",
+        body: `Você foi convidado para participar de ${project.name}.`,
+        project_id: data.project_id,
+        actor_id: userId,
+        link: `/convite/${token}`,
+      });
+    }
+
+    await enqueueCollaborationEmail({
+      to: email,
+      label: "project_invite",
+      subject: `Convite para o projeto ${project.name}`,
+      title: `Você foi convidado para ${project.name}`,
+      body: `Abra o convite para entrar no projeto ${project.name} no Focou.`,
+      ctaLabel: "Abrir convite",
+      ctaUrl: inviteUrl,
+    });
+
     return {
       invite_url: inviteUrl,
       email,
@@ -274,5 +368,74 @@ export const assignTask = createServerFn({ method: "POST" })
       .update({ assignee_id: data.assignee_id, updated_at: new Date().toISOString() })
       .eq("id", data.task_id);
     if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const notifyProjectTeamAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        team_id: z.string().uuid(),
+        origin: z.string().url(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    const [{ data: project }, { data: team }, { data: actor }] = await Promise.all([
+      supabaseAdmin.from("projects").select("id, name, user_id").eq("id", data.project_id).maybeSingle(),
+      supabaseAdmin.from("teams").select("id, name, owner_id").eq("id", data.team_id).maybeSingle(),
+      supabaseAdmin.from("profiles").select("display_name, email").eq("user_id", userId).maybeSingle(),
+    ]);
+
+    if (!project || !team) return { success: false };
+
+    const { data: teamMembers } = await supabaseAdmin
+      .from("team_members")
+      .select("user_id")
+      .eq("team_id", data.team_id);
+
+    const recipientIds = Array.from(
+      new Set([team.owner_id, ...(teamMembers ?? []).map((row) => row.user_id)]),
+    ).filter((id) => id && id !== userId);
+
+    if (recipientIds.length === 0) return { success: true };
+
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("user_id, email")
+      .in("user_id", recipientIds);
+
+    const actorName = actor?.display_name ?? actor?.email ?? "Alguém";
+
+    await Promise.all(
+      (profiles ?? []).map(async (profile) => {
+        await supabaseAdmin.from("notifications").insert({
+          user_id: profile.user_id,
+          type: "team_project_access",
+          title: "Novo projeto compartilhado com sua equipe",
+          body: `${actorName} compartilhou ${project.name} com a equipe ${team.name}.`,
+          project_id: project.id,
+          actor_id: userId,
+          link: `/projetos/${project.id}`,
+        });
+
+        if (profile.email) {
+          await enqueueCollaborationEmail({
+            to: profile.email,
+            label: "team_project_access",
+            subject: `Novo projeto disponível: ${project.name}`,
+            title: `${project.name} agora está com a sua equipe`,
+            body: `${actorName} compartilhou o projeto ${project.name} com a equipe ${team.name}.`,
+            ctaLabel: "Abrir projeto",
+            ctaUrl: `${data.origin}/projetos/${project.id}`,
+          });
+        }
+      }),
+    );
+
     return { success: true };
   });
