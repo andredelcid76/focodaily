@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
@@ -80,6 +81,11 @@ const ProjetosIdRoute = ProjetosIdRouteImport.update({
 const OauthConsentRoute = OauthConsentRouteImport.update({
   id: '/oauth/consent',
   path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotwellKnownOauthProtectedResourceRoute =
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos': typeof ProjetosIndexRoute
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
   '/projetos/': typeof ProjetosIndexRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/convite/$token'
     | '/oauth/consent'
     | '/projetos/$id'
     | '/projetos/'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/convite/$token'
     | '/oauth/consent'
     | '/projetos/$id'
     | '/projetos'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/convite/$token'
     | '/oauth/consent'
     | '/projetos/$id'
     | '/projetos/'
@@ -304,6 +316,7 @@ export interface RootRouteChildren {
   SemanaRoute: typeof SemanaRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   OauthConsentRoute: typeof OauthConsentRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
@@ -388,6 +401,13 @@ declare module '@tanstack/react-router' {
       path: '/oauth/consent'
       fullPath: '/oauth/consent'
       preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -500,6 +520,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   OauthConsentRoute: OauthConsentRoute,
   ProjetosIdRoute: ProjetosIdRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,

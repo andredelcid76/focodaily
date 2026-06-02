@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePickerField } from "@/components/DatePickerField";
+import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
 import { toast } from "sonner";
@@ -175,7 +176,13 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
               <DatePickerField value={deadline} onChange={setDeadline} />
             </div>
           </div>
+
+          {project?.id && <ProjectMembersSection projectId={project.id} />}
         </div>
+
+
+
+
 
         <DialogFooter className="flex justify-between sm:justify-between">
           <div>

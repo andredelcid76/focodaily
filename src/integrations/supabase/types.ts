@@ -577,6 +577,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       project_comments: {
         Row: {
           content: string
@@ -604,6 +634,42 @@ export type Database = {
           project_id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      project_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          project_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          project_id: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          project_id?: string
+          token?: string
         }
         Relationships: []
       }
@@ -639,6 +705,30 @@ export type Database = {
           project_id?: string
           updated_at?: string
           url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_members: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          role?: string
           user_id?: string
         }
         Relationships: []
@@ -913,6 +1003,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assignee_id: string | null
           category: Database["public"]["Enums"]["task_category"]
           completed: boolean
           completed_at: string | null
@@ -949,6 +1040,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assignee_id?: string | null
           category?: Database["public"]["Enums"]["task_category"]
           completed?: boolean
           completed_at?: string | null
@@ -985,6 +1077,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assignee_id?: string | null
           category?: Database["public"]["Enums"]["task_category"]
           completed?: boolean
           completed_at?: string | null
@@ -1111,6 +1204,15 @@ export type Database = {
       }
     }
     Functions: {
+      accept_project_invite: { Args: { _token: string }; Returns: string }
+      is_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_owner: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       reorder_tasks: { Args: { p_ordered_ids: string[] }; Returns: undefined }
     }
     Enums: {
