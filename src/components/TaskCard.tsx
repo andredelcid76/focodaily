@@ -504,3 +504,29 @@ function InlineQuickActions({
     </div>
   );
 }
+
+function AssigneeChip({ assigneeId, ownerId }: { assigneeId: string; ownerId: string }) {
+  const profiles = useProfiles([assigneeId]);
+  const profile = profiles.get(assigneeId);
+  const delegated = assigneeId !== ownerId;
+  const label = profile?.display_name ?? profile?.email?.split("@")[0] ?? "Responsável";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${
+        delegated
+          ? "border-primary/30 bg-primary/5 text-primary"
+          : "border-border/60 bg-muted/40 text-muted-foreground"
+      }`}
+      title={delegated ? `Delegada para ${label}` : `Responsável: ${label}`}
+    >
+      <Avatar className="h-3.5 w-3.5">
+        {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={label} /> : null}
+        <AvatarFallback className="bg-primary/15 text-[8px] font-semibold text-primary">
+          {profileInitials(profile)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="max-w-[7rem] truncate">{label}</span>
+    </span>
+  );
+}
