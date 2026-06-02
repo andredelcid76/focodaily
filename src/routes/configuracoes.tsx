@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy,
   Check,
@@ -14,7 +15,11 @@ import {
   Mic,
   Link2,
   Unlink,
+  UserCircle,
+  Plug,
+  Settings2,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -81,37 +86,62 @@ function IntegracoesPage() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["integrations-status"] });
 
+  const [tab, setTab] = useState("perfil");
+
+  const tabs = [
+    { value: "perfil", label: "Perfil", icon: UserCircle },
+    { value: "integracoes", label: "Integrações", icon: Plug },
+    { value: "avancado", label: "Avançado", icon: Settings2 },
+  ];
+
   return (
     <AppShell>
       <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Configurações</h1>
           <p className="text-sm text-muted-foreground">
-            Seu perfil e suas integrações externas. Cada integração usa apenas suas credenciais — outros usuários do Foco não têm acesso.
+            Seu perfil, integrações externas e acessos avançados. Tudo isolado por usuário.
           </p>
         </div>
 
-        <ProfileCard />
+        <Tabs value={tab} onValueChange={setTab} className="space-y-5">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              return (
+                <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-        <OutlookCard
-          status={status?.outlook}
-          loading={statusLoading}
-          onChanged={invalidate}
-        />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-5"
+            >
+              <TabsContent value="perfil" className="mt-0 space-y-5">
+                <ProfileCard />
+              </TabsContent>
 
-        <PipedriveCard
-          status={status?.pipedrive}
-          loading={statusLoading}
-          onChanged={invalidate}
-        />
+              <TabsContent value="integracoes" className="mt-0 space-y-5">
+                <OutlookCard status={status?.outlook} loading={statusLoading} onChanged={invalidate} />
+                <PipedriveCard status={status?.pipedrive} loading={statusLoading} onChanged={invalidate} />
+                <FirefliesCard status={status?.fireflies} loading={statusLoading} onChanged={invalidate} />
+              </TabsContent>
 
-        <FirefliesCard
-          status={status?.fireflies}
-          loading={statusLoading}
-          onChanged={invalidate}
-        />
-
-        <McpCard />
+              <TabsContent value="avancado" className="mt-0 space-y-5">
+                <McpCard />
+              </TabsContent>
+            </motion.div>
+          </AnimatePresence>
+        </Tabs>
       </div>
     </AppShell>
   );
