@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -38,6 +38,11 @@ import { formatShort, todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth";
+import { useRoles } from "@/hooks/useRoles";
+import { useProjects, type Project } from "@/hooks/useProjects";
+import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
+import type { Task } from "@/hooks/useTasks";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
