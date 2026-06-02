@@ -125,15 +125,21 @@ export const listProjectMembers = createServerFn({ method: "POST" })
 
     const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
+    const memberRoleMap = new Map(
+      (members ?? []).map((m) => [m.user_id, (m.role ?? "editor") as "owner" | "editor" | "viewer"]),
+    );
     const memberList = Array.from(memberIds).map((uid) => {
       const profile = profileMap.get(uid);
       const isOwner = uid === project.user_id;
+      const role: "owner" | "editor" | "viewer" = isOwner
+        ? "owner"
+        : (memberRoleMap.get(uid) ?? "editor");
       return {
         user_id: uid,
         email: profile?.email ?? null,
         display_name: profile?.display_name ?? null,
         avatar_url: profile?.avatar_url ?? null,
-        role: (isOwner ? "owner" : "member") as "owner" | "member",
+        role,
         is_me: uid === userId,
       };
     });
