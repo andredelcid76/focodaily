@@ -50,7 +50,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
       <MyTasksPage />
     </AppShell>
   ),
-  head: () => ({ meta: [{ title: "Minhas tarefas · Focou" }] }),
+  head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
 type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category";
@@ -169,7 +169,8 @@ function MyTasksPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | MyTaskRow["status"]>("all");
-  const [kindFilter, setKindFilter] = useState<"all" | "own" | "delegated" | "personal" | "project">("all");
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "others">("all");
+  const [kindFilter, setKindFilter] = useState<"all" | "personal" | "project">("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
@@ -235,8 +236,9 @@ function MyTasksPage() {
       if (hideDone && t.completed) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
-      if (kindFilter === "own" && t.kind !== "own") return false;
-      if (kindFilter === "delegated" && t.kind !== "delegated") return false;
+      // Owner-based primary toggle: minhas = own/delegated; outros = shared
+      if (ownerFilter === "mine" && t.kind === "shared") return false;
+      if (ownerFilter === "others" && t.kind !== "shared") return false;
       if (kindFilter === "personal" && t.project_id) return false;
       if (kindFilter === "project" && !t.project_id) return false;
       if (projectFilter !== "all") {
@@ -287,7 +289,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, kindFilter, projectFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [tasks, search, statusFilter, categoryFilter, ownerFilter, kindFilter, projectFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -422,9 +424,9 @@ function MyTasksPage() {
         </div>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Minhas tarefas</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Tarefas</h1>
             <p className="text-sm text-muted-foreground">
-              Tudo que é seu — pessoais e em projetos — em uma única tabela.
+              Suas tarefas pessoais e em projetos — e, opcionalmente, as de colegas em projetos compartilhados.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -449,12 +451,19 @@ function MyTasksPage() {
           />
         </div>
 
+        <Select value={ownerFilter} onValueChange={(v) => setOwnerFilter(v as typeof ownerFilter)}>
+          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="mine">Minhas</SelectItem>
+            <SelectItem value="others">De outros</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as typeof kindFilter)}>
           <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas origens</SelectItem>
-            <SelectItem value="own">Criadas por mim</SelectItem>
-            <SelectItem value="delegated">Delegadas a mim</SelectItem>
+            <SelectItem value="all">Origem (todas)</SelectItem>
             <SelectItem value="personal">Pessoais</SelectItem>
             <SelectItem value="project">De projeto</SelectItem>
           </SelectContent>
