@@ -89,6 +89,17 @@ export const Route = createFileRoute("/api/public/oauth/register")({
           );
         }
         const data = parsed.data;
+        const invalid = data.redirect_uris.filter((u) => !isAllowedRedirectUri(u));
+        if (invalid.length > 0) {
+          return json(
+            {
+              error: "invalid_redirect_uri",
+              error_description:
+                "redirect_uri host is not on the allowlist of permitted MCP client origins",
+            },
+            400,
+          );
+        }
         const clientId = randomId("foco-client", 18);
         const { error } = await supabaseAdmin.from("oauth_clients").insert({
           id: clientId,
