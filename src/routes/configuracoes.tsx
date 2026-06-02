@@ -420,8 +420,14 @@ function FirefliesCard({
 }) {
   const save = useServerFn(saveFirefliesConnection);
   const disconnect = useServerFn(disconnectFireflies);
+  const test = useServerFn(testFirefliesConnection);
   const [open, setOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const testMut = useMutation({
+    mutationFn: () => test({ data: undefined }),
+    onSuccess: (r) => toast.success(`Conexão OK${r.email ? ` — ${r.email}` : r.name ? ` — ${r.name}` : ""}`),
+    onError: (e: Error) => toast.error(`Falhou: ${e.message}`),
+  });
 
   const saveMut = useMutation({
     mutationFn: () => save({ data: { api_key: apiKey.trim() } }),
