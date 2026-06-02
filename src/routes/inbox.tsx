@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { fetchInboxSuggestions, dismissSuggestion, acceptSuggestion, triggerScan, type InboxSuggestion } from "@/lib/inboxClient";
 import { useAuth } from "@/lib/auth";
@@ -29,6 +30,8 @@ const SOURCE_META = {
   pipedrive: { icon: Briefcase, label: "Pipedrive", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
 } as const;
 
+type SourceKey = keyof typeof SOURCE_META;
+
 function InboxPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -38,6 +41,7 @@ function InboxPage() {
   const { roles } = useRoles(userId);
 
   const [editing, setEditing] = useState<InboxSuggestion | null>(null);
+  const [tab, setTab] = useState<"all" | SourceKey>("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["inbox-suggestions", userId],
@@ -63,6 +67,54 @@ function InboxPage() {
   const suggestions = data?.suggestions ?? [];
   const lastScan = data?.state?.last_scan_at;
 
+  const counts = useMemo(() => {
+    const c: Record<SourceKey, number> = { email: 0, meeting: 0, pipedrive: 0 };
+    for (const s of suggestions) c[s.source] = (c[s.source] ?? 0) + 1;
+    return c;
+  }, [suggestions]);
+
+  const visible = tab === "all" ? suggestions : suggestions.filter((s) => s.source === tab);
+
+  const renderCard = (s: InboxSuggestion) => {
+    const meta = SOURCE_META[s.source];
+    const Icon = meta.icon;
+    return (
+      <Card key={s.id} className="p-4 space-y-2 hover:border-border transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-base">{s.title}</div>
+            {s.description && <p className="text-sm text-muted-foreground mt-1">{s.description}</p>}
+          </div>
+          <Badge variant="outline" className={meta.color}>
+            <Icon className="h-3 w-3 mr-1" /> {meta.label}
+          </Badge>
+        </div>
+        <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+          <span className="truncate max-w-md">{s.source_label}</span>
+          {s.source_url && (
+            <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          {s.reasoning && (
+            <>
+              <span>·</span>
+              <span className="italic">{s.reasoning}</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button variant="ghost" size="sm" onClick={() => dismissMut.mutate(s.id)} disabled={dismissMut.isPending}>
+            <X className="h-4 w-4 mr-1" /> Descartar
+          </Button>
+          <Button size="sm" onClick={() => setEditing(s)}>
+            <Plus className="h-4 w-4 mr-1" /> Adicionar tarefa
+          </Button>
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -71,7 +123,7 @@ function InboxPage() {
             <Inbox className="h-6 w-6" /> Caixa de entrada
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sugestões automáticas vindas do Outlook, Fireflies e Pipedrive.
+            Sugestões vindas do Outlook, Fireflies e Pipedrive.
             {lastScan && (
               <> Última varredura {formatDistanceToNow(new Date(lastScan), { addSuffix: true, locale: ptBR })}.</>
             )}
@@ -92,56 +144,23 @@ function InboxPage() {
           <p className="text-xs text-muted-foreground/70 mt-1">A varredura automática roda a cada 2 horas.</p>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {suggestions.map((s) => {
-            const meta = SOURCE_META[s.source];
-            const Icon = meta.icon;
-            return (
-              <Card key={s.id} className="p-4 space-y-2 hover:border-border transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-base">{s.title}</div>
-                    {s.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{s.description}</p>
-                    )}
-                  </div>
-                  <Badge variant="outline" className={meta.color}>
-                    <Icon className="h-3 w-3 mr-1" /> {meta.label}
-                  </Badge>
-                </div>
-
-                <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                  <span className="truncate max-w-md">{s.source_label}</span>
-                  {s.source_url && (
-                    <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  {s.reasoning && (
-                    <>
-                      <span>·</span>
-                      <span className="italic">{s.reasoning}</span>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => dismissMut.mutate(s.id)}
-                    disabled={dismissMut.isPending}
-                  >
-                    <X className="h-4 w-4 mr-1" /> Descartar
-                  </Button>
-                  <Button size="sm" onClick={() => setEditing(s)}>
-                    <Plus className="h-4 w-4 mr-1" /> Adicionar tarefa
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+          <TabsList>
+            <TabsTrigger value="all">Todas <Badge variant="secondary" className="ml-2">{suggestions.length}</Badge></TabsTrigger>
+            <TabsTrigger value="email"><Mail className="h-3.5 w-3.5 mr-1.5" />Outlook <Badge variant="secondary" className="ml-2">{counts.email}</Badge></TabsTrigger>
+            <TabsTrigger value="meeting"><Users className="h-3.5 w-3.5 mr-1.5" />Fireflies <Badge variant="secondary" className="ml-2">{counts.meeting}</Badge></TabsTrigger>
+            <TabsTrigger value="pipedrive"><Briefcase className="h-3.5 w-3.5 mr-1.5" />Pipedrive <Badge variant="secondary" className="ml-2">{counts.pipedrive}</Badge></TabsTrigger>
+          </TabsList>
+          <TabsContent value={tab} className="mt-4">
+            <div className="space-y-3">
+              {visible.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhuma sugestão nesta origem.</p>
+              ) : (
+                visible.map(renderCard)
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
 
       {editing && userId && (

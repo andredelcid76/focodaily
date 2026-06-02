@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -42,6 +43,7 @@ import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oau
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
 import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
+import { Route as ApiPublicInboxScanAllRouteImport } from './routes/api/public/inbox/scan-all'
 import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
 
 const SemanaRoute = SemanaRouteImport.update({
@@ -52,6 +54,11 @@ const SemanaRoute = SemanaRouteImport.update({
 const PapeisRoute = PapeisRouteImport.update({
   id: '/papeis',
   path: '/papeis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
@@ -215,6 +222,11 @@ const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
   path: '/api/public/inbox/tag-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInboxScanAllRoute = ApiPublicInboxScanAllRouteImport.update({
+  id: '/api/public/inbox/scan-all',
+  path: '/api/public/inbox/scan-all',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
   id: '/api/public/inbox/scan',
   path: '/api/public/inbox/scan',
@@ -228,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
@@ -246,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
+  '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
@@ -264,6 +278,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
@@ -282,6 +297,7 @@ export interface FileRoutesByTo {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
+  '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
@@ -301,6 +317,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
@@ -319,6 +336,7 @@ export interface FileRoutesById {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
+  '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
@@ -339,6 +357,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/onboarding'
     | '/papeis'
     | '/semana'
     | '/.well-known/oauth-authorization-server'
@@ -357,6 +376,7 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/lovable/email/suppression'
     | '/api/public/inbox/scan'
+    | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
@@ -375,6 +395,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/onboarding'
     | '/papeis'
     | '/semana'
     | '/.well-known/oauth-authorization-server'
@@ -393,6 +414,7 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/lovable/email/suppression'
     | '/api/public/inbox/scan'
+    | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
@@ -411,6 +433,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/onboarding'
     | '/papeis'
     | '/semana'
     | '/.well-known/oauth-authorization-server'
@@ -429,6 +452,7 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/lovable/email/suppression'
     | '/api/public/inbox/scan'
+    | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
@@ -448,6 +472,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   InboxRoute: typeof InboxRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
+  OnboardingRoute: typeof OnboardingRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
@@ -466,6 +491,7 @@ export interface RootRouteChildren {
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
+  ApiPublicInboxScanAllRoute: typeof ApiPublicInboxScanAllRoute
   ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
   ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
@@ -491,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/papeis'
       fullPath: '/papeis'
       preLoaderRoute: typeof PapeisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/minhas-tarefas': {
@@ -710,6 +743,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInboxTagEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/inbox/scan-all': {
+      id: '/api/public/inbox/scan-all'
+      path: '/api/public/inbox/scan-all'
+      fullPath: '/api/public/inbox/scan-all'
+      preLoaderRoute: typeof ApiPublicInboxScanAllRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inbox/scan': {
       id: '/api/public/inbox/scan'
       path: '/api/public/inbox/scan'
@@ -738,6 +778,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   InboxRoute: InboxRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
+  OnboardingRoute: OnboardingRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
   DotwellKnownOauthAuthorizationServerRoute:
@@ -758,6 +799,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
+  ApiPublicInboxScanAllRoute: ApiPublicInboxScanAllRoute,
   ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
   ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
@@ -771,3 +813,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
