@@ -2,7 +2,7 @@ import { defineTool } from "mcp-tanstack-start";
 import { z } from "zod";
 import { db, getUserId } from "../supabase";
 
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
+const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
 export const listRoles = defineTool({
   name: "list_roles",
@@ -250,17 +250,19 @@ export const deleteTask = defineTool({
   },
 });
 
-async function fireflies(query: string, variables: Record<string, unknown>) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const ffKey = process.env.FIREFLIES_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY não configurada");
-  if (!ffKey) throw new Error("Fireflies não conectado");
+async function fireflies(userId: string, query: string, variables: Record<string, unknown>) {
+  const { data: conn } = await db()
+    .from("fireflies_connections")
+    .select("api_key")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const ffKey = (conn?.api_key as string | undefined) ?? undefined;
+  if (!ffKey) throw new Error("Fireflies não conectado — conecte sua chave em Integrações no Foco");
   const r = await fetch(FIREFLIES_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": ffKey,
+      Authorization: `Bearer ${ffKey}`,
     },
     body: JSON.stringify({ query, variables }),
   });

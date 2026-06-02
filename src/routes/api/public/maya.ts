@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
+const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
 // ---------------- Auth ----------------
 async function authenticateRequest(request: Request) {
@@ -281,7 +281,7 @@ async function execTool(
 
   if (name === "list_fireflies_meetings") {
     const limit = Number(args.limit ?? 10);
-    const result = await fireflies(`
+    const result = await fireflies(userId, `
       query Last($limit: Int) {
         transcripts(limit: $limit) {
           id title date duration host_email
@@ -294,7 +294,7 @@ async function execTool(
 
   if (name === "get_fireflies_transcript") {
     const id = String(args.transcript_id);
-    const result = await fireflies(`
+    const result = await fireflies(userId, `
       query One($id: String!) {
         transcript(id: $id) {
           id title date duration host_email
@@ -321,17 +321,20 @@ async function execTool(
   throw new Error(`Tool desconhecida: ${name}`);
 }
 
-async function fireflies(query: string, variables: Record<string, unknown>) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const ffKey = process.env.FIREFLIES_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
-  if (!ffKey) throw new Error("FIREFLIES_API_KEY missing — conecte o Fireflies");
+async function fireflies(userId: string, query: string, variables: Record<string, unknown>) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: conn } = await supabaseAdmin
+    .from("fireflies_connections")
+    .select("api_key")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const ffKey = conn?.api_key as string | undefined;
+  if (!ffKey) throw new Error("Fireflies não conectado — conecte sua chave em Integrações");
   const r = await fetch(FIREFLIES_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": ffKey,
+      Authorization: `Bearer ${ffKey}`,
     },
     body: JSON.stringify({ query, variables }),
   });
