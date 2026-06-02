@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +11,9 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
+import { listTeams } from "@/lib/teams.functions";
+import { Users, User as UserIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 type Props = {
@@ -24,6 +29,7 @@ type Props = {
     status: ProjectStatus;
     starts_on: string | null;
     deadline: string | null;
+    team_id: string | null;
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
@@ -36,7 +42,17 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
   const [status, setStatus] = useState<ProjectStatus>("active");
   const [startsOn, setStartsOn] = useState<string>("");
   const [deadline, setDeadline] = useState<string>("");
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const fetchTeams = useServerFn(listTeams);
+  const { data: teamsData } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => fetchTeams(),
+    enabled: open,
+    staleTime: 30_000,
+  });
+  const teams = teamsData?.teams ?? [];
 
   useEffect(() => {
     if (open) {
@@ -47,6 +63,7 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
       setStatus(project?.status ?? "active");
       setStartsOn(project?.starts_on ?? "");
       setDeadline(project?.deadline ?? "");
+      setTeamId(((project as any)?.team_id ?? null) as string | null);
     }
   }, [open, project]);
 
@@ -65,6 +82,7 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
         status,
         starts_on: startsOn || null,
         deadline: deadline || null,
+        team_id: teamId,
       });
       onOpenChange(false);
     } catch (e: any) {
@@ -112,6 +130,48 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
               rows={5}
               placeholder="Objetivos, escopo, decisões importantes, links de referência…"
             />
+          </div>
+
+          <div>
+            <Label>Visibilidade</Label>
+            <Select
+              value={teamId ?? "__personal"}
+              onValueChange={(v) => setTeamId(v === "__personal" ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__personal">
+                  <span className="inline-flex items-center gap-2">
+                    <UserIcon className="h-3 w-3" /> Pessoal
+                  </span>
+                </SelectItem>
+                {teams.map((t: any) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <Users className="h-3 w-3" style={{ color: t.color }} />
+                      Equipe: {t.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {teamId
+                ? "Todos os membros da equipe verão e poderão colaborar neste projeto."
+                : teams.length === 0
+                ? (
+                  <>
+                    Apenas você tem acesso.{" "}
+                    <Link to="/equipes" className="underline hover:text-foreground" onClick={() => onOpenChange(false)}>
+                      Criar equipe
+                    </Link>
+                    {" "}para compartilhar com várias pessoas.
+                  </>
+                )
+                : "Apenas você tem acesso (pode convidar pessoas individualmente abaixo)."}
+            </p>
           </div>
 
           <div>
@@ -179,10 +239,6 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
 
           {project?.id && <ProjectMembersSection projectId={project.id} />}
         </div>
-
-
-
-
 
         <DialogFooter className="flex justify-between sm:justify-between">
           <div>

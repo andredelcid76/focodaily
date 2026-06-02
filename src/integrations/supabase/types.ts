@@ -870,6 +870,7 @@ export type Database = {
           role_id: string | null
           starts_on: string | null
           status: Database["public"]["Enums"]["project_status"]
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -887,6 +888,7 @@ export type Database = {
           role_id?: string | null
           starts_on?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -904,6 +906,7 @@ export type Database = {
           role_id?: string | null
           starts_on?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -913,6 +916,13 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -1179,6 +1189,112 @@ export type Database = {
           },
         ]
       }
+      team_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          team_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          team_id: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          team_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           auto_organize_use_ai: boolean
@@ -1247,12 +1363,21 @@ export type Database = {
     }
     Functions: {
       accept_project_invite: { Args: { _token: string }; Returns: string }
+      accept_team_invite: { Args: { _token: string }; Returns: string }
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       is_project_owner: {
         Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_team_owner: {
+        Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
       reorder_tasks: { Args: { p_ordered_ids: string[] }; Returns: undefined }

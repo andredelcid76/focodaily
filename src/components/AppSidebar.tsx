@@ -49,6 +49,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Trabalho",
     items: [
       { title: "Projetos", url: "/projetos", icon: FolderKanban, shortcut: "G P" },
+      { title: "Equipes", url: "/equipes", icon: Users, shortcut: "G E" },
       { title: "Papéis", url: "/papeis", icon: Users },
       { title: "Caixa de entrada", url: "/inbox", icon: Inbox, badgeKey: "inbox", shortcut: "G I" },
     ],
@@ -101,6 +102,7 @@ function useNavHotkeys() {
       s: "/semana",
       a: "/agenda",
       p: "/projetos",
+      e: "/equipes",
       i: "/inbox",
     };
     const onKey = (e: KeyboardEvent) => {
