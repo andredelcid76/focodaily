@@ -1502,6 +1502,14 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      is_project_admin: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_manager_or_above: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
