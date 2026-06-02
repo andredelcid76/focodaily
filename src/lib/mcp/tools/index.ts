@@ -277,9 +277,11 @@ export const listFirefliesMeetings = defineTool({
   name: "list_fireflies_meetings",
   description: "Lista as últimas reuniões transcritas do Fireflies (id, título, data, action items).",
   parameters: z.object({ limit: z.number().optional().describe("Padrão 10") }),
-  execute: async (args, _ctx) => {
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
     const limit = args.limit ?? 10;
     const result = await fireflies(
+      userId,
       `query Last($limit: Int) {
         transcripts(limit: $limit) {
           id title date duration host_email
@@ -296,8 +298,10 @@ export const getFirefliesTranscript = defineTool({
   name: "get_fireflies_transcript",
   description: "Pega o conteúdo completo de uma reunião do Fireflies (sumário, action items e transcrição).",
   parameters: z.object({ transcript_id: z.string() }),
-  execute: async (args, _ctx) => {
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
     const result = await fireflies(
+      userId,
       `query One($id: String!) {
         transcript(id: $id) {
           id title date duration host_email
