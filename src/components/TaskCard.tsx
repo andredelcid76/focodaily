@@ -182,6 +182,14 @@ export function TaskCard({
             </button>
             {role && <RoleBadge role={role} size="xs" />}
             {project && <ProjectChip project={project} size="xs" />}
+            {(task as any).assignee_id && (task as any).assignee_id !== (task as any).user_id && (
+              <span
+                className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary"
+                title="Tarefa delegada"
+              >
+                <User className="h-2.5 w-2.5" /> delegada
+              </span>
+            )}
             {(task as any).origin_source && (() => {
               const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
               const url = (task as any).origin_source_url as string | null;
