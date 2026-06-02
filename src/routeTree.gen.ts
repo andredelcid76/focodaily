@@ -29,6 +29,7 @@ import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planne
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
@@ -138,6 +139,12 @@ const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
   path: '/api/public/maya',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOutlookCallbackRoute =
   ApiPublicOutlookCallbackRouteImport.update({
     id: '/callback',
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -225,6 +233,7 @@ export interface FileRoutesByTo {
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -254,6 +263,7 @@ export interface FileRoutesById {
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
+    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
+    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -340,6 +352,7 @@ export interface FileRouteTypes {
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
+    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -368,6 +381,7 @@ export interface RootRouteChildren {
   ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
   ApiPublicOauthTokenRoute: typeof ApiPublicOauthTokenRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -512,6 +526,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMayaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/outlook/callback': {
       id: '/api/public/outlook/callback'
       path: '/callback'
@@ -596,7 +617,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
   ApiPublicOauthTokenRoute: ApiPublicOauthTokenRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
