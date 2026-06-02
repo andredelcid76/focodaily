@@ -125,15 +125,21 @@ export const listProjectMembers = createServerFn({ method: "POST" })
 
     const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
+    const memberRoleMap = new Map(
+      (members ?? []).map((m) => [m.user_id, (m.role ?? "editor") as "owner" | "editor" | "viewer"]),
+    );
     const memberList = Array.from(memberIds).map((uid) => {
       const profile = profileMap.get(uid);
       const isOwner = uid === project.user_id;
+      const role: "owner" | "editor" | "viewer" = isOwner
+        ? "owner"
+        : (memberRoleMap.get(uid) ?? "editor");
       return {
         user_id: uid,
         email: profile?.email ?? null,
         display_name: profile?.display_name ?? null,
         avatar_url: profile?.avatar_url ?? null,
-        role: (isOwner ? "owner" : "member") as "owner" | "member",
+        role,
         is_me: uid === userId,
       };
     });
@@ -141,7 +147,7 @@ export const listProjectMembers = createServerFn({ method: "POST" })
     // Pending invites (only visible to owner via RLS)
     const { data: invites } = await supabase
       .from("project_invites")
-      .select("id, email, expires_at, created_at")
+      .select("id, email, expires_at, created_at, role")
       .eq("project_id", data.project_id)
       .is("accepted_at", null);
 
@@ -163,6 +169,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
         project_id: z.string().uuid(),
         email: z.string().email().max(255),
         origin: z.string().url(),
+        role: z.enum(["editor", "viewer"]).default("editor"),
       })
       .parse(input),
   )
@@ -217,6 +224,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
           project_id: data.project_id,
           email,
           token,
+          role: data.role,
           invited_by: userId,
           expires_at: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
           accepted_at: null,
@@ -288,6 +296,40 @@ export const removeProjectMember = createServerFn({ method: "POST" })
     const { error } = await supabase
       .from("project_members")
       .delete()
+      .eq("project_id", data.project_id)
+      .eq("user_id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+// ============================================================
+// Update a member's role (owner-only)
+// ============================================================
+export const updateProjectMemberRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        user_id: z.string().uuid(),
+        role: z.enum(["editor", "viewer"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: project } = await supabaseAdmin
+      .from("projects")
+      .select("user_id")
+      .eq("id", data.project_id)
+      .maybeSingle();
+    if (!project) throw new Error("Projeto não encontrado");
+    if (project.user_id !== userId) throw new Error("Apenas o dono pode mudar papéis");
+    if (data.user_id === project.user_id) throw new Error("O dono não tem papel editável");
+
+    const { error } = await supabaseAdmin
+      .from("project_members")
+      .update({ role: data.role } as never)
       .eq("project_id", data.project_id)
       .eq("user_id", data.user_id);
     if (error) throw new Error(error.message);
