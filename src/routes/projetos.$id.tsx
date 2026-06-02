@@ -277,6 +277,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
             onSetStatus={(id, status) => tasksApi.setStatus(id, status)}
             onUpdate={(id, patch) => tasksApi.updateTask(id, patch as any)}
             onToggleComplete={(t) => tasksApi.toggleComplete(t)}
+            onBulkDelete={(ids) => tasksApi.bulkDelete(ids)}
           />
         )}
 
