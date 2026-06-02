@@ -55,7 +55,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Sistema",
-    items: [{ title: "Configurações", url: "/configuracoes", icon: Settings }],
+    items: [{ title: "Integrações", url: "/configuracoes", icon: Settings }],
   },
 ];
 

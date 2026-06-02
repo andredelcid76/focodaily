@@ -16,7 +16,7 @@ const PAGE_META: { match: (path: string) => boolean; eyebrow: string; title: str
   { match: (p) => p.startsWith("/projetos"), eyebrow: "Trabalho", title: "Projetos" },
   { match: (p) => p.startsWith("/papeis"), eyebrow: "Trabalho", title: "Papéis" },
   { match: (p) => p.startsWith("/inbox"), eyebrow: "Trabalho", title: "Caixa de entrada" },
-  { match: (p) => p.startsWith("/configuracoes"), eyebrow: "Sistema", title: "Configurações" },
+  { match: (p) => p.startsWith("/configuracoes"), eyebrow: "Sistema", title: "Integrações" },
 ];
 
 function pageMetaFor(pathname: string) {
