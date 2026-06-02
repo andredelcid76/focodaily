@@ -22,7 +22,7 @@ function RolesPage() {
   return <RolesInner userId={user.id} />;
 }
 
-function RolesInner({ userId }: { userId: string }) {
+export function RolesInner({ userId }: { userId: string }) {
   const { roles, createRole, updateRole, deleteRole } = useRoles(userId);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");

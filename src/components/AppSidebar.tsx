@@ -1,7 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  CalendarClock,
-  CalendarDays,
   FolderKanban,
   Inbox,
   ListTodo,
@@ -41,8 +39,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Planejar",
     items: [
       { title: "Hoje", url: "/", icon: ListTodo, shortcut: "G H" },
-      { title: "Semana", url: "/semana", icon: CalendarDays, shortcut: "G S" },
-      { title: "Agenda", url: "/agenda", icon: CalendarClock, shortcut: "G A" },
       { title: "Minhas tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
     ],
   },
@@ -51,13 +47,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { title: "Projetos", url: "/projetos", icon: FolderKanban, shortcut: "G P" },
       { title: "Equipes", url: "/equipes", icon: Users, shortcut: "G E" },
-      { title: "Papéis", url: "/papeis", icon: Users },
       { title: "Caixa de entrada", url: "/inbox", icon: Inbox, badgeKey: "inbox", shortcut: "G I" },
     ],
   },
   {
     label: "Sistema",
-    items: [{ title: "Integrações", url: "/configuracoes", icon: Settings }],
+    items: [{ title: "Configurações", url: "/configuracoes", icon: Settings }],
   },
 ];
 
@@ -100,12 +95,11 @@ function useNavHotkeys() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const map: Record<string, string> = {
       h: "/",
-      s: "/semana",
-      a: "/agenda",
       m: "/minhas-tarefas",
       p: "/projetos",
       e: "/equipes",
       i: "/inbox",
+      c: "/configuracoes",
     };
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
