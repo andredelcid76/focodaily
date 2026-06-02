@@ -73,6 +73,10 @@ const CAT_LABEL: Record<MyTaskRow["category"], string> = {
 };
 
 function MyTasksPage() {
+  const { user } = useAuth();
+  const userId = user?.id;
+  const { roles } = useRoles(userId);
+  const { projects } = useProjects(userId);
   const fetchTasks = useServerFn(listMyAssignedTasks);
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["my-assigned-tasks"],
@@ -82,6 +86,86 @@ function MyTasksPage() {
 
   const today = todayISO();
   const tasks = data?.tasks ?? [];
+
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [opening, setOpening] = useState<string | null>(null);
+
+  const openTask = async (id: string) => {
+    setOpening(id);
+    const { data: row, error } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
+    setOpening(null);
+    if (error || !row) {
+      toast.error(error?.message ?? "Não foi possível abrir a tarefa.");
+      return;
+    }
+    setEditingTask(row as Task);
+    setDialogOpen(true);
+  };
+
+  // Ensure the task's project is available in the dialog selector even when
+  // the user is only an assignee (not the owner) of the project.
+  const projectsForDialog = useMemo<Project[]>(() => {
+    if (!editingTask?.project_id) return projects;
+    if (projects.some((p) => p.id === editingTask.project_id)) return projects;
+    const fromRow = tasks.find((t) => t.id === editingTask.id);
+    const proj = fromRow?.project;
+    if (!proj) return projects;
+    return [
+      ...projects,
+      {
+        id: proj.id,
+        name: proj.name,
+        color: proj.color ?? "#8b5cf6",
+        icon: proj.icon ?? "folder",
+      } as Project,
+    ];
+  }, [projects, editingTask, tasks]);
+
+  const handleSave = async (
+    patch: Partial<Task>,
+    _scope?: RecurrenceScope,
+  ) => {
+    if (!editingTask) return;
+    const { error } = await supabase.from("tasks").update(patch).eq("id", editingTask.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Tarefa atualizada");
+    refetch();
+  };
+
+  const handleDelete = async () => {
+    if (!editingTask) return;
+    const { error } = await supabase.from("tasks").delete().eq("id", editingTask.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Tarefa excluída");
+    setDialogOpen(false);
+    refetch();
+  };
+
+  const handleDialogToggleComplete = async () => {
+    if (!editingTask) return;
+    const next = !editingTask.completed;
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        completed: next,
+        completed_at: next ? new Date().toISOString() : null,
+        status: next ? "done" : "todo",
+      })
+      .eq("id", editingTask.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    refetch();
+  };
+
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | MyTaskRow["status"]>("all");
