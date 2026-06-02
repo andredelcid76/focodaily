@@ -785,6 +785,7 @@ export type Database = {
           id: string
           invited_by: string
           project_id: string
+          role: string
           token: string
         }
         Insert: {
@@ -796,6 +797,7 @@ export type Database = {
           id?: string
           invited_by: string
           project_id: string
+          role?: string
           token: string
         }
         Update: {
@@ -807,6 +809,7 @@ export type Database = {
           id?: string
           invited_by?: string
           project_id?: string
+          role?: string
           token?: string
         }
         Relationships: []
@@ -1318,6 +1321,7 @@ export type Database = {
           expires_at: string
           id: string
           invited_by: string
+          role: string
           team_id: string
           token: string
         }
@@ -1329,6 +1333,7 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by: string
+          role?: string
           team_id: string
           token: string
         }
@@ -1340,6 +1345,7 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string
+          role?: string
           team_id?: string
           token?: string
         }
@@ -1484,6 +1490,10 @@ export type Database = {
     Functions: {
       accept_project_invite: { Args: { _token: string }; Returns: string }
       accept_team_invite: { Args: { _token: string }; Returns: string }
+      can_edit_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
