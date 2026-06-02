@@ -326,8 +326,9 @@ function CardsView({
                   role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
                   tasks={tasksByProject.get(p.id) ?? []}
                   today={today}
-                  onEdit={() => onEdit(p)}
+                  onEdit={canEdit(p) ? () => onEdit(p) : null}
                 />
+
               ))}
             </div>
           </section>
