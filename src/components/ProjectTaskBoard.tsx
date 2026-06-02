@@ -286,44 +286,87 @@ function TableView({
   }, [tasks, grouping, ownerId, memberById, today]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-      <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <span />
-        <span>Tarefa</span>
-        <span>Vencimento</span>
-        <span>Responsável</span>
-        <span>Status</span>
-        <span />
-      </div>
-
-      {groups.map((g) => (
-        <div key={g.key}>
-          {g.label && (
-            <div className="flex items-center gap-2 border-b border-border/40 bg-background/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {grouping === "assignee" && (
-                <Avatar name={g.label} />
-              )}
-              <span>{g.label}</span>
-              <span className="text-muted-foreground/60">· {g.tasks.length}</span>
-            </div>
+    <div className="space-y-2">
+      {hasSelection && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
+          <span className="font-semibold text-primary">{ids.length} selecionada(s)</span>
+          <span className="text-muted-foreground">·</span>
+          <Select onValueChange={(v) => bulkStatus(v as TaskStatus)}>
+            <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Mudar status" /></SelectTrigger>
+            <SelectContent>
+              {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select onValueChange={(v) => bulkAssign(v === "__none" ? null : v)}>
+            <SelectTrigger className="h-7 w-44 text-xs"><SelectValue placeholder="Atribuir a…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Sem responsável</SelectItem>
+              {members.map((m) => (
+                <SelectItem key={m.user_id} value={m.user_id}>{nameOf(m)}{m.is_me ? " (você)" : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            onChange={(e) => bulkDate(e.target.value)}
+            className="h-7 w-36 text-xs"
+            title="Mover vencimento"
+          />
+          {onBulkDelete && (
+            <Button size="sm" variant="ghost" onClick={bulkDelete} className="h-7 text-destructive hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+            </Button>
           )}
-          {g.tasks.map((t) => (
-            <TaskRow
-              key={t.id}
-              task={t}
-              today={today}
-              members={members}
-              assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
-              role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
-              onEdit={() => onEdit(t)}
-              onSetStatus={(s) => onSetStatus(t.id, s)}
-              onAssign={(uid) => onUpdate(t.id, { assignee_id: uid })}
-              onDate={(d) => onUpdate(t.id, { scheduled_date: d })}
-              onToggleComplete={() => onToggleComplete(t)}
-            />
-          ))}
+          <Button size="sm" variant="ghost" onClick={clearSel} className="ml-auto h-7">
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar
+          </Button>
         </div>
-      ))}
+      )}
+
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+        <div className="grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span />
+          <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
+          <span>Tarefa</span>
+          <span>Vencimento</span>
+          <span>Responsável</span>
+          <span>Status</span>
+          <span />
+        </div>
+
+        {groups.map((g) => (
+          <div key={g.key}>
+            {g.label && (
+              <div className="flex items-center gap-2 border-b border-border/40 bg-background/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {grouping === "assignee" && (
+                  <Avatar name={g.label} />
+                )}
+                <span>{g.label}</span>
+                <span className="text-muted-foreground/60">· {g.tasks.length}</span>
+              </div>
+            )}
+            {g.tasks.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                today={today}
+                members={members}
+                assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
+                role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                selected={selected.has(t.id)}
+                onSelectToggle={() => toggleSel(t.id)}
+                onEdit={() => onEdit(t)}
+                onSetStatus={(s) => onSetStatus(t.id, s)}
+                onAssign={(uid) => onUpdate(t.id, { assignee_id: uid })}
+                onDate={(d) => onUpdate(t.id, { scheduled_date: d })}
+                onToggleComplete={() => onToggleComplete(t)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
