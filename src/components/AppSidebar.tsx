@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfiles, profileInitials } from "@/hooks/useProfiles";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type NavItem = {
   title: string;
