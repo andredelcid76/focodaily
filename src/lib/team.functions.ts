@@ -355,6 +355,71 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
   });
 
 // ============================================================
+// Transfer project leadership (current leader → another member)
+// ============================================================
+export const transferProjectLeadership = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        new_leader_id: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    const { data: project } = await supabaseAdmin
+      .from("projects")
+      .select("id, user_id, name")
+      .eq("id", data.project_id)
+      .maybeSingle();
+    if (!project) throw new Error("Projeto não encontrado");
+    if (project.user_id !== userId) {
+      throw new Error("Apenas o líder atual pode transferir a liderança");
+    }
+    if (project.user_id === data.new_leader_id) {
+      throw new Error("Este usuário já é o líder do projeto");
+    }
+
+    // 1) Update the project owner (this is the "leader" in the new vocabulary).
+    const { error: updErr } = await supabaseAdmin
+      .from("projects")
+      .update({ user_id: data.new_leader_id })
+      .eq("id", data.project_id);
+    if (updErr) throw new Error(updErr.message);
+
+    // 2) Ensure ex-leader keeps full access as manager.
+    await supabaseAdmin
+      .from("project_members")
+      .upsert(
+        { project_id: data.project_id, user_id: userId, role: "manager" },
+        { onConflict: "project_id,user_id" },
+      );
+
+    // 3) Remove any project_members row for the new leader (now they're the owner).
+    await supabaseAdmin
+      .from("project_members")
+      .delete()
+      .eq("project_id", data.project_id)
+      .eq("user_id", data.new_leader_id);
+
+    // 4) Notify the new leader.
+    await supabaseAdmin.from("notifications").insert({
+      user_id: data.new_leader_id,
+      type: "project_leader_transfer",
+      title: "Você agora é o líder do projeto",
+      body: `Você recebeu a liderança do projeto ${project.name}.`,
+      project_id: project.id,
+      actor_id: userId,
+      link: `/projetos/${project.id}`,
+    });
+
+    return { success: true };
+  });
+
+// ============================================================
 // Accept invite (token-based)
 // ============================================================
 export const acceptProjectInvite = createServerFn({ method: "POST" })

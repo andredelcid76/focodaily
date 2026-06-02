@@ -44,6 +44,8 @@ type Props = {
   selected?: boolean;
   onSelectToggle?: () => void;
   subtaskCount?: { total: number; completed: number };
+  /** When true, hides the assignee avatar/chip (e.g. on the "Today" page where only "my" tasks are shown). */
+  hideAssignee?: boolean;
 };
 
 export function TaskCard({
@@ -69,6 +71,7 @@ export function TaskCard({
   selected,
   onSelectToggle,
   subtaskCount,
+  hideAssignee,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -186,7 +189,7 @@ export function TaskCard({
             </button>
             {role && <RoleBadge role={role} size="xs" />}
             {project && <ProjectChip project={project} size="xs" />}
-            {(task as any).assignee_id && (
+            {!hideAssignee && (task as any).assignee_id && (
               <AssigneeChip
                 assigneeId={(task as any).assignee_id}
                 ownerId={(task as any).user_id}

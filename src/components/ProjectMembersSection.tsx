@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Users, Mail, Trash2, Copy, Check, UserPlus, Clock, Crown, Shield, Pencil, User } from "lucide-react";
+import { Users, Mail, Trash2, Copy, Check, UserPlus, Clock, Crown, Pencil, User, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import {
   revokeInvite,
   removeProjectMember,
   updateProjectMemberRole,
+  transferProjectLeadership,
 } from "@/lib/team.functions";
 
 type Props = { projectId: string };
@@ -27,9 +28,9 @@ type Props = { projectId: string };
 type Role = "admin" | "manager" | "member";
 
 const ROLE_META: Record<"owner" | Role, { label: string; icon: typeof Crown; tone: string; hint: string }> = {
-  owner: { label: "Dono", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Criador do projeto — controle total" },
-  admin: { label: "Admin", icon: Shield, tone: "bg-rose-500/10 text-rose-600", hint: "Pode tudo, inclusive gerenciar membros" },
-  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita o projeto e qualquer tarefa" },
+  owner: { label: "Líder", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Líder do projeto — controle total" },
+  admin: { label: "Líder (legado)", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Membro com permissões de líder legadas — recomendado migrar para Gestor" },
+  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita qualquer tarefa, mas não os dados do projeto" },
   member: { label: "Membro", icon: User, tone: "bg-muted text-muted-foreground", hint: "Adiciona tarefas e mexe só nas próprias e nas delegadas" },
 };
 
@@ -40,6 +41,7 @@ export function ProjectMembersSection({ projectId }: Props) {
   const revoke = useServerFn(revokeInvite);
   const remove = useServerFn(removeProjectMember);
   const updateRole = useServerFn(updateProjectMemberRole);
+  const transferLeader = useServerFn(transferProjectLeadership);
 
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("member");
@@ -108,6 +110,17 @@ export function ProjectMembersSection({ projectId }: Props) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["project-members", projectId] }),
   });
 
+  const transferMut = useMutation({
+    mutationFn: (newLeaderId: string) =>
+      transferLeader({ data: { project_id: projectId, new_leader_id: newLeaderId } }),
+    onSuccess: () => {
+      toast.success("Liderança transferida");
+      qc.invalidateQueries({ queryKey: ["project-members", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const copyLink = async () => {
     if (!lastInviteUrl) return;
     await navigator.clipboard.writeText(lastInviteUrl);
@@ -163,9 +176,6 @@ export function ProjectMembersSection({ projectId }: Props) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">
-                        <span className="flex items-center gap-2"><Shield className="h-3 w-3" /> Admin</span>
-                      </SelectItem>
                       <SelectItem value="manager">
                         <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Gestor</span>
                       </SelectItem>
@@ -178,6 +188,25 @@ export function ProjectMembersSection({ projectId }: Props) {
                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.tone}`} title={meta.hint}>
                     <Icon className="h-3 w-3" /> {meta.label}
                   </span>
+                )}
+                {isOwner && m.role !== "owner" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-amber-600"
+                    title="Transferir liderança para este membro"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Transferir a liderança do projeto para ${m.display_name ?? m.email ?? "este membro"}? Você passará a ser Gestor.`,
+                        )
+                      ) {
+                        transferMut.mutate(m.user_id);
+                      }
+                    }}
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                  </Button>
                 )}
                 {canRemove && (
                   <Button
@@ -258,9 +287,6 @@ export function ProjectMembersSection({ projectId }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">
-                  <span className="flex items-center gap-2"><Shield className="h-3 w-3" /> Admin</span>
-                </SelectItem>
                 <SelectItem value="manager">
                   <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Gestor</span>
                 </SelectItem>
@@ -278,7 +304,7 @@ export function ProjectMembersSection({ projectId }: Props) {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            <strong>Admin</strong> faz tudo. <strong>Gestor</strong> edita projeto e qualquer tarefa. <strong>Membro</strong> mexe nas próprias e nas delegadas.
+            <strong>Gestor</strong> edita qualquer tarefa, mas não os dados do projeto. <strong>Membro</strong> só mexe nas próprias e nas delegadas. O <strong>Líder</strong> é o dono do projeto — você pode transferir a liderança usando o botão <ArrowRightLeft className="inline h-3 w-3" /> ao lado de cada membro.
           </p>
           {lastInviteUrl && (
             <div className="space-y-1.5">
