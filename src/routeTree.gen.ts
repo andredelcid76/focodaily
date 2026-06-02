@@ -15,6 +15,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as BemVindoRouteImport } from './routes/bem-vindo'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -74,6 +75,11 @@ const InboxRoute = InboxRouteImport.update({
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BemVindoRoute = BemVindoRouteImport.update({
+  id: '/bem-vindo',
+  path: '/bem-vindo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
@@ -275,6 +282,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/auth': typeof AuthRoute
+  '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
@@ -354,6 +363,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/bem-vindo'
     | '/configuracoes'
     | '/inbox'
     | '/minhas-tarefas'
@@ -392,6 +402,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/bem-vindo'
     | '/configuracoes'
     | '/inbox'
     | '/minhas-tarefas'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/auth'
+    | '/bem-vindo'
     | '/configuracoes'
     | '/inbox'
     | '/minhas-tarefas'
@@ -469,6 +481,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AuthRoute: typeof AuthRoute
+  BemVindoRoute: typeof BemVindoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   InboxRoute: typeof InboxRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bem-vindo': {
+      id: '/bem-vindo'
+      path: '/bem-vindo'
+      fullPath: '/bem-vindo'
+      preLoaderRoute: typeof BemVindoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -775,6 +795,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AuthRoute: AuthRoute,
+  BemVindoRoute: BemVindoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   InboxRoute: InboxRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,

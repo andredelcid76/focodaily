@@ -1,5 +1,6 @@
 import { useRouter, useLocation, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 import { GlobalSearch, useGlobalSearchHotkey } from "@/components/GlobalSearch";
