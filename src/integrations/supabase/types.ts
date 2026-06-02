@@ -109,6 +109,33 @@ export type Database = {
         }
         Relationships: []
       }
+      fireflies_connections: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       inbox_processed_sources: {
         Row: {
           id: string

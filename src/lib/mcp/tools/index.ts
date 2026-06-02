@@ -2,7 +2,7 @@ import { defineTool } from "mcp-tanstack-start";
 import { z } from "zod";
 import { db, getUserId } from "../supabase";
 
-const FIREFLIES_URL = "https://connector-gateway.lovable.dev/fireflies/graphql";
+const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
 export const listRoles = defineTool({
   name: "list_roles",
@@ -250,17 +250,19 @@ export const deleteTask = defineTool({
   },
 });
 
-async function fireflies(query: string, variables: Record<string, unknown>) {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const ffKey = process.env.FIREFLIES_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY não configurada");
-  if (!ffKey) throw new Error("Fireflies não conectado");
+async function fireflies(userId: string, query: string, variables: Record<string, unknown>) {
+  const { data: conn } = await db()
+    .from("fireflies_connections")
+    .select("api_key")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const ffKey = (conn?.api_key as string | undefined) ?? undefined;
+  if (!ffKey) throw new Error("Fireflies não conectado — conecte sua chave em Integrações no Foco");
   const r = await fetch(FIREFLIES_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": ffKey,
+      Authorization: `Bearer ${ffKey}`,
     },
     body: JSON.stringify({ query, variables }),
   });
@@ -275,9 +277,11 @@ export const listFirefliesMeetings = defineTool({
   name: "list_fireflies_meetings",
   description: "Lista as últimas reuniões transcritas do Fireflies (id, título, data, action items).",
   parameters: z.object({ limit: z.number().optional().describe("Padrão 10") }),
-  execute: async (args, _ctx) => {
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
     const limit = args.limit ?? 10;
     const result = await fireflies(
+      userId,
       `query Last($limit: Int) {
         transcripts(limit: $limit) {
           id title date duration host_email
@@ -294,8 +298,10 @@ export const getFirefliesTranscript = defineTool({
   name: "get_fireflies_transcript",
   description: "Pega o conteúdo completo de uma reunião do Fireflies (sumário, action items e transcrição).",
   parameters: z.object({ transcript_id: z.string() }),
-  execute: async (args, _ctx) => {
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
     const result = await fireflies(
+      userId,
       `query One($id: String!) {
         transcript(id: $id) {
           id title date duration host_email
