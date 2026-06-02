@@ -345,7 +345,7 @@ function ProjectCard({
   role: { name: string; color: string } | null;
   tasks: any[];
   today: string;
-  onEdit: () => void;
+  onEdit: (() => void) | null;
 }) {
   const stats = computeProjectStats(project, tasks, today);
   const pct = Math.round(stats.progress * 100);
@@ -369,10 +369,13 @@ function ProjectCard({
             {role && <RoleChip role={role} />}
           </div>
         </div>
-        <button onClick={onEdit} className="text-xs text-muted-foreground hover:text-foreground" title="Editar">
-          Editar
-        </button>
+        {onEdit && (
+          <button onClick={onEdit} className="text-xs text-muted-foreground hover:text-foreground" title="Editar">
+            Editar
+          </button>
+        )}
       </div>
+
 
       {project.description && (
         <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{project.description}</p>
