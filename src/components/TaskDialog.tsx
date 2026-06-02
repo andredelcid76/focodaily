@@ -76,6 +76,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [roleId, setRoleId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [nonNegotiable, setNonNegotiable] = useState(false);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
