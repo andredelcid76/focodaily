@@ -313,6 +313,7 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
       source_url: `https://${domain}.pipedrive.com/activities/list#dialog/activity/${a.id}`,
       source_date: a.due_date ?? a.update_time ?? a.add_time ?? null,
       text: `Atividade: ${a.subject ?? "—"}\nTipo: ${a.type ?? "—"}\nVencimento: ${a.due_date ?? "—"} ${a.due_time ?? ""}\nDeal: ${a.deal_title ?? "—"}\nOrganização: ${a.org_name ?? "—"}\nPessoa: ${a.person_name ?? "—"}\nNota: ${(a.note ?? a.public_description ?? "").replace(/<[^>]+>/g, "").slice(0, 800)}`,
+      title_override: (a.subject ?? "").trim() || null,
     }));
   } catch (e) {
     console.error("pipedrive", e);
