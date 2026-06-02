@@ -271,9 +271,15 @@ function PipedriveCard({
 }) {
   const save = useServerFn(savePipedriveConnection);
   const disconnect = useServerFn(disconnectPipedrive);
+  const test = useServerFn(testPipedriveConnection);
   const [open, setOpen] = useState(false);
   const [domain, setDomain] = useState("");
   const [token, setToken] = useState("");
+  const testMut = useMutation({
+    mutationFn: () => test({ data: undefined }),
+    onSuccess: (r) => toast.success(`Conexão OK${r.email ? ` — ${r.email}` : r.name ? ` — ${r.name}` : ""}`),
+    onError: (e: Error) => toast.error(`Falhou: ${e.message}`),
+  });
 
   const saveMut = useMutation({
     mutationFn: () => save({ data: { domain: domain.trim(), api_token: token.trim() } }),
