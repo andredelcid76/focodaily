@@ -333,7 +333,10 @@ function PipedriveCard({
             <div className="text-sm">
               Domínio: <span className="font-mono">{status.domain}.pipedrive.com</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
+                {testMut.isPending ? "Testando…" : "Testar conexão"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
                 Atualizar token
               </Button>
