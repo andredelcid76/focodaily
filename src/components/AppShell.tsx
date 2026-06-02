@@ -8,6 +8,7 @@ import { MayaChat } from "@/components/MayaChat";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 const PAGE_META: { match: (path: string) => boolean; eyebrow: string; title: string }[] = [
   { match: (p) => p === "/", eyebrow: "Foco", title: "Hoje" },
@@ -101,6 +102,7 @@ function Shell({ children }: { children: ReactNode }) {
               >
                 <Search className="h-4 w-4" />
               </Button>
+              <NotificationsBell />
             </div>
           </header>
 
