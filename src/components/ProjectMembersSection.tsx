@@ -42,7 +42,7 @@ export function ProjectMembersSection({ projectId }: Props) {
   const updateRole = useServerFn(updateProjectMemberRole);
 
   const [email, setEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<Role>("editor");
+  const [inviteRole, setInviteRole] = useState<Role>("member");
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
