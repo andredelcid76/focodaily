@@ -71,7 +71,7 @@ function WeekInner({ userId }: { userId: string }) {
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>();
     days.forEach((d) => map.set(d, []));
-    const filteredTasks = applyTaskFilters(tasksApi.tasks.filter(matchesQuery), filters);
+    const filteredTasks = applyTaskFilters(tasksApi.tasks.filter(matchesQuery), filters, userId);
     for (const t of filteredTasks) {
       if (map.has(t.scheduled_date)) {
         map.get(t.scheduled_date)!.push(t);

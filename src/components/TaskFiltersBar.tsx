@@ -8,6 +8,8 @@ import type { Project } from "@/hooks/useProjects";
 
 export type TaskOrigin = "manual" | "pipedrive" | "email" | "meeting";
 
+export type AssigneeMode = "all" | "mine" | "delegated" | "unassigned";
+
 export type TaskFilters = {
   roleIds: Set<string | "none">; // "none" = sem papel
   projectIds: Set<string | "none">;
@@ -15,6 +17,7 @@ export type TaskFilters = {
   statuses: Set<TaskStatus>;
   origins: Set<TaskOrigin>;
   nonNegotiableOnly: boolean;
+  assigneeMode: AssigneeMode;
 };
 
 export const emptyFilters = (): TaskFilters => ({
@@ -24,6 +27,7 @@ export const emptyFilters = (): TaskFilters => ({
   statuses: new Set(),
   origins: new Set(),
   nonNegotiableOnly: false,
+  assigneeMode: "all",
 });
 
 export function countActiveFilters(f: TaskFilters): number {
@@ -33,7 +37,8 @@ export function countActiveFilters(f: TaskFilters): number {
     f.categories.size +
     f.statuses.size +
     f.origins.size +
-    (f.nonNegotiableOnly ? 1 : 0)
+    (f.nonNegotiableOnly ? 1 : 0) +
+    (f.assigneeMode !== "all" ? 1 : 0)
   );
 }
 
@@ -44,7 +49,9 @@ export function applyTaskFilters<T extends {
   status: TaskStatus;
   non_negotiable: boolean;
   origin_source?: string | null;
-}>(tasks: T[], f: TaskFilters): T[] {
+  user_id?: string;
+  assignee_id?: string | null;
+}>(tasks: T[], f: TaskFilters, currentUserId?: string): T[] {
   if (countActiveFilters(f) === 0) return tasks;
   return tasks.filter((t) => {
     if (f.roleIds.size > 0) {
@@ -63,6 +70,18 @@ export function applyTaskFilters<T extends {
       if (!f.origins.has(origin)) return false;
     }
     if (f.nonNegotiableOnly && !t.non_negotiable) return false;
+    if (f.assigneeMode !== "all" && currentUserId) {
+      const a = t.assignee_id ?? null;
+      if (f.assigneeMode === "mine") {
+        // mine = assigned to me OR (unassigned AND I own the task)
+        if (!(a === currentUserId || (a === null && t.user_id === currentUserId))) return false;
+      } else if (f.assigneeMode === "delegated") {
+        // delegated = I own the task but it's assigned to someone else
+        if (!(t.user_id === currentUserId && a && a !== currentUserId)) return false;
+      } else if (f.assigneeMode === "unassigned") {
+        if (a !== null) return false;
+      }
+    }
     return true;
   });
 }
@@ -221,6 +240,21 @@ export function TaskFiltersBar({
                 onClick={() => toggle("statuses", s)}
                 label={STATUS_LABEL[s]}
                 icon={s === "done" ? <CheckCircle2 className="h-3 w-3" /> : undefined}
+              />
+            ))}
+          </FilterSection>
+
+          <FilterSection title="Responsável">
+            {(["all", "mine", "delegated", "unassigned"] as AssigneeMode[]).map((m) => (
+              <Chip
+                key={m}
+                active={filters.assigneeMode === m}
+                onClick={() => update({ assigneeMode: m })}
+                label={
+                  m === "all" ? "Todas" :
+                  m === "mine" ? "Minhas" :
+                  m === "delegated" ? "Delegadas" : "Sem responsável"
+                }
               />
             ))}
           </FilterSection>

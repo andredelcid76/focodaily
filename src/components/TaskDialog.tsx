@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,9 +15,10 @@ import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
-import { FolderKanban, Lock, CheckCircle2, RotateCcw } from "lucide-react";
+import { FolderKanban, Lock, CheckCircle2, RotateCcw, User } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
 import { useAuth } from "@/lib/auth";
+import { listProjectMembers } from "@/lib/team.functions";
 
 type Props = {
   open: boolean;
@@ -37,6 +40,7 @@ type Props = {
       recurrence: TaskRecurrence;
       role_id: string | null;
       project_id: string | null;
+      assignee_id: string | null;
       non_negotiable: boolean;
       recurrence_interval: number | null;
       recurrence_weekdays: number[] | null;
@@ -72,6 +76,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [roleId, setRoleId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [nonNegotiable, setNonNegotiable] = useState(false);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
@@ -91,6 +96,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
       setProjectId(((task as any)?.project_id ?? defaultProjectId ?? null) as string | null);
+      setAssigneeId(((task as any)?.assignee_id ?? null) as string | null);
       setNonNegotiable(!!(task as any)?.non_negotiable);
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
@@ -113,6 +119,17 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
   };
 
+  const effectiveProjectId = lockedProjectId !== undefined ? lockedProjectId : projectId;
+  const fetchMembers = useServerFn(listProjectMembers);
+  const { data: membersData } = useQuery({
+    queryKey: ["project-members", effectiveProjectId],
+    queryFn: () => fetchMembers({ data: { project_id: effectiveProjectId as string } }),
+    enabled: !!effectiveProjectId && open,
+    staleTime: 60_000,
+  });
+  const members = membersData?.members ?? [];
+  const isShared = members.length > 1;
+
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
@@ -130,6 +147,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           recurrence,
           role_id: roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
+          assignee_id: (lockedProjectId !== undefined ? lockedProjectId : projectId) ? assigneeId : null,
           non_negotiable: nonNegotiable,
           recurrence_interval:
             recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
@@ -297,6 +315,37 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               </span>
             </div>
           )}
+          {effectiveProjectId && isShared && (
+            <div>
+              <Label>Responsável</Label>
+              <Select
+                value={assigneeId ?? user?.id ?? "__none"}
+                onValueChange={(v) => setAssigneeId(v === "__none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">
+                    <span className="inline-flex items-center gap-2">
+                      <User className="h-3 w-3" /> Sem responsável
+                    </span>
+                  </SelectItem>
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      <span className="inline-flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        {m.display_name ?? m.email ?? "Membro"}
+                        {m.is_me ? " (você)" : ""}
+                        {m.role === "owner" ? " · dono" : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
 
           <button
             type="button"

@@ -188,7 +188,8 @@ function TodayInner({ userId }: { userId: string }) {
         dayTasks
           .filter((t) => (showCompleted ? true : !t.completed))
           .filter(matchesQuery),
-        filters
+        filters,
+        userId
       ),
     [dayTasks, showCompleted, normalizedQuery, filters]
   );
@@ -205,7 +206,8 @@ function TodayInner({ userId }: { userId: string }) {
         tasksApi.overdueTasks
           .filter((t) => (showCompleted ? true : !t.completed))
           .filter(matchesQuery),
-        filters
+        filters,
+        userId
       ),
     [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters]
   );
