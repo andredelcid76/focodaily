@@ -37,8 +37,18 @@ export const getOutlookAuthUrl = createServerFn({ method: "POST" })
     if (!clientId) throw new Error("MS_CLIENT_ID is not configured");
 
     const redirectUri = getRedirectUri(data.origin);
-    // state = userId so callback (without auth header) can attribute it
-    const state = context.userId;
+
+    // Create a state token in oauth_pending_states for CSRF protection.
+    // The callback will look it up to attribute the connection to this user.
+    const state = crypto.randomUUID();
+    const { error: stateErr } = await supabaseAdmin
+      .from("oauth_pending_states")
+      .insert({
+        state_token: state,
+        user_id: context.userId,
+        provider: "outlook",
+      });
+    if (stateErr) throw new Error(`Failed to create state token: ${stateErr.message}`);
 
     const params = new URLSearchParams({
       client_id: clientId,
