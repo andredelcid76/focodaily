@@ -132,7 +132,7 @@ export function ProjectMembersSection({ projectId }: Props) {
 
       <div className="space-y-1.5">
         {members.map((m) => {
-          const meta = ROLE_META[m.role as "owner" | Role] ?? ROLE_META.editor;
+          const meta = ROLE_META[m.role as "owner" | Role] ?? ROLE_META.member;
           const Icon = meta.icon;
           const canEditRole = isOwner && m.role !== "owner";
           const canRemove = (isOwner && m.role !== "owner") || (m.is_me && m.role !== "owner");
@@ -163,11 +163,14 @@ export function ProjectMembersSection({ projectId }: Props) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="editor">
-                        <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Editor</span>
+                      <SelectItem value="admin">
+                        <span className="flex items-center gap-2"><Shield className="h-3 w-3" /> Admin</span>
                       </SelectItem>
-                      <SelectItem value="viewer">
-                        <span className="flex items-center gap-2"><Eye className="h-3 w-3" /> Leitor</span>
+                      <SelectItem value="manager">
+                        <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Gestor</span>
+                      </SelectItem>
+                      <SelectItem value="member">
+                        <span className="flex items-center gap-2"><User className="h-3 w-3" /> Membro</span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -202,7 +205,7 @@ export function ProjectMembersSection({ projectId }: Props) {
             <Clock className="h-3 w-3" /> Convites pendentes
           </div>
           {invites.map((inv: any) => {
-            const r = (inv.role ?? "editor") as Role;
+            const r = (inv.role ?? "member") as Role;
             const m = ROLE_META[r];
             const I = m.icon;
             return (
@@ -255,11 +258,14 @@ export function ProjectMembersSection({ projectId }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="editor">
-                  <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Editor</span>
+                <SelectItem value="admin">
+                  <span className="flex items-center gap-2"><Shield className="h-3 w-3" /> Admin</span>
                 </SelectItem>
-                <SelectItem value="viewer">
-                  <span className="flex items-center gap-2"><Eye className="h-3 w-3" /> Leitor</span>
+                <SelectItem value="manager">
+                  <span className="flex items-center gap-2"><Pencil className="h-3 w-3" /> Gestor</span>
+                </SelectItem>
+                <SelectItem value="member">
+                  <span className="flex items-center gap-2"><User className="h-3 w-3" /> Membro</span>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -272,7 +278,7 @@ export function ProjectMembersSection({ projectId }: Props) {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            <strong>Editor</strong> cria e edita tarefas. <strong>Leitor</strong> só visualiza.
+            <strong>Admin</strong> faz tudo. <strong>Gestor</strong> edita projeto e qualquer tarefa. <strong>Membro</strong> mexe nas próprias e nas delegadas.
           </p>
           {lastInviteUrl && (
             <div className="space-y-1.5">
