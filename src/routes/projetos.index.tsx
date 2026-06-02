@@ -30,6 +30,7 @@ import {
   KanbanSquare,
   Users as UsersIcon,
   Layers,
+  GanttChart,
 } from "lucide-react";
 import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
