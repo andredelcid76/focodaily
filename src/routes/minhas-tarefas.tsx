@@ -13,7 +13,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minhas-tarefas")({
-  component: MyTasksPage,
+  component: () => (
+    <AppShell>
+      <MyTasksPage />
+    </AppShell>
+  ),
   head: () => ({
     meta: [{ title: "Minhas tarefas · Focou" }],
   }),
