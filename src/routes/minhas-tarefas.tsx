@@ -85,9 +85,48 @@ function MyTasksPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
   const [hideDone, setHideDone] = useState(true);
+  const [dateRange, setDateRange] = useState<
+    "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
+  >("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const dateBounds = useMemo(() => {
+    const [y, m, d] = today.split("-").map(Number);
+    const base = new Date(y, m - 1, d);
+    const fmt = (dt: Date) => {
+      const yy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getDate()).padStart(2, "0");
+      return `${yy}-${mm}-${dd}`;
+    };
+    const addD = (n: number) => {
+      const dt = new Date(base);
+      dt.setDate(dt.getDate() + n);
+      return fmt(dt);
+    };
+    const day = base.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const monday = new Date(base);
+    monday.setDate(monday.getDate() + diffToMon);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const monthStart = new Date(base.getFullYear(), base.getMonth(), 1);
+    const monthEnd = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+    return {
+      today,
+      tomorrow: addD(1),
+      next7: addD(7),
+      next30: addD(30),
+      weekStart: fmt(monday),
+      weekEnd: fmt(sunday),
+      monthStart: fmt(monthStart),
+      monthEnd: fmt(monthEnd),
+    };
+  }, [today]);
 
   const projectOptions = useMemo(() => {
     const m = new Map<string, { id: string; name: string; color: string | null }>();
@@ -119,9 +158,47 @@ function MyTasksPage() {
       }
       if (q && !t.title.toLowerCase().includes(q) && !(t.project?.name ?? "").toLowerCase().includes(q))
         return false;
+      // date range
+      if (dateRange !== "all") {
+        const sd = t.scheduled_date;
+        if (dateRange === "no_date") {
+          if (sd) return false;
+        } else if (!sd) {
+          return false;
+        } else {
+          const b = dateBounds;
+          switch (dateRange) {
+            case "overdue":
+              if (!(sd < b.today && !t.completed)) return false;
+              break;
+            case "today":
+              if (sd !== b.today) return false;
+              break;
+            case "tomorrow":
+              if (sd !== b.tomorrow) return false;
+              break;
+            case "week":
+              if (sd < b.weekStart || sd > b.weekEnd) return false;
+              break;
+            case "next7":
+              if (sd < b.today || sd > b.next7) return false;
+              break;
+            case "month":
+              if (sd < b.monthStart || sd > b.monthEnd) return false;
+              break;
+            case "next30":
+              if (sd < b.today || sd > b.next30) return false;
+              break;
+            case "custom":
+              if (customFrom && sd < customFrom) return false;
+              if (customTo && sd > customTo) return false;
+              break;
+          }
+        }
+      }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, kindFilter, projectFilter, roleFilter, hideDone]);
+  }, [tasks, search, statusFilter, categoryFilter, kindFilter, projectFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -335,6 +412,40 @@ function MyTasksPage() {
             <SelectItem value="circumstantial">Circunstancial</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select value={dateRange} onValueChange={(v) => setDateRange(v as typeof dateRange)}>
+          <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer data</SelectItem>
+            <SelectItem value="overdue">Atrasadas</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="tomorrow">Amanhã</SelectItem>
+            <SelectItem value="week">Esta semana</SelectItem>
+            <SelectItem value="next7">Próximos 7 dias</SelectItem>
+            <SelectItem value="month">Este mês</SelectItem>
+            <SelectItem value="next30">Próximos 30 dias</SelectItem>
+            <SelectItem value="no_date">Sem data</SelectItem>
+            <SelectItem value="custom">Personalizado…</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {dateRange === "custom" && (
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="h-9 w-[140px] text-xs"
+            />
+            <span className="text-xs text-muted-foreground">até</span>
+            <Input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="h-9 w-[140px] text-xs"
+            />
+          </div>
+        )}
 
         <button
           onClick={() => setHideDone((v) => !v)}
