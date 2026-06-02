@@ -228,15 +228,15 @@ function MyTasksPage() {
   }, [filtered, sortKey, sortDir]);
 
   const stats = useMemo(() => {
-    const open = tasks.filter((t) => !t.completed);
+    const open = filtered.filter((t) => !t.completed);
     return {
-      total: tasks.length,
+      total: filtered.length,
       open: open.length,
       overdue: open.filter((t) => t.scheduled_date < today).length,
       due: open.filter((t) => t.scheduled_date === today).length,
-      delegated: tasks.filter((t) => t.kind === "delegated").length,
+      delegated: filtered.filter((t) => t.kind === "delegated").length,
     };
-  }, [tasks, today]);
+  }, [filtered, today]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
