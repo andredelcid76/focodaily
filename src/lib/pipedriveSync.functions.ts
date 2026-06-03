@@ -25,7 +25,7 @@ export const syncTaskCompletionToPipedrive = createServerFn({ method: "POST" })
     if (!m) return { ok: false, reason: "no-activity-id" };
     const activityId = m[1];
 
-    const { data: conn } = await supabase
+    const { data: conn } = await supabaseAdmin
       .from("pipedrive_connections")
       .select("api_token,domain")
       .eq("user_id", userId)
