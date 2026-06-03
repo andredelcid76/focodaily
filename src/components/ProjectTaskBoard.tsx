@@ -174,8 +174,8 @@ export function ProjectTaskBoard({
         <TimelineView
           tasks={filtered}
           memberById={memberById}
-          rolesById={rolesById}
           onEdit={onEdit}
+          onUpdate={onUpdate}
         />
       )}
     </div>
