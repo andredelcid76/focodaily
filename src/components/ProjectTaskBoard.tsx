@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -174,8 +174,8 @@ export function ProjectTaskBoard({
         <TimelineView
           tasks={filtered}
           memberById={memberById}
-          rolesById={rolesById}
           onEdit={onEdit}
+          onUpdate={onUpdate}
         />
       )}
     </div>
@@ -583,95 +583,403 @@ function KanbanCard({
 }
 
 /* ============================================================
-   Timeline view (simple Gantt by week)
+   Timeline view — zoomable Gantt with draggable bars
 ============================================================ */
+type Zoom = "day" | "week" | "month" | "quarter";
+type TLGroup = "none" | "status" | "assignee";
+
+const ZOOM_PX: Record<Zoom, number> = { day: 56, week: 22, month: 9, quarter: 4 };
+const ZOOM_LABEL: Record<Zoom, string> = { day: "Dia", week: "Semana", month: "Mês", quarter: "Trimestre" };
+
+function startOfMonth(iso: string) {
+  const [y, m] = iso.split("-").map(Number);
+  return `${y}-${String(m).padStart(2, "0")}-01`;
+}
+function diffDays(a: string, b: string) {
+  const at = new Date(a + "T00:00:00").getTime();
+  const bt = new Date(b + "T00:00:00").getTime();
+  return Math.round((bt - at) / 86400000);
+}
+function fmtMonth(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+}
+function fmtDay(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
 function TimelineView({
-  tasks, memberById, rolesById, onEdit,
+  tasks, memberById, onEdit, onUpdate,
 }: {
   tasks: Task[];
   memberById: Map<string, Member>;
-  rolesById: Map<string, Role>;
   onEdit: (t: Task) => void;
+  onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
 }) {
+  const [zoom, setZoom] = useState<Zoom>("week");
+  const [group, setGroup] = useState<TLGroup>("none");
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+  const syncing = useRef(false);
+
   const sorted = useMemo(() => sortByDate(tasks.filter((t) => !!t.scheduled_date)), [tasks]);
   if (sorted.length === 0) {
     return <p className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-6 text-center text-sm text-muted-foreground">Sem datas para exibir.</p>;
   }
-  const min = sorted[0].scheduled_date;
-  const max = sorted[sorted.length - 1].scheduled_date;
-  const minT = new Date(min + "T00:00:00").getTime();
-  const maxT = new Date(max + "T00:00:00").getTime();
-  const span = Math.max(1, (maxT - minT) / 86400000);
-  const today = todayISO();
-  const todayT = new Date(today + "T00:00:00").getTime();
-  const todayPct = ((todayT - minT) / 86400000 / span) * 100;
 
-  // Track width grows with task count so dense projects get a horizontal scrollbar
-  // instead of overlapping labels.
-  const trackMinWidth = Math.max(480, Math.min(2400, sorted.length * 80));
+  const today = todayISO();
+  // Pad range a bit so today line + future drag space are visible
+  const rawMin = sorted[0].scheduled_date;
+  const rawMax = sorted[sorted.length - 1].scheduled_date;
+  const minDate = addDays(rawMin < today ? rawMin : today, -3);
+  const maxDate = addDays(rawMax > today ? rawMax : today, 14);
+  const totalDays = diffDays(minDate, maxDate) + 1;
+  const pxPerDay = ZOOM_PX[zoom];
+  const trackWidth = totalDays * pxPerDay;
+
+  // Month markers
+  const months: { iso: string; left: number; width: number; label: string }[] = [];
+  let cursor = startOfMonth(minDate);
+  while (cursor <= maxDate) {
+    const [y, m] = cursor.split("-").map(Number);
+    const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+    const startOffset = Math.max(0, diffDays(minDate, cursor));
+    const endOffset = Math.min(totalDays, diffDays(minDate, next));
+    months.push({
+      iso: cursor,
+      left: startOffset * pxPerDay,
+      width: Math.max(0, (endOffset - startOffset) * pxPerDay),
+      label: fmtMonth(cursor),
+    });
+    cursor = next;
+  }
+
+  // Day ticks (only at sensible zooms)
+  const showDayTicks = zoom === "day" || zoom === "week";
+  const dayTicks: { iso: string; left: number; isToday: boolean; isWeekend: boolean }[] = [];
+  if (showDayTicks) {
+    for (let i = 0; i < totalDays; i++) {
+      const iso = addDays(minDate, i);
+      const [y, m, d] = iso.split("-").map(Number);
+      const dow = new Date(y, m - 1, d).getDay();
+      dayTicks.push({ iso, left: i * pxPerDay, isToday: iso === today, isWeekend: dow === 0 || dow === 6 });
+    }
+  }
+
+  const todayLeft = diffDays(minDate, today) * pxPerDay;
+
+  // Grouping
+  const groups = useMemo(() => {
+    if (group === "none") return [{ key: "all", label: "", tasks: sorted }];
+    if (group === "status") {
+      const order: TaskStatus[] = ["doing", "todo", "done"];
+      return order.map((s) => ({
+        key: s,
+        label: STATUS_LABEL[s],
+        tasks: sorted.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s),
+      })).filter((g) => g.tasks.length > 0);
+    }
+    // assignee
+    const map = new Map<string, Task[]>();
+    for (const t of sorted) {
+      const aid = (t.assignee_id ?? "__unassigned") as string;
+      map.set(aid, [...(map.get(aid) ?? []), t]);
+    }
+    return Array.from(map.entries()).map(([uid, ts]) => ({
+      key: uid,
+      label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
+      tasks: ts,
+    }));
+  }, [sorted, group, memberById]);
+
+  // Sync top/bottom horizontal scrollbars
+  const onScrollTop = () => {
+    if (syncing.current) return;
+    syncing.current = true;
+    if (bottomScrollRef.current && topScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+    syncing.current = false;
+  };
+  const onScrollBottom = () => {
+    if (syncing.current) return;
+    syncing.current = true;
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+    syncing.current = false;
+  };
+
+  const scrollToToday = () => {
+    if (!bottomScrollRef.current) return;
+    const target = Math.max(0, todayLeft - bottomScrollRef.current.clientWidth / 2);
+    bottomScrollRef.current.scrollTo({ left: target, behavior: "smooth" });
+    if (topScrollRef.current) topScrollRef.current.scrollLeft = target;
+  };
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm">
-      <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
-        <span>{formatShort(min)}</span>
-        <span>{sorted.length} tarefas</span>
-        <span>{formatShort(max)}</span>
-      </div>
-      <div className="flex">
-        {/* Fixed title column */}
-        <div className="w-[220px] shrink-0 space-y-1.5 pr-2">
-          {sorted.map((t) => {
-            const role = t.role_id ? rolesById.get(t.role_id) : null;
-            return (
-              <button
-                key={t.id}
-                onClick={() => onEdit(t)}
-                className="flex h-9 w-full items-center gap-1.5 rounded-md border border-border/40 bg-background/40 px-2 text-left text-xs hover:border-primary/50"
-                title={t.title}
-              >
-                <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>
-                {role && <RoleBadge role={role} size="xs" />}
-              </button>
-            );
-          })}
+    <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
+        <div className="inline-flex rounded-md border border-border/60 bg-background/40 p-0.5">
+          {(Object.keys(ZOOM_PX) as Zoom[]).map((z) => (
+            <button
+              key={z}
+              onClick={() => setZoom(z)}
+              className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                zoom === z ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {ZOOM_LABEL[z]}
+            </button>
+          ))}
         </div>
-        {/* Scrollable timeline track */}
-        <div className="min-w-0 flex-1 overflow-x-auto">
-          <div className="relative space-y-1.5" style={{ minWidth: `${trackMinWidth}px` }}>
-            {todayPct >= 0 && todayPct <= 100 && (
-              <div className="pointer-events-none absolute inset-y-0 w-px bg-primary/60" style={{ left: `${todayPct}%` }}>
-                <span className="absolute -top-3 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[9px] font-semibold text-primary-foreground">hoje</span>
-              </div>
-            )}
-            {sorted.map((t) => {
-              const tT = new Date(t.scheduled_date + "T00:00:00").getTime();
-              const left = ((tT - minT) / 86400000 / span) * 100;
-              const status = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
-              const assignee = memberById.get(t.assignee_id ?? "");
-              const isOverdue = !t.completed && t.scheduled_date < today;
-              const color = t.completed ? "bg-emerald-500/60" : isOverdue ? "bg-overdue" : status === "doing" ? "bg-primary" : "bg-muted-foreground/50";
-              return (
+        <Select value={group} onValueChange={(v) => setGroup(v as TLGroup)}>
+          <SelectTrigger className="h-7 w-40 text-xs">
+            <Layers className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sem agrupamento</SelectItem>
+            <SelectItem value="status">Por status</SelectItem>
+            <SelectItem value="assignee">Por responsável</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={scrollToToday}>
+          Ir para hoje
+        </Button>
+        <div className="ml-auto text-[11px] text-muted-foreground">
+          {sorted.length} tarefas · {fmtDay(rawMin)} → {fmtDay(rawMax)} · arraste as barras para mudar a data
+        </div>
+      </div>
+
+      <div className="flex">
+        {/* Fixed left column header spacer + titles */}
+        <div className="w-[220px] shrink-0 border-r border-border/60">
+          <div className="h-12 border-b border-border/60 bg-muted/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-end">
+            Tarefa
+          </div>
+          {groups.map((g) => (
+            <div key={g.key}>
+              {g.label && (
+                <div className="border-b border-border/40 bg-background/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {g.label} · {g.tasks.length}
+                </div>
+              )}
+              {g.tasks.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => onEdit(t)}
-                  className="group relative flex h-9 w-full items-center rounded-md border border-border/40 bg-background/40 hover:border-primary/50"
+                  className="flex h-9 w-full items-center gap-1.5 border-b border-border/30 px-3 text-left text-xs hover:bg-accent/20"
                   title={t.title}
                 >
-                  <span className="absolute inset-y-1 rounded-sm" style={{ left: `calc(${left}% - 4px)`, width: "8px" }}>
-                    <span className={`block h-full w-full rounded-full ${color}`} />
-                  </span>
-                  <span
-                    className="pointer-events-none absolute flex items-center gap-1.5 whitespace-nowrap px-2 text-[10px] text-muted-foreground"
-                    style={{ left: `calc(${left}% + 12px)` }}
-                  >
-                    {assignee && <Avatar name={nameOf(assignee)} />}
-                    <span className="tabular-nums">{formatShort(t.scheduled_date)}</span>
-                  </span>
+                  <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+                  <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Right column: top scrollbar + header + body */}
+        <div className="min-w-0 flex-1">
+          {/* TOP scrollbar (mirror) */}
+          <div
+            ref={topScrollRef}
+            onScroll={onScrollTop}
+            className="overflow-x-auto overflow-y-hidden"
+            style={{ height: 12 }}
+          >
+            <div style={{ width: trackWidth, height: 1 }} />
+          </div>
+
+          {/* Synced header + body share one horizontal scroll */}
+          <div
+            ref={bottomScrollRef}
+            onScroll={onScrollBottom}
+            className="overflow-x-auto"
+          >
+            <div style={{ width: trackWidth }}>
+              {/* Header: months + days */}
+              <div className="relative h-12 border-b border-border/60 bg-muted/20">
+                {/* Month row */}
+                <div className="relative h-6 border-b border-border/40">
+                  {months.map((mo) => (
+                    <div
+                      key={mo.iso}
+                      className="absolute top-0 flex h-full items-center border-l border-border/40 px-1.5 text-[11px] font-semibold capitalize text-foreground/80"
+                      style={{ left: mo.left, width: mo.width }}
+                    >
+                      {mo.label}
+                    </div>
+                  ))}
+                </div>
+                {/* Day row */}
+                <div className="relative h-6">
+                  {showDayTicks ? (
+                    dayTicks.map((d) => {
+                      const dd = d.iso.slice(8, 10);
+                      const showLabel = zoom === "day" || pxPerDay >= 20;
+                      return (
+                        <div
+                          key={d.iso}
+                          className={`absolute top-0 flex h-full items-center justify-center border-l text-[10px] tabular-nums ${
+                            d.isToday ? "border-primary/60 text-primary font-semibold" :
+                            d.isWeekend ? "border-border/30 text-muted-foreground/60 bg-muted/20" :
+                            "border-border/30 text-muted-foreground"
+                          }`}
+                          style={{ left: d.left, width: pxPerDay }}
+                        >
+                          {showLabel ? dd : ""}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    months.map((mo) => (
+                      <div
+                        key={mo.iso}
+                        className="absolute top-0 flex h-full items-center border-l border-border/30 px-1.5 text-[10px] text-muted-foreground"
+                        style={{ left: mo.left, width: mo.width }}
+                      >
+                        &nbsp;
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Rows */}
+              <div className="relative">
+                {/* Today line */}
+                {todayLeft >= 0 && todayLeft <= trackWidth && (
+                  <div
+                    className="pointer-events-none absolute inset-y-0 z-10 w-px bg-primary/70"
+                    style={{ left: todayLeft }}
+                  />
+                )}
+                {/* Weekend stripes (only when day ticks shown) */}
+                {showDayTicks && dayTicks.filter((d) => d.isWeekend).map((d) => (
+                  <div
+                    key={`w-${d.iso}`}
+                    className="pointer-events-none absolute inset-y-0 bg-muted/15"
+                    style={{ left: d.left, width: pxPerDay }}
+                  />
+                ))}
+
+                {groups.map((g) => (
+                  <div key={g.key}>
+                    {g.label && <div className="h-[26px] border-b border-border/40 bg-background/30" />}
+                    {g.tasks.map((t) => (
+                      <TimelineRow
+                        key={t.id}
+                        task={t}
+                        minDate={minDate}
+                        pxPerDay={pxPerDay}
+                        trackWidth={trackWidth}
+                        today={today}
+                        assignee={memberById.get(t.assignee_id ?? "")}
+                        onEdit={() => onEdit(t)}
+                        onUpdate={onUpdate}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineRow({
+  task, minDate, pxPerDay, trackWidth, today, assignee, onEdit, onUpdate,
+}: {
+  task: Task;
+  minDate: string;
+  pxPerDay: number;
+  trackWidth: number;
+  today: string;
+  assignee?: Member;
+  onEdit: () => void;
+  onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
+}) {
+  const baseLeft = diffDays(minDate, task.scheduled_date) * pxPerDay;
+  const [dragOffset, setDragOffset] = useState(0);
+  const draggingRef = useRef(false);
+
+  const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
+  const isOverdue = !task.completed && task.scheduled_date < today;
+  const color = task.completed
+    ? "bg-emerald-500/70 border-emerald-500/50"
+    : isOverdue
+    ? "bg-overdue/80 border-overdue"
+    : status === "doing"
+    ? "bg-primary border-primary/60"
+    : "bg-primary/55 border-primary/40";
+
+  // Bar width: derive from duration (min 1 day visual)
+  const durationDays = Math.max(1, Math.ceil((task.duration_minutes || 0) / (60 * 8)));
+  const barWidth = Math.max(pxPerDay * durationDays, 18);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    let lastDelta = 0;
+    draggingRef.current = true;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      lastDelta = delta;
+      setDragOffset(delta);
+    };
+    const onUp = async () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const days = Math.round(lastDelta / pxPerDay);
+      setDragOffset(0);
+      // Reset dragging after click handler check
+      setTimeout(() => { draggingRef.current = false; }, 0);
+      if (days !== 0) {
+        const newDate = addDays(task.scheduled_date, days);
+        try {
+          await onUpdate(task.id, { scheduled_date: newDate } as any);
+          toast.success(`Movida para ${fmtDay(newDate)}`);
+        } catch (err: any) {
+          toast.error(err?.message || "Não foi possível mover");
+        }
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  const onClick = (e: React.MouseEvent) => {
+    if (draggingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onEdit();
+  };
+
+  const left = Math.max(0, Math.min(trackWidth - barWidth, baseLeft + dragOffset));
+
+  return (
+    <div className="relative h-9 border-b border-border/30">
+      <div
+        role="button"
+        onMouseDown={onMouseDown}
+        onClick={onClick}
+        title={`${task.title} · ${fmtDay(task.scheduled_date)}${dragOffset !== 0 ? ` → ${fmtDay(addDays(task.scheduled_date, Math.round(dragOffset / pxPerDay)))}` : ""}`}
+        className={`group absolute top-1.5 flex h-6 cursor-grab items-center gap-1.5 rounded-md border px-1.5 text-[10px] font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing ${color} ${task.completed ? "opacity-75" : ""}`}
+        style={{ left, width: barWidth }}
+      >
+        {assignee && barWidth >= 40 && <Avatar name={nameOf(assignee)} />}
+        <span className="truncate">{barWidth >= 60 ? task.title : ""}</span>
       </div>
     </div>
   );
