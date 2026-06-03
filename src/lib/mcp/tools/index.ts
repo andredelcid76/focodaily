@@ -230,7 +230,7 @@ export const updateTask = defineTool({
       .from("tasks")
       .update(patch as never)
       .eq("id", args.id)
-      .eq("user_id", userId)
+      .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -240,11 +240,15 @@ export const updateTask = defineTool({
 
 export const deleteTask = defineTool({
   name: "delete_task",
-  description: "Exclui uma tarefa do usuário.",
+  description: "Exclui uma tarefa do usuário (criador ou responsável).",
   parameters: z.object({ id: z.string() }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const { error } = await db().from("tasks").delete().eq("id", args.id).eq("user_id", userId);
+    const { error } = await db()
+      .from("tasks")
+      .delete()
+      .eq("id", args.id)
+      .or(`user_id.eq.${userId},assignee_id.eq.${userId}`);
     if (error) throw new Error(error.message);
     return JSON.stringify({ ok: true });
   },
