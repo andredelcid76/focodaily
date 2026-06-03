@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 
 const ACTIVITY_URL_RE = /\/activity\/(\d+)\b/;
@@ -25,7 +26,7 @@ export const syncTaskCompletionToPipedrive = createServerFn({ method: "POST" })
     if (!m) return { ok: false, reason: "no-activity-id" };
     const activityId = m[1];
 
-    const { data: conn } = await supabase
+    const { data: conn } = await supabaseAdmin
       .from("pipedrive_connections")
       .select("api_token,domain")
       .eq("user_id", userId)
