@@ -1,6 +1,6 @@
 import { defineTool } from "mcp-tanstack-start";
 import { z } from "zod";
-import { db, getUserId } from "../supabase";
+import { adminDb, db, getUserId } from "../supabase";
 
 const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
@@ -10,7 +10,7 @@ export const listRoles = defineTool({
   parameters: z.object({}),
   execute: async (_args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const { data, error } = await db()
+    const { data, error } = await db(ctx.auth)
       .from("roles")
       .select("id,name,color,position")
       .eq("user_id", userId)
@@ -33,7 +33,7 @@ export const listTasks = defineTool({
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
-    let q = db()
+    let q = db(ctx.auth)
       .from("tasks")
       .select(
         "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,role:roles(id,name,color),project:projects(id,name,color)",
@@ -76,7 +76,7 @@ export const createProject = defineTool({
       starts_on: args.starts_on ?? null,
       deadline: args.deadline ?? null,
     };
-    const { data, error } = await db().from("projects").insert(insert as never).select().single();
+    const { data, error } = await db(ctx.auth).from("projects").insert(insert as never).select().single();
     if (error) throw new Error(error.message);
     return JSON.stringify({ ok: true, project: data });
   },
@@ -88,7 +88,7 @@ export const listProjects = defineTool({
   parameters: z.object({}),
   execute: async (_args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const { data, error } = await db()
+    const { data, error } = await db(ctx.auth)
       .from("projects")
       .select("id,name,description,status,deadline,starts_on,color,role_id,role:roles(id,name,color)")
       .eq("user_id", userId);
@@ -121,7 +121,7 @@ export const updateProject = defineTool({
     if (args.status !== undefined) patch.status = args.status;
     if (args.starts_on !== undefined) patch.starts_on = args.starts_on;
     if (args.deadline !== undefined) patch.deadline = args.deadline;
-    const { data, error } = await db()
+    const { data, error } = await db(ctx.auth)
       .from("projects")
       .update(patch as never)
       .eq("id", args.id)
@@ -139,7 +139,7 @@ export const deleteProject = defineTool({
   parameters: z.object({ id: z.string() }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const { error } = await db().from("projects").delete().eq("id", args.id).eq("user_id", userId);
+    const { error } = await db(ctx.auth).from("projects").delete().eq("id", args.id).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return JSON.stringify({ ok: true });
   },
@@ -154,7 +154,7 @@ export const listMeetings = defineTool({
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
-    let q = db()
+    let q = db(ctx.auth)
       .from("meetings")
       .select("id,title,description,starts_at,ends_at,scheduled_date,project_id,location")
       .eq("user_id", userId)
@@ -193,7 +193,7 @@ export const createTask = defineTool({
       project_id: args.project_id ?? null,
       role_id: args.role_id ?? null,
     };
-    const { data, error } = await db().from("tasks").insert(insert as never).select().single();
+    const { data, error } = await db(ctx.auth).from("tasks").insert(insert as never).select().single();
     if (error) throw new Error(error.message);
     return JSON.stringify({ ok: true, task: data });
   },
@@ -226,7 +226,7 @@ export const updateTask = defineTool({
       patch.status = args.completed ? "done" : "todo";
       patch.completed_at = args.completed ? new Date().toISOString() : null;
     }
-    const { data, error } = await db()
+    const { data, error } = await db(ctx.auth)
       .from("tasks")
       .update(patch as never)
       .eq("id", args.id)
@@ -244,7 +244,7 @@ export const deleteTask = defineTool({
   parameters: z.object({ id: z.string() }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const { error } = await db()
+    const { error } = await db(ctx.auth)
       .from("tasks")
       .delete()
       .eq("id", args.id)
@@ -255,7 +255,7 @@ export const deleteTask = defineTool({
 });
 
 async function fireflies(userId: string, query: string, variables: Record<string, unknown>) {
-  const { data: conn } = await db()
+  const { data: conn } = await adminDb()
     .from("fireflies_connections")
     .select("api_key")
     .eq("user_id", userId)
