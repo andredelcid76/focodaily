@@ -606,6 +606,10 @@ function TimelineView({
   const todayT = new Date(today + "T00:00:00").getTime();
   const todayPct = ((todayT - minT) / 86400000 / span) * 100;
 
+  // Track width grows with task count so dense projects get a horizontal scrollbar
+  // instead of overlapping labels.
+  const trackMinWidth = Math.max(480, Math.min(2400, sorted.length * 80));
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm">
       <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -613,48 +617,66 @@ function TimelineView({
         <span>{sorted.length} tarefas</span>
         <span>{formatShort(max)}</span>
       </div>
-      <div className="relative space-y-1.5">
-        {todayPct >= 0 && todayPct <= 100 && (
-          <div className="pointer-events-none absolute inset-y-0 w-px bg-primary/60" style={{ left: `${todayPct}%` }}>
-            <span className="absolute -top-3 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[9px] font-semibold text-primary-foreground">hoje</span>
-          </div>
-        )}
-        {sorted.map((t) => {
-          const tT = new Date(t.scheduled_date + "T00:00:00").getTime();
-          const left = ((tT - minT) / 86400000 / span) * 100;
-          const status = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
-          const role = t.role_id ? rolesById.get(t.role_id) : null;
-          const assignee = memberById.get(t.assignee_id ?? "");
-          const isOverdue = !t.completed && t.scheduled_date < today;
-          const color = t.completed ? "bg-emerald-500/60" : isOverdue ? "bg-overdue" : status === "doing" ? "bg-primary" : "bg-muted-foreground/50";
-          return (
-            <button
-              key={t.id}
-              onClick={() => onEdit(t)}
-              className="group relative flex h-9 w-full items-center rounded-md border border-border/40 bg-background/40 hover:border-primary/50"
-              title={t.title}
-            >
-              <span className="absolute inset-y-1 rounded-sm" style={{ left: `calc(${left}% - 4px)`, width: "8px" }}>
-                <span className={`block h-full w-full rounded-full ${color}`} />
-              </span>
-              <span
-                className="absolute flex items-center gap-1.5 truncate px-2 text-xs"
-                style={{ left: `calc(${left}% + 12px)`, maxWidth: "70%" }}
+      <div className="flex">
+        {/* Fixed title column */}
+        <div className="w-[220px] shrink-0 space-y-1.5 pr-2">
+          {sorted.map((t) => {
+            const role = t.role_id ? rolesById.get(t.role_id) : null;
+            return (
+              <button
+                key={t.id}
+                onClick={() => onEdit(t)}
+                className="flex h-9 w-full items-center gap-1.5 rounded-md border border-border/40 bg-background/40 px-2 text-left text-xs hover:border-primary/50"
+                title={t.title}
               >
                 <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>
                 {role && <RoleBadge role={role} size="xs" />}
-              </span>
-              <span className="ml-auto flex items-center gap-1.5 pr-2 text-[10px] text-muted-foreground">
-                {assignee && <Avatar name={nameOf(assignee)} />}
-                <span className="tabular-nums">{formatShort(t.scheduled_date)}</span>
-              </span>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
+        {/* Scrollable timeline track */}
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <div className="relative space-y-1.5" style={{ minWidth: `${trackMinWidth}px` }}>
+            {todayPct >= 0 && todayPct <= 100 && (
+              <div className="pointer-events-none absolute inset-y-0 w-px bg-primary/60" style={{ left: `${todayPct}%` }}>
+                <span className="absolute -top-3 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[9px] font-semibold text-primary-foreground">hoje</span>
+              </div>
+            )}
+            {sorted.map((t) => {
+              const tT = new Date(t.scheduled_date + "T00:00:00").getTime();
+              const left = ((tT - minT) / 86400000 / span) * 100;
+              const status = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
+              const assignee = memberById.get(t.assignee_id ?? "");
+              const isOverdue = !t.completed && t.scheduled_date < today;
+              const color = t.completed ? "bg-emerald-500/60" : isOverdue ? "bg-overdue" : status === "doing" ? "bg-primary" : "bg-muted-foreground/50";
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onEdit(t)}
+                  className="group relative flex h-9 w-full items-center rounded-md border border-border/40 bg-background/40 hover:border-primary/50"
+                  title={t.title}
+                >
+                  <span className="absolute inset-y-1 rounded-sm" style={{ left: `calc(${left}% - 4px)`, width: "8px" }}>
+                    <span className={`block h-full w-full rounded-full ${color}`} />
+                  </span>
+                  <span
+                    className="pointer-events-none absolute flex items-center gap-1.5 whitespace-nowrap px-2 text-[10px] text-muted-foreground"
+                    style={{ left: `calc(${left}% + 12px)` }}
+                  >
+                    {assignee && <Avatar name={nameOf(assignee)} />}
+                    <span className="tabular-nums">{formatShort(t.scheduled_date)}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
 
 /* ============================================================
    Bits
