@@ -622,23 +622,42 @@ function MyTasksPage() {
                 return (
                   <TableRow key={t.id} data-state={isSelected ? "selected" : undefined}>
                     <TableCell>
-                      <Checkbox checked={isSelected} onCheckedChange={() => toggleOne(t.id)} />
+                      <button
+                        type="button"
+                        onClick={() => toggleOne(t.id)}
+                        className={`grid h-5 w-5 place-items-center rounded-sm border transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/40 bg-background hover:border-primary/60"
+                        }`}
+                        aria-label={isSelected ? "Desmarcar tarefa" : "Selecionar tarefa"}
+                        aria-pressed={isSelected}
+                        title={isSelected ? "Desmarcar tarefa" : "Selecionar tarefa"}
+                      >
+                        {isSelected && <CheckCircle2 className="h-3 w-3" />}
+                      </button>
                     </TableCell>
                     <TableCell>
                       <button
+                        type="button"
                         onClick={() => toggleComplete(t)}
-                        className={`text-muted-foreground/60 hover:text-emerald-500 ${
-                          t.completed ? "text-emerald-500" : ""
+                        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all ${
+                          t.completed
+                            ? "border-emerald-500 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
+                            : "border-muted-foreground/30 text-muted-foreground/50 hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
                         }`}
-                        title={t.completed ? "Reabrir" : "Concluir"}
+                        aria-label={t.completed ? "Reabrir tarefa" : "Concluir tarefa"}
+                        aria-pressed={t.completed}
+                        title={t.completed ? "Reabrir tarefa" : "Concluir tarefa"}
                       >
                         {t.completed ? (
-                          <CheckCircle2 className="h-4 w-4 fill-emerald-500/20" />
+                          <CheckCircle2 className="h-4 w-4 fill-current" />
                         ) : (
-                          <Circle className="h-4 w-4" />
+                          <Circle className="h-4 w-4" strokeWidth={1.5} />
                         )}
                       </button>
                     </TableCell>
+
                     <TableCell className="max-w-[280px]">
                       <div className="flex items-center gap-1.5">
                         {t.non_negotiable && !t.completed && (
