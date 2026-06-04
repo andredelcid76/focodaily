@@ -399,15 +399,31 @@ export function TaskListHeader({
   sortKey,
   sortDir,
   onSort,
+  columns,
+  gridTemplate,
+  onResizeColumn,
+  onReorderColumn,
 }: {
   sortKey?: TaskSortKey | null;
   sortDir?: TaskSortDir;
   onSort?: (key: TaskSortKey) => void;
+  columns?: TaskColumnDef[];
+  gridTemplate?: string;
+  /** Called with new width in pixels (use `${px}px`) while user drags the resize handle. */
+  onResizeColumn?: (key: TaskColumnKey, newWidthPx: number) => void;
+  /** Drag column `from` onto column `to` to swap positions. */
+  onReorderColumn?: (from: TaskColumnKey, to: TaskColumnKey) => void;
 }) {
-  const SortBtn = ({ k, label, align = "left", narrow = false }: { k: TaskSortKey; label: string; align?: "left" | "center"; narrow?: boolean }) => {
+  const cols = columns ?? DEFAULT_COLUMNS;
+  const visibleCols = cols.filter((c) => c.visible);
+  const computedGridTemplate =
+    gridTemplate ??
+    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 2.25rem`;
+
+  const SortBtn = ({ k, label, align = "left" }: { k: TaskSortKey; label: string; align?: "left" | "center" }) => {
     const active = sortKey === k;
     if (!onSort) {
-      return <span className={`${align === "center" ? "text-center" : ""} ${narrow ? "justify-self-center" : ""}`}>{label}</span>;
+      return <span className={align === "center" ? "text-center" : ""}>{label}</span>;
     }
     return (
       <button
@@ -415,35 +431,102 @@ export function TaskListHeader({
         onClick={() => onSort(k)}
         className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${
           align === "center" ? "justify-center" : ""
-        } ${narrow ? "justify-self-center" : ""} ${active ? "text-foreground" : ""}`}
+        } ${active ? "text-foreground" : ""}`}
         aria-label={`Ordenar por ${label}`}
       >
         <span>{label}</span>
         {active ? (
-          sortDir === "desc" ? (
-            <ArrowDown className="h-3 w-3" />
-          ) : (
-            <ArrowUp className="h-3 w-3" />
-          )
+          sortDir === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
         ) : (
           <ArrowUpDown className="h-3 w-3 opacity-40" />
         )}
       </button>
     );
   };
+
+  const handleResizeStart = (key: TaskColumnKey) => (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!onResizeColumn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const target = e.currentTarget;
+    const cell = target.parentElement;
+    if (!cell) return;
+    const startX = e.clientX;
+    const startWidth = cell.getBoundingClientRect().width;
+    const col = cols.find((c) => c.key === key);
+    const minPx = col?.minPx ?? 60;
+    target.setPointerCapture(e.pointerId);
+    const onMove = (ev: PointerEvent) => {
+      const next = Math.max(minPx, startWidth + (ev.clientX - startX));
+      onResizeColumn(key, next);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  const handleDragStart = (key: TaskColumnKey) => (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onReorderColumn) return;
+    e.dataTransfer.setData("text/x-column-key", key);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onReorderColumn) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const handleDrop = (toKey: TaskColumnKey) => (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onReorderColumn) return;
+    e.preventDefault();
+    const fromKey = e.dataTransfer.getData("text/x-column-key") as TaskColumnKey;
+    if (fromKey && fromKey !== toKey) onReorderColumn(fromKey, toKey);
+  };
+
   return (
     <div
-      className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40
-        grid-cols-[1rem_1.75rem_minmax(0,1.5fr)_minmax(0,2fr)_7rem_4.5rem_6rem_8rem_2.25rem]"
+      className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40"
+      style={{ gridTemplateColumns: computedGridTemplate }}
     >
       <span aria-hidden="true" />
-      <SortBtn k="position" label="#" narrow />
-      <SortBtn k="title" label="Tarefa" />
-      <SortBtn k="project" label="Projeto" />
-      <SortBtn k="role" label="Papel" />
-      <SortBtn k="duration" label="Duração" />
-      <SortBtn k="due" label="Vencimento" />
-      <SortBtn k="status" label="Status" align="center" />
+      {onSort ? (
+        <button
+          type="button"
+          onClick={() => onSort("position")}
+          className={`inline-flex items-center justify-center gap-0.5 hover:text-foreground transition-colors ${sortKey === "position" ? "text-foreground" : ""}`}
+          aria-label="Ordenar por #"
+        >
+          <span>#</span>
+          {sortKey === "position" ? (
+            sortDir === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
+          ) : null}
+        </button>
+      ) : (
+        <span className="text-center">#</span>
+      )}
+      {visibleCols.map((col) => (
+        <div
+          key={col.key}
+          className="relative flex items-center pr-2"
+          draggable={!!onReorderColumn}
+          onDragStart={handleDragStart(col.key)}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop(col.key)}
+          title={onReorderColumn ? "Arraste para reordenar" : undefined}
+        >
+          <SortBtn k={col.key} label={col.label} align={col.key === "status" ? "center" : "left"} />
+          {onResizeColumn && (
+            <span
+              onPointerDown={handleResizeStart(col.key)}
+              className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none hover:bg-primary/40 active:bg-primary/60 transition-colors"
+              aria-label={`Redimensionar coluna ${col.label}`}
+              role="separator"
+            />
+          )}
+        </div>
+      ))}
       <span />
     </div>
   );
