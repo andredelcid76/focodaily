@@ -836,7 +836,6 @@ function TodayInner({ userId }: { userId: string }) {
                       onPostpone={(date) => handlePostpone(t, date)}
                       onDuplicate={(date) => handleDuplicate(t, date)}
                       onFollowUp={(date) => handleFollowUp(t, date)}
-                      onFollowUp={(date) => handleFollowUp(t, date)}
                       selected={selectedIds.has(t.id)}
                       onSelectToggle={() => toggleSelect(t.id)}
                       subtaskCount={subtaskCounts[t.id]}
