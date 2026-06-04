@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { AppShell } from "@/components/AppShell";
 import { CategoryIcon } from "@/components/CategoryBadge";
+import { TaskCompleteButton } from "@/components/TaskCompleteButton";
 import { formatShort, todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { supabase } from "@/integrations/supabase/client";
