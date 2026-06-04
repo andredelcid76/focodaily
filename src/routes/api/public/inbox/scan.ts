@@ -653,13 +653,44 @@ export async function scanForUser(userId: string) {
   const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
   const openTitleSet = new Set(openTitles.map(normalizeTitle));
 
-  // AI extract
-  const results = await aiExtractTasks(fresh, { openTasks: openTitles, projects: projectNames });
+  // ── Auto-create tasks for Pipedrive items (bypass Inbox + AI) ──
+  const pipedriveFresh = fresh.filter((it) => it.source === "pipedrive");
+  const otherFresh = fresh.filter((it) => it.source !== "pipedrive");
+
+  let autoCreated = 0;
+  for (const it of pipedriveFresh) {
+    const title = (it.title_override ?? "").trim() || it.source_label || "Atividade Pipedrive";
+    const norm = normalizeTitle(title);
+    if (norm && openTitleSet.has(norm)) continue;
+    const scheduledDate = it.source_date
+      ? String(it.source_date).slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+    const { error } = await supabaseAdmin.from("tasks").insert({
+      user_id: userId,
+      title,
+      description: null,
+      category: "important",
+      scheduled_date: scheduledDate,
+      duration_minutes: 30,
+      origin_source: "pipedrive",
+      origin_source_label: it.source_label,
+      origin_source_url: it.source_url,
+    } as never);
+    if (!error) {
+      autoCreated++;
+      if (norm) openTitleSet.add(norm);
+    } else {
+      console.error("auto-create pipedrive task", error.message);
+    }
+  }
+
+  // AI extract (skip pipedrive — they're auto-created above)
+  const results = await aiExtractTasks(otherFresh, { openTasks: openTitles, projects: projectNames });
 
   // Persist
-  let created = 0;
+  let created = autoCreated;
   for (const r of results) {
-    const item = fresh[r.source_index];
+    const item = otherFresh[r.source_index];
     if (!item) continue;
     for (const s of r.suggestions ?? []) {
       // Post-filter: drop suggestions whose title matches an existing open task.
