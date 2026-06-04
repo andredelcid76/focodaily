@@ -626,6 +626,7 @@ function TodayInner({ userId }: { userId: string }) {
                 onFollowUp={(date) => handleFollowUp(t, date)}
                 subtaskCount={subtaskCounts[t.id]}
                 hideAssignee
+                blockedBy={blockedByMap.get(t.id)}
               />
             ))}
           </div>
