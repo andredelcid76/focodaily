@@ -341,9 +341,50 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
 }
 
 
-// Poll Pipedrive for activities recently marked as "done" and complete any
-// linked task in our DB (Pipedrive → App sync).
-async function syncPipedriveCompletionsToApp(userId: string): Promise<void> {
+// ─────────────────────────────────────────────────────────────
+// Pipedrive → App sync (completion + field changes + deletions)
+// Conflict policy: newest update_time wins.
+// ─────────────────────────────────────────────────────────────
+type PdActivity = {
+  id: number;
+  subject?: string;
+  type?: string;
+  note?: string | null;
+  public_description?: string | null;
+  due_date?: string | null;
+  due_time?: string | null;
+  duration?: string | null;
+  done?: boolean;
+  active_flag?: boolean;
+  update_time?: string;
+  add_time?: string;
+};
+
+function parsePdDuration(s?: string | null): number | null {
+  if (!s) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+  if (!m) return null;
+  const mins = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return mins > 0 ? mins : null;
+}
+
+function stripHtml(s?: string | null): string | null {
+  if (!s) return null;
+  const out = s.replace(/<[^>]+>/g, "").trim();
+  return out.length > 0 ? out : null;
+}
+
+function pdActivityUrl(domain: string, id: number): string {
+  return `https://${domain}.pipedrive.com/activities/list#dialog/activity/${id}`;
+}
+
+function parsePdTime(s?: string): number {
+  if (!s) return 0;
+  // Pipedrive returns "YYYY-MM-DD HH:MM:SS" in UTC.
+  return new Date(s.replace(" ", "T") + "Z").getTime();
+}
+
+async function syncPipedriveToApp(userId: string): Promise<void> {
   const creds = await getPipedriveCreds(userId);
   if (!creds) return;
   const { token, domain } = creds;
@@ -356,36 +397,103 @@ async function syncPipedriveCompletionsToApp(userId: string): Promise<void> {
     if (!pdUserId) return;
 
     const startDate = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
-    const endDate = new Date(Date.now() + 1 * 86400_000).toISOString().slice(0, 10);
-    const r = await fetch(
-      `${base}/activities?user_id=${pdUserId}&done=1&start_date=${startDate}&end_date=${endDate}&start=0&limit=200&api_token=${token}`,
-    );
-    if (!r.ok) return;
-    const json = await r.json();
-    const acts = (json?.data ?? []) as Array<{ id: number }>;
-    if (acts.length === 0) return;
+    const endDate = new Date(Date.now() + 60 * 86400_000).toISOString().slice(0, 10);
 
-    const candidateUrls = acts.map(
-      (a) => `https://${domain}.pipedrive.com/activities/list#dialog/activity/${a.id}`,
-    );
-    const { data: linkedTasks } = await supabaseAdmin
+    const fetchPage = async (done: 0 | 1): Promise<PdActivity[]> => {
+      const r = await fetch(
+        `${base}/activities?user_id=${pdUserId}&done=${done}&start_date=${startDate}&end_date=${endDate}&start=0&limit=200&api_token=${token}`,
+      );
+      if (!r.ok) return [];
+      const j = await r.json();
+      return (j?.data ?? []) as PdActivity[];
+    };
+    const [pending, completed] = await Promise.all([fetchPage(0), fetchPage(1)]);
+    const all = [...pending, ...completed];
+    const seenIds = new Set<number>(all.map((a) => a.id));
+
+    // Load linked tasks once
+    const { data: linked } = await supabaseAdmin
       .from("tasks")
-      .select("id")
+      .select(
+        "id,origin_source_url,updated_at,title,description,scheduled_date,duration_minutes,completed",
+      )
       .eq("user_id", userId)
-      .eq("origin_source", "pipedrive")
-      .eq("completed", false)
-      .in("origin_source_url", candidateUrls);
+      .eq("origin_source", "pipedrive");
+    const linkedList = linked ?? [];
+    const linkedByUrl = new Map<string, (typeof linkedList)[number]>();
+    for (const t of linkedList) {
+      if (t.origin_source_url) linkedByUrl.set(t.origin_source_url as string, t);
+    }
 
-    if (!linkedTasks || linkedTasks.length === 0) return;
-    const ids = linkedTasks.map((t) => t.id as string);
-    await supabaseAdmin
-      .from("tasks")
-      .update({
-        completed: true,
-        completed_at: new Date().toISOString(),
-        status: "done",
-      } as never)
-      .in("id", ids);
+    // ── Update / completion sync ─────────────────────────────
+    for (const a of all) {
+      const url = pdActivityUrl(domain, a.id);
+      const task = linkedByUrl.get(url);
+      if (!task) continue;
+      const pdTs = parsePdTime(a.update_time ?? a.add_time);
+      const taskTs = task.updated_at ? new Date(task.updated_at as string).getTime() : 0;
+      const patch: Record<string, unknown> = {};
+
+      // Completion is always synced from Pipedrive (matches previous behavior).
+      if (a.done && !task.completed) {
+        patch.completed = true;
+        patch.completed_at = new Date().toISOString();
+        patch.status = "done";
+      } else if (!a.done && task.completed) {
+        patch.completed = false;
+        patch.completed_at = null;
+        patch.status = "todo";
+      }
+
+      // Field updates: only when Pipedrive is strictly newer.
+      if (pdTs > taskTs) {
+        const newTitle = (a.subject ?? "").trim();
+        if (newTitle && newTitle !== task.title) patch.title = newTitle;
+        const newDesc = stripHtml(a.note ?? a.public_description);
+        if ((newDesc ?? null) !== (task.description ?? null)) patch.description = newDesc;
+        if (a.due_date && a.due_date !== task.scheduled_date) {
+          patch.scheduled_date = a.due_date;
+        }
+        const dur = parsePdDuration(a.duration);
+        if (dur && dur !== task.duration_minutes) patch.duration_minutes = dur;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        await supabaseAdmin
+          .from("tasks")
+          .update(patch as never)
+          .eq("id", task.id as string);
+      }
+    }
+
+    // ── Deletion sync ────────────────────────────────────────
+    // For linked tasks whose activity didn't appear in the window, probe the
+    // single-activity endpoint. 404 or active_flag=false ⇒ deleted upstream.
+    const orphans = linkedList
+      .map((t) => {
+        const url = (t.origin_source_url as string | null) ?? "";
+        const m = /\/activity\/(\d+)\b/.exec(url);
+        return m ? { task: t, id: parseInt(m[1], 10) } : null;
+      })
+      .filter((x): x is { task: (typeof linkedList)[number]; id: number } => !!x && !seenIds.has(x.id));
+
+    for (const { task, id } of orphans.slice(0, 30)) {
+      try {
+        const pr = await fetch(`${base}/activities/${id}?api_token=${token}`);
+        if (pr.status === 404) {
+          await supabaseAdmin.from("tasks").delete().eq("id", task.id as string);
+          continue;
+        }
+        if (!pr.ok) continue;
+        const pj = await pr.json();
+        const act = pj?.data as PdActivity | undefined;
+        if (act && act.active_flag === false) {
+          await supabaseAdmin.from("tasks").delete().eq("id", task.id as string);
+        }
+      } catch {
+        // ignore individual probe failures
+      }
+    }
   } catch (e) {
     console.error("pipedrive→app sync", e);
   }
@@ -468,8 +576,8 @@ Retorne JSON válido:
 }
 
 export async function scanForUser(userId: string) {
-  // Bidirectional sync: pull Pipedrive completions into the app first
-  await syncPipedriveCompletionsToApp(userId);
+  // Bidirectional sync: pull Pipedrive completions/updates/deletions into the app first
+  await syncPipedriveToApp(userId);
   // Look up the user's email/name (used to attribute Fireflies action items).
   const { data: oconn } = await supabaseAdmin
     .from("outlook_connections")
@@ -545,13 +653,44 @@ export async function scanForUser(userId: string) {
   const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
   const openTitleSet = new Set(openTitles.map(normalizeTitle));
 
-  // AI extract
-  const results = await aiExtractTasks(fresh, { openTasks: openTitles, projects: projectNames });
+  // ── Auto-create tasks for Pipedrive items (bypass Inbox + AI) ──
+  const pipedriveFresh = fresh.filter((it) => it.source === "pipedrive");
+  const otherFresh = fresh.filter((it) => it.source !== "pipedrive");
+
+  let autoCreated = 0;
+  for (const it of pipedriveFresh) {
+    const title = (it.title_override ?? "").trim() || it.source_label || "Atividade Pipedrive";
+    const norm = normalizeTitle(title);
+    if (norm && openTitleSet.has(norm)) continue;
+    const scheduledDate = it.source_date
+      ? String(it.source_date).slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+    const { error } = await supabaseAdmin.from("tasks").insert({
+      user_id: userId,
+      title,
+      description: null,
+      category: "important",
+      scheduled_date: scheduledDate,
+      duration_minutes: 30,
+      origin_source: "pipedrive",
+      origin_source_label: it.source_label,
+      origin_source_url: it.source_url,
+    } as never);
+    if (!error) {
+      autoCreated++;
+      if (norm) openTitleSet.add(norm);
+    } else {
+      console.error("auto-create pipedrive task", error.message);
+    }
+  }
+
+  // AI extract (skip pipedrive — they're auto-created above)
+  const results = await aiExtractTasks(otherFresh, { openTasks: openTitles, projects: projectNames });
 
   // Persist
-  let created = 0;
+  let created = autoCreated;
   for (const r of results) {
-    const item = fresh[r.source_index];
+    const item = otherFresh[r.source_index];
     if (!item) continue;
     for (const s of r.suggestions ?? []) {
       // Post-filter: drop suggestions whose title matches an existing open task.
