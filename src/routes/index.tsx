@@ -10,6 +10,8 @@ import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListRow, TaskListHeader, type TaskSortKey, type TaskSortDir } from "@/components/TaskListRow";
 import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
+import { useTaskColumns } from "@/hooks/useTaskColumns";
+import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
 
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
