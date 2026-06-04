@@ -238,6 +238,12 @@ function TableView({
     toast.success("Datas atualizadas");
     clearSel();
   };
+  const bulkRole = async (rid: string | null) => {
+    await Promise.all(ids.map((id) => onUpdate(id, { role_id: rid } as any)));
+    toast.success(rid ? "Papel atualizado" : "Papel removido");
+    clearSel();
+  };
+
   const bulkDelete = async () => {
     if (!onBulkDelete) return;
     if (!window.confirm(`Excluir ${ids.length} subtarefa(s)?`)) return;
