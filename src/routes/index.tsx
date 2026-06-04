@@ -778,12 +778,24 @@ function TodayInner({ userId }: { userId: string }) {
               </button>
             )}
           </div>
-          <TaskFiltersBar
-            filters={filters}
-            onChange={setFilters}
-            roles={roles}
-            projects={projects}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex-1 min-w-[200px]">
+              <TaskFiltersBar
+                filters={filters}
+                onChange={setFilters}
+                roles={roles}
+                projects={projects}
+              />
+            </div>
+            {taskView === "list" && (
+              <ColumnSettingsPopover
+                columns={taskColumns.columns}
+                onToggleVisible={taskColumns.toggleVisible}
+                onReorder={taskColumns.reorder}
+                onReset={taskColumns.reset}
+              />
+            )}
+          </div>
         </div>
         {visibleDayTasks.length === 0 ? (
           normalizedQuery ? (
