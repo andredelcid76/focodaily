@@ -172,6 +172,7 @@ function MyTasksPage() {
   const handleDialogToggleComplete = async () => {
     if (!editingTask) return;
     const next = !editingTask.completed;
+    if (next && !confirmIfBlocked(editingTask.id)) return;
     const { error } = await supabase
       .from("tasks")
       .update({
