@@ -128,19 +128,28 @@ function AnaliseInner({ userId }: { userId: string }) {
     return { total, done, overdue, postponed, critical, completionRate, avgPostpone, totalPostpones };
   }, [scoped]);
 
-  // Atividade diária (concluídas vs criadas)
+  // Evolução diária (concluídas, criadas e adiadas por dia)
+  // Para 'today' e 'yesterday' mostramos 14 dias de contexto para a evolução.
   const daily = useMemo(() => {
-    const map = new Map<string, { date: string; concluidas: number; criadas: number }>();
-    const days = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 60;
+    const windowDays =
+      period === "today" || period === "yesterday" ? 14 : periodDays(period);
+    const map = new Map<
+      string,
+      { date: string; concluidas: number; criadas: number; adiadas: number }
+    >();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    for (let i = days - 1; i >= 0; i--) {
+    for (let i = windowDays - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().slice(0, 10);
-      map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0 });
+      map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0, adiadas: 0 });
     }
-    for (const t of scoped) {
+    // Usa todas as tarefas do usuário para a evolução, não apenas o recorte do período.
+    const userTasks = tasks.filter(
+      (t) => t.user_id === userId || t.assignee_id === userId,
+    );
+    for (const t of userTasks) {
       if (t.completed_at) {
         const iso = t.completed_at.slice(0, 10);
         const entry = map.get(iso);
@@ -151,9 +160,24 @@ function AnaliseInner({ userId }: { userId: string }) {
         const entry = map.get(iso);
         if (entry) entry.criadas += 1;
       }
+      // Adiada nesse dia: estava planejada para o dia mas foi remarcada para depois
+      if (
+        t.planned_date &&
+        t.scheduled_date &&
+        t.scheduled_date > t.planned_date &&
+        (t.postpone_count ?? 0) > 0
+      ) {
+        const entry = map.get(t.planned_date);
+        if (entry) entry.adiadas += 1;
+      }
     }
     return Array.from(map.values());
-  }, [scoped, period]);
+  }, [tasks, userId, period]);
+
+  // Snapshot diário recente (últimos 7 dias) para a "evolução"
+  const snapshot = useMemo(() => {
+    return daily.slice(-7);
+  }, [daily]);
 
   // Por papel
   const byRole = useMemo(() => {
