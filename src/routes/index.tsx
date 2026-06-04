@@ -789,6 +789,7 @@ function TodayInner({ userId }: { userId: string }) {
                     onSelectToggle={() => toggleSelect(t.id)}
                     subtaskCount={subtaskCounts[t.id]}
                     hideAssignee
+                    blockedBy={blockedByMap.get(t.id)}
                   />
                 ))}
               </div>
