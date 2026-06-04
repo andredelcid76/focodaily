@@ -204,6 +204,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         },
         scope
       );
+      // Persist dependencies on existing tasks (new tasks: deps can be added after creation)
+      if (task?.id) {
+        try {
+          await depsApi.setPredecessors(task.id, predecessorIds);
+        } catch (e: any) {
+          toast.error(e.message ?? "Erro ao salvar dependências");
+        }
+      }
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
