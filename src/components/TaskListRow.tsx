@@ -9,6 +9,7 @@ import {
   CalendarClock, Copy, Repeat2, ArrowRight, Lock, Check, Circle, ListChecks,
   MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
+import { TaskCompleteButton } from "./TaskCompleteButton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -138,20 +139,8 @@ export function TaskListRow({
       </span>
 
       {/* Complete — Notion/Linear style rounded square */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border transition-all ${
-          task.completed
-            ? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-600"
-            : "border-muted-foreground/25 bg-transparent text-transparent hover:border-emerald-500/60 hover:bg-emerald-500/10"
-        }`}
-        aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-        title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-        aria-pressed={task.completed}
-      >
-        <Check className="h-3 w-3" strokeWidth={3} />
-      </button>
+      <TaskCompleteButton completed={!!task.completed} onToggle={onToggle} />
+
 
       {/* Title column (with #, category icon, badges) */}
       <div className="min-w-0" data-no-select="true">

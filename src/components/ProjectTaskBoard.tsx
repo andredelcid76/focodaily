@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
 import { CategoryIcon } from "./CategoryBadge";
+import { TaskCompleteButton } from "./TaskCompleteButton";
 import { formatShort, todayISO, addDays } from "@/lib/date";
 import { listProjectMembers } from "@/lib/team.functions";
 import type { Task, TaskStatus } from "@/hooks/useTasks";
@@ -557,19 +558,8 @@ function TaskRow({
         onCheckedChange={() => onSelectToggle?.()}
         aria-label="Selecionar"
       />
-      <button
-        type="button"
-        onClick={onToggleComplete}
-        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all ${
-          task.completed
-            ? "border-emerald-500 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
-            : "border-muted-foreground/30 text-muted-foreground/50 hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
-        }`}
-        aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-        title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-      >
-        {task.completed ? <CheckCircle2 className="h-4 w-4 fill-current" /> : <Circle className="h-4 w-4" strokeWidth={1.5} />}
-      </button>
+      <TaskCompleteButton completed={!!task.completed} onToggle={onToggleComplete} size="md" />
+
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
@@ -710,19 +700,12 @@ function KanbanCard({
   return (
     <div className={`rounded-xl border border-border/60 bg-background/60 p-2.5 shadow-sm hover:border-primary/40 ${task.completed ? "opacity-70" : ""}`}>
       <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onToggleComplete(); }}
-          className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all ${
-            task.completed
-              ? "border-emerald-500 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
-              : "border-muted-foreground/30 text-muted-foreground/50 hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
-          }`}
-          aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-          title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-        >
-          {task.completed ? <CheckCircle2 className="h-3.5 w-3.5 fill-current" /> : <Circle className="h-3.5 w-3.5" strokeWidth={1.5} />}
-        </button>
+        <TaskCompleteButton
+          completed={!!task.completed}
+          onToggle={onToggleComplete}
+          size="md"
+          className="mt-0.5"
+        />
         <button onClick={onEdit} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
             <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
