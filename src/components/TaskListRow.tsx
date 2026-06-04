@@ -113,7 +113,7 @@ export function TaskListRow({
       data-task-card="true"
       onClick={handleRowClick}
       className={`group relative grid items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
-        grid-cols-[1rem_1.75rem_minmax(0,2fr)_minmax(0,3fr)_7rem_4.5rem_6rem_8rem_2.25rem]
+        grid-cols-[1rem_1.75rem_minmax(0,1.5fr)_minmax(0,2fr)_7rem_4.5rem_6rem_8rem_2.25rem]
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
@@ -408,7 +408,7 @@ export function TaskListHeader({
   return (
     <div
       className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40
-        grid-cols-[1rem_1.75rem_minmax(0,2fr)_minmax(0,3fr)_7rem_4.5rem_6rem_8rem_2.25rem]"
+        grid-cols-[1rem_1.75rem_minmax(0,1.5fr)_minmax(0,2fr)_7rem_4.5rem_6rem_8rem_2.25rem]"
     >
       <span aria-hidden="true" />
       <SortBtn k="position" label="#" narrow />
