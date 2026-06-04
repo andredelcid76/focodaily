@@ -492,7 +492,7 @@ function TaskRow({
    Kanban view
 ============================================================ */
 function KanbanView({
-  tasks, members, memberById, rolesById, onEdit, onSetStatus, onUpdate,
+  tasks, members, memberById, rolesById, onEdit, onSetStatus, onUpdate, onToggleComplete,
 }: {
   tasks: Task[];
   members: Member[];
@@ -501,6 +501,7 @@ function KanbanView({
   onEdit: (t: Task) => void;
   onSetStatus: (id: string, status: TaskStatus) => Promise<void> | void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
+  onToggleComplete: (t: Task) => Promise<void> | void;
 }) {
   const cols: TaskStatus[] = ["todo", "doing", "done"];
   const byStatus = useMemo(() => {
@@ -534,6 +535,7 @@ function KanbanView({
                 onEdit={() => onEdit(t)}
                 onSetStatus={(ns) => onSetStatus(t.id, ns)}
                 onAssign={(uid) => onUpdate(t.id, { assignee_id: uid })}
+                onToggleComplete={() => onToggleComplete(t)}
               />
             ))}
             {byStatus[s].length === 0 && (
