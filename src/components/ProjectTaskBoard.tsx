@@ -428,16 +428,73 @@ function TableView({
         </div>
       )}
 
+      {/* Column filters */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/30 px-3 py-2 text-xs">
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <FilterIcon className="h-3 w-3" /> Filtros
+        </span>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos status</SelectItem>
+            {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
+              <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          <SelectTrigger className="h-7 w-44 text-xs"><SelectValue placeholder="Responsável" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos responsáveis</SelectItem>
+            <SelectItem value="__none">Sem responsável</SelectItem>
+            {members.map((m) => (
+              <SelectItem key={m.user_id} value={m.user_id}>{nameOf(m)}{m.is_me ? " (você)" : ""}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Papel" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos papéis</SelectItem>
+            <SelectItem value="__none">Sem papel</SelectItem>
+            {roles.map((r) => (
+              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={dueFilter} onValueChange={(v) => setDueFilter(v as DueFilter)}>
+          <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Vencimento" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer prazo</SelectItem>
+            <SelectItem value="overdue">Atrasadas</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="week">Próximos 7 dias</SelectItem>
+            <SelectItem value="later">Mais tarde</SelectItem>
+            <SelectItem value="no_date">Sem data</SelectItem>
+            <SelectItem value="done">Concluídas</SelectItem>
+          </SelectContent>
+        </Select>
+        {activeFilterCount > 0 && (
+          <Button size="sm" variant="ghost" onClick={clearFilters} className="h-7 text-xs">
+            <X className="h-3 w-3 mr-1" /> Limpar ({activeFilterCount})
+          </Button>
+        )}
+        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+          {visibleTasks.length} de {tasks.length}
+        </span>
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
         <div className="grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
           <span />
-          <span>Tarefa</span>
-          <span>Vencimento</span>
-          <span>Responsável</span>
-          <span>Status</span>
+          <SortColHeader label="Tarefa" k="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Vencimento" k="scheduled_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Responsável" k="assignee" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
           <span />
         </div>
+
 
         {groups.map((g) => (
           <div key={g.key}>
