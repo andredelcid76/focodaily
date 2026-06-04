@@ -309,6 +309,7 @@ function AnaliseInner({ userId }: { userId: string }) {
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="concluidas" stroke="#3ddc9a" strokeWidth={2} dot={false} name="Concluídas" />
                 <Line type="monotone" dataKey="criadas" stroke="#e8c468" strokeWidth={2} dot={false} name="Criadas" />
+                <Line type="monotone" dataKey="adiadas" stroke="#f87171" strokeWidth={2} dot={false} name="Adiadas" />
               </LineChart>
             </ResponsiveContainer>
           </div>
