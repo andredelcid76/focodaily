@@ -112,7 +112,7 @@ export function TaskListRow({
       data-task-card="true"
       onClick={handleRowClick}
       className={`group relative grid items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
-        grid-cols-[1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]
+        grid-cols-[1rem_1.75rem_minmax(0,1fr)_12rem_7rem_4.5rem_6rem_8rem_2.25rem]
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
@@ -170,15 +170,21 @@ export function TaskListRow({
           {(task as any).non_negotiable && !task.completed && (
             <Lock className="h-3 w-3 text-overdue shrink-0" aria-label="Inegociável hoje" />
           )}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className={`min-w-0 flex-1 text-left text-sm font-medium leading-snug cursor-pointer ${
+          <div
+            className={`min-w-0 flex-1 text-sm font-medium leading-snug ${
               task.completed ? "line-through text-muted-foreground" : ""
             }`}
           >
-            <span className="line-clamp-2 break-words [&>span]:hover:underline"><span>{task.title}</span></span>
-          </button>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onEdit(); } }}
+              className="inline cursor-pointer hover:underline decoration-from-font underline-offset-2 break-words [overflow-wrap:anywhere]"
+            >
+              {task.title}
+            </span>
+          </div>
         </div>
         {/* Compact secondary line: timer / subtasks / recurrence / blockers */}
         {(totalSpent > 0 || (subtaskCount && subtaskCount.total > 0)
@@ -413,7 +419,7 @@ export function TaskListHeader({
   return (
     <div
       className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40
-        grid-cols-[1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]"
+        grid-cols-[1rem_1.75rem_minmax(0,1fr)_12rem_7rem_4.5rem_6rem_8rem_2.25rem]"
     >
       <span aria-hidden="true" />
       <SortBtn k="position" label="#" narrow />
