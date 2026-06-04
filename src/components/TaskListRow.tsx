@@ -374,8 +374,48 @@ export function TaskListRow({
   );
 }
 
+export type TaskSortKey = "title" | "project" | "role" | "duration" | "due" | "status";
+export type TaskSortDir = "asc" | "desc";
+
 /** Header row matching TaskListRow's grid template. */
-export function TaskListHeader({ showSelect = true }: { showSelect?: boolean }) {
+export function TaskListHeader({
+  showSelect = true,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  showSelect?: boolean;
+  sortKey?: TaskSortKey | null;
+  sortDir?: TaskSortDir;
+  onSort?: (key: TaskSortKey) => void;
+}) {
+  const SortBtn = ({ k, label, align = "left" }: { k: TaskSortKey; label: string; align?: "left" | "center" }) => {
+    const active = sortKey === k;
+    if (!onSort) {
+      return <span className={align === "center" ? "text-center" : ""}>{label}</span>;
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${
+          align === "center" ? "justify-center" : ""
+        } ${active ? "text-foreground" : ""}`}
+        aria-label={`Ordenar por ${label}`}
+      >
+        <span>{label}</span>
+        {active ? (
+          sortDir === "desc" ? (
+            <ArrowDown className="h-3 w-3" />
+          ) : (
+            <ArrowUp className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    );
+  };
   return (
     <div
       className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40
@@ -384,12 +424,12 @@ export function TaskListHeader({ showSelect = true }: { showSelect?: boolean }) 
       <span aria-hidden="true">{showSelect ? "" : ""}</span>
       <span />
       <span />
-      <span>Tarefa</span>
-      <span>Projeto</span>
-      <span>Papel</span>
-      <span>Duração</span>
-      <span>Vencimento</span>
-      <span className="text-center">Status</span>
+      <SortBtn k="title" label="Tarefa" />
+      <SortBtn k="project" label="Projeto" />
+      <SortBtn k="role" label="Papel" />
+      <SortBtn k="duration" label="Duração" />
+      <SortBtn k="due" label="Vencimento" />
+      <SortBtn k="status" label="Status" align="center" />
       <span />
     </div>
   );
