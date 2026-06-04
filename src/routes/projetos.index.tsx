@@ -32,7 +32,13 @@ import {
   Layers,
   GanttChart,
   Crown,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  X,
+  Search,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useProfiles } from "@/hooks/useProfiles";
 import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
