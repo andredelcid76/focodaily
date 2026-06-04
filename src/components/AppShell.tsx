@@ -89,7 +89,7 @@ function Shell({ children }: { children: ReactNode }) {
 
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <Link
-                to="/"
+                to={meta.eyebrowHref}
                 className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
               >
                 {meta.eyebrow}
