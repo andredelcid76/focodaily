@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2, Circle, Clock, Table as TableIcon, KanbanSquare, GanttChart,
   Plus, Lock, AlertCircle, Layers, Pencil, Trash2, X,
+  ArrowUp, ArrowDown, ArrowUpDown, Filter as FilterIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -209,14 +210,94 @@ function TableView({
   const today = todayISO();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // ---- Column filters & sort -------------------------------------------------
+  type SortKey = "title" | "scheduled_date" | "assignee" | "status";
+  type SortDir = "asc" | "desc";
+  type DueFilter = "all" | "overdue" | "today" | "week" | "later" | "no_date" | "done";
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all"); // "all" | "__none" | uid
+  const [roleFilter, setRoleFilter] = useState<string>("all"); // "all" | "__none" | rid
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir("asc"); }
+  };
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setAssigneeFilter("all");
+    setRoleFilter("all");
+    setDueFilter("all");
+  };
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (assigneeFilter !== "all" ? 1 : 0) +
+    (roleFilter !== "all" ? 1 : 0) +
+    (dueFilter !== "all" ? 1 : 0);
+
+  const in7 = useMemo(() => addDays(today, 7), [today]);
+
+  const matchesFilters = (t: Task) => {
+    const status = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
+    if (statusFilter !== "all" && status !== statusFilter) return false;
+    if (assigneeFilter !== "all") {
+      if (assigneeFilter === "__none" ? !!t.assignee_id : t.assignee_id !== assigneeFilter) return false;
+    }
+    if (roleFilter !== "all") {
+      if (roleFilter === "__none" ? !!t.role_id : t.role_id !== roleFilter) return false;
+    }
+    if (dueFilter !== "all") {
+      const sd = t.scheduled_date;
+      switch (dueFilter) {
+        case "overdue": if (!(sd && sd < today && !t.completed)) return false; break;
+        case "today":   if (sd !== today) return false; break;
+        case "week":    if (!sd || sd < today || sd > in7) return false; break;
+        case "later":   if (!sd || sd <= in7) return false; break;
+        case "no_date": if (sd) return false; break;
+        case "done":    if (!t.completed) return false; break;
+      }
+    }
+    return true;
+  };
+
+  const sortTasks = (arr: Task[]) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: Task, b: Task) => {
+      switch (sortKey) {
+        case "title":
+          return a.title.localeCompare(b.title) * dir;
+        case "scheduled_date":
+          return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~") * dir;
+        case "assignee": {
+          const an = a.assignee_id ? nameOf(memberById.get(a.assignee_id)) : "~";
+          const bn = b.assignee_id ? nameOf(memberById.get(b.assignee_id)) : "~";
+          return an.localeCompare(bn) * dir;
+        }
+        case "status": {
+          const as = (a.status ?? (a.completed ? "done" : "todo")) as TaskStatus;
+          const bs = (b.status ?? (b.completed ? "done" : "todo")) as TaskStatus;
+          return as.localeCompare(bs) * dir;
+        }
+      }
+    };
+    return [...arr].sort(cmp);
+  };
+
+  const clearSel = () => setSelected(new Set());
   const toggleSel = (id: string) =>
     setSelected((s) => {
       const next = new Set(s);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  const clearSel = () => setSelected(new Set());
-  const allIds = tasks.map((t) => t.id);
+
+  const visibleTasks = useMemo(() => tasks.filter(matchesFilters),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tasks, statusFilter, assigneeFilter, roleFilter, dueFilter, today, in7]);
+
+  const allIds = visibleTasks.map((t) => t.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
   const toggleAll = () => setSelected(allChecked ? new Set() : new Set(allIds));
 
@@ -254,33 +335,32 @@ function TableView({
   };
 
   const groups = useMemo(() => {
-    if (grouping === "none") return [{ key: "all", label: "", tasks: sortByDate(tasks) }];
+    if (grouping === "none") return [{ key: "all", label: "", tasks: sortTasks(visibleTasks) }];
     if (grouping === "status") {
       const order: TaskStatus[] = ["doing", "todo", "done"];
       return order.map((s) => ({
         key: s,
         label: STATUS_LABEL[s],
-        tasks: sortByDate(tasks.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s)),
+        tasks: sortTasks(visibleTasks.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s)),
       })).filter((g) => g.tasks.length > 0);
     }
     if (grouping === "assignee") {
       const map = new Map<string, Task[]>();
-      for (const t of tasks) {
+      for (const t of visibleTasks) {
         const aid = (t.assignee_id ?? "__unassigned") as string;
         map.set(aid, [...(map.get(aid) ?? []), t]);
       }
       const arr = Array.from(map.entries()).map(([uid, ts]) => ({
         key: uid,
         label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
-        tasks: sortByDate(ts),
+        tasks: sortTasks(ts),
       }));
       arr.sort((a, b) => b.tasks.length - a.tasks.length);
       return arr;
     }
     // due
     const buckets = { overdue: [] as Task[], today: [] as Task[], week: [] as Task[], later: [] as Task[], done: [] as Task[] };
-    const in7 = addDays(today, 7);
-    for (const t of tasks) {
+    for (const t of visibleTasks) {
       if (t.completed) buckets.done.push(t);
       else if (t.scheduled_date < today) buckets.overdue.push(t);
       else if (t.scheduled_date === today) buckets.today.push(t);
@@ -288,13 +368,15 @@ function TableView({
       else buckets.later.push(t);
     }
     return [
-      { key: "overdue", label: "Atrasadas", tasks: sortByDate(buckets.overdue) },
-      { key: "today", label: "Hoje", tasks: sortByDate(buckets.today) },
-      { key: "week", label: "Próximos 7 dias", tasks: sortByDate(buckets.week) },
-      { key: "later", label: "Mais tarde", tasks: sortByDate(buckets.later) },
-      { key: "done", label: "Concluídas", tasks: sortByDate(buckets.done) },
+      { key: "overdue", label: "Atrasadas", tasks: sortTasks(buckets.overdue) },
+      { key: "today", label: "Hoje", tasks: sortTasks(buckets.today) },
+      { key: "week", label: "Próximos 7 dias", tasks: sortTasks(buckets.week) },
+      { key: "later", label: "Mais tarde", tasks: sortTasks(buckets.later) },
+      { key: "done", label: "Concluídas", tasks: sortTasks(buckets.done) },
     ].filter((g) => g.tasks.length > 0);
-  }, [tasks, grouping, ownerId, memberById, today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTasks, grouping, memberById, today, in7, sortKey, sortDir]);
+
 
   return (
     <div className="space-y-2">
@@ -346,16 +428,73 @@ function TableView({
         </div>
       )}
 
+      {/* Column filters */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/30 px-3 py-2 text-xs">
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <FilterIcon className="h-3 w-3" /> Filtros
+        </span>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos status</SelectItem>
+            {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
+              <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          <SelectTrigger className="h-7 w-44 text-xs"><SelectValue placeholder="Responsável" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos responsáveis</SelectItem>
+            <SelectItem value="__none">Sem responsável</SelectItem>
+            {members.map((m) => (
+              <SelectItem key={m.user_id} value={m.user_id}>{nameOf(m)}{m.is_me ? " (você)" : ""}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Papel" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos papéis</SelectItem>
+            <SelectItem value="__none">Sem papel</SelectItem>
+            {roles.map((r) => (
+              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={dueFilter} onValueChange={(v) => setDueFilter(v as DueFilter)}>
+          <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Vencimento" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer prazo</SelectItem>
+            <SelectItem value="overdue">Atrasadas</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="week">Próximos 7 dias</SelectItem>
+            <SelectItem value="later">Mais tarde</SelectItem>
+            <SelectItem value="no_date">Sem data</SelectItem>
+            <SelectItem value="done">Concluídas</SelectItem>
+          </SelectContent>
+        </Select>
+        {activeFilterCount > 0 && (
+          <Button size="sm" variant="ghost" onClick={clearFilters} className="h-7 text-xs">
+            <X className="h-3 w-3 mr-1" /> Limpar ({activeFilterCount})
+          </Button>
+        )}
+        <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+          {visibleTasks.length} de {tasks.length}
+        </span>
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
         <div className="grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
           <span />
-          <span>Tarefa</span>
-          <span>Vencimento</span>
-          <span>Responsável</span>
-          <span>Status</span>
+          <SortColHeader label="Tarefa" k="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Vencimento" k="scheduled_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Responsável" k="assignee" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
           <span />
         </div>
+
 
         {groups.map((g) => (
           <div key={g.key}>
@@ -1067,3 +1206,32 @@ function sortByDate(arr: Task[]) {
     (a, b) => a.scheduled_date.localeCompare(b.scheduled_date) || a.position - b.position,
   );
 }
+
+function SortColHeader<K extends string>({
+  label, k, sortKey, sortDir, onSort,
+}: {
+  label: string;
+  k: K;
+  sortKey: K;
+  sortDir: "asc" | "desc";
+  onSort: (k: K) => void;
+}) {
+  const active = sortKey === k;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(k)}
+      className={`inline-flex items-center gap-1 text-left text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      {active ? (
+        sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-50" />
+      )}
+    </button>
+  );
+}
+
