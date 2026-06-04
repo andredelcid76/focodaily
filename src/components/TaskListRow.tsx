@@ -170,15 +170,21 @@ export function TaskListRow({
           {(task as any).non_negotiable && !task.completed && (
             <Lock className="h-3 w-3 text-overdue shrink-0" aria-label="Inegociável hoje" />
           )}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className={`min-w-0 flex-1 text-left text-sm font-medium leading-snug cursor-pointer ${
+          <div
+            className={`min-w-0 flex-1 text-sm font-medium leading-snug ${
               task.completed ? "line-through text-muted-foreground" : ""
             }`}
           >
-            <span className="line-clamp-2 break-words [&>span]:hover:underline"><span>{task.title}</span></span>
-          </button>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onEdit(); } }}
+              className="inline cursor-pointer hover:underline decoration-from-font underline-offset-2 break-words [overflow-wrap:anywhere]"
+            >
+              {task.title}
+            </span>
+          </div>
         </div>
         {/* Compact secondary line: timer / subtasks / recurrence / blockers */}
         {(totalSpent > 0 || (subtaskCount && subtaskCount.total > 0)
