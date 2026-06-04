@@ -152,6 +152,7 @@ export function ProjectTaskBoard({
           grouping={grouping}
           members={members}
           memberById={memberById}
+          roles={roles}
           rolesById={rolesById}
           ownerId={ownerId}
           onEdit={onEdit}
@@ -160,6 +161,7 @@ export function ProjectTaskBoard({
           onToggleComplete={onToggleComplete}
           onBulkDelete={onBulkDelete}
         />
+
       ) : view === "kanban" ? (
         <KanbanView
           tasks={filtered}
