@@ -384,6 +384,7 @@ function MyTasksPage() {
 
   const toggleComplete = async (t: MyTaskRow) => {
     const next = !t.completed;
+    if (next && !confirmIfBlocked(t.id)) return;
     await updateOne(t.id, {
       completed: next,
       completed_at: next ? new Date().toISOString() : null,
@@ -393,6 +394,7 @@ function MyTasksPage() {
   };
 
   const setStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
+    if (status === "done" && !t.completed && !confirmIfBlocked(t.id)) return;
     const patch: Parameters<typeof updateOne>[1] = { status };
     if (status === "done") {
       patch.completed = true;
@@ -407,7 +409,19 @@ function MyTasksPage() {
 
   const bulkStatus = async (status: MyTaskRow["status"]) => {
     if (selected.size === 0) return;
-    const ids = Array.from(selected);
+    let ids = Array.from(selected);
+    if (status === "done") {
+      const blocked = ids
+        .map((id) => ({ id, blockers: blockedByMap.get(id) }))
+        .filter((x) => x.blockers && x.blockers.length > 0);
+      if (blocked.length > 0) {
+        const ok = window.confirm(
+          `${blocked.length} tarefa(s) selecionada(s) estão bloqueadas por dependências. Concluir todas mesmo assim?`,
+        );
+        if (!ok) ids = ids.filter((id) => !blockedByMap.get(id)?.length);
+        if (ids.length === 0) return;
+      }
+    }
     const patch: Parameters<typeof updateOne>[1] = { status };
     if (status === "done") {
       patch.completed = true;
