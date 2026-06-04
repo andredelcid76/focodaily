@@ -101,15 +101,8 @@ export function TaskCard({
       style={style}
       data-task-card="true"
       {...dragProps}
-      onClick={(e) => {
-        if (!selectionMode) return;
-        e.stopPropagation();
-        onSelectToggle?.();
-      }}
-      className={`group relative flex items-start gap-2 rounded-xl border backdrop-blur-sm p-3 shadow-[var(--shadow-card)] transition-all touch-none ${
-        selectionMode
-          ? "cursor-pointer"
-          : "cursor-grab active:cursor-grabbing hover:border-primary/40"
+      className={`group relative flex items-stretch gap-0 rounded-xl border backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none overflow-hidden ${
+        selectionMode ? "" : "cursor-grab active:cursor-grabbing hover:border-primary/40"
       } ${
         task.completed
           ? "bg-muted/30 border-border/40 opacity-70"
@@ -126,46 +119,78 @@ export function TaskCard({
           : ""
       } ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}`}
     >
-      <span
-        className="mt-1 text-muted-foreground/40 group-hover:text-muted-foreground/70 pointer-events-none"
-        aria-hidden="true"
-      >
-        <GripVertical className="h-4 w-4" />
-      </span>
-
-      {typeof index === "number" && (
-        <span
-          className={`mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-border/60 bg-muted/40 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground ${
-            task.completed ? "line-through" : ""
+      {/* Selection rail – dedicated zone for multi-select (separate from complete) */}
+      {onSelectToggle && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectToggle();
+          }}
+          className={`flex w-7 flex-shrink-0 items-center justify-center border-r transition-colors ${
+            selected
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-border/40 bg-muted/20 text-muted-foreground/50 hover:bg-muted/40 hover:text-foreground"
           }`}
-          aria-label={`Posição ${index}`}
+          aria-label={selected ? "Desmarcar seleção" : "Selecionar tarefa"}
+          title={selected ? "Desmarcar seleção" : "Selecionar tarefa"}
+          aria-pressed={selected}
         >
-          {index}
-        </span>
+          <span
+            className={`grid h-4 w-4 place-items-center rounded-sm border ${
+              selected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-muted-foreground/40 bg-background"
+            }`}
+          >
+            {selected && <CheckCircle2 className="h-3 w-3" />}
+          </span>
+        </button>
       )}
 
-      {/* Complete button – always visible and separate from selection */}
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-        className={`mt-0.5 flex-shrink-0 rounded-full transition-colors ${
-          task.completed
-            ? "text-green-500 hover:text-green-400"
-            : "text-muted-foreground/40 hover:text-green-500"
-        }`}
-        aria-label="Concluir tarefa"
-        title={task.completed ? "Desmarcar conclusão" : "Concluir tarefa"}
-      >
-        {task.completed ? (
-          <CheckCircle2 className="h-5 w-5 fill-green-500/20" />
-        ) : (
-          <Circle className="h-5 w-5" />
+      <div className="flex flex-1 items-start gap-2 p-3 min-w-0">
+        <span
+          className="mt-1 text-muted-foreground/40 group-hover:text-muted-foreground/70 pointer-events-none"
+          aria-hidden="true"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+
+        {typeof index === "number" && (
+          <span
+            className={`mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-border/60 bg-muted/40 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground ${
+              task.completed ? "line-through" : ""
+            }`}
+            aria-label={`Posição ${index}`}
+          >
+            {index}
+          </span>
         )}
-      </button>
+
+        {/* Complete button – prominent, clearly distinct from selection rail */}
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+            task.completed
+              ? "border-green-500 bg-green-500/15 text-green-500 hover:bg-green-500/25"
+              : "border-muted-foreground/30 text-muted-foreground/50 hover:border-green-500 hover:bg-green-500/10 hover:text-green-500"
+          }`}
+          aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
+          title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
+          aria-pressed={task.completed}
+        >
+          {task.completed ? (
+            <CheckCircle2 className="h-4 w-4 fill-current" />
+          ) : (
+            <Circle className="h-4 w-4" strokeWidth={1.5} />
+          )}
+        </button>
 
 
       <div className="flex-1 min-w-0 text-left">
