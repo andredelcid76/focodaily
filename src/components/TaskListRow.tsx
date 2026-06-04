@@ -143,7 +143,7 @@ export function TaskListRow({
 
 
       {/* Title column (with #, category icon, badges) */}
-      <div className="min-w-0" data-no-select="true">
+      <div className="min-w-0 flex-1 basis-full md:basis-auto md:flex-none order-1 md:order-none" data-no-select="true">
         <div className="flex items-center gap-1.5">
           {typeof index === "number" && (
             <span
