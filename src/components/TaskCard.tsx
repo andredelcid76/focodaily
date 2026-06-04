@@ -255,6 +255,14 @@ export function TaskCard({
                 chip
               );
             })()}
+            {blockedBy && blockedBy.length > 0 && !task.completed && (
+              <span
+                className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600"
+                title={`Aguardando: ${blockedBy.join(", ")}`}
+              >
+                <Lock className="h-2.5 w-2.5" /> Bloqueada
+              </span>
+            )}
             {followupNumber > 1 && (
               <span
                 className="inline-flex items-center gap-1 rounded-md border border-circumstantial/40 bg-circumstantial/10 px-1.5 py-0.5 text-[10px] font-semibold text-circumstantial"
