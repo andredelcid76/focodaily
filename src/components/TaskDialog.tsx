@@ -118,7 +118,11 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     if (task?.id) setPredecessorIds(depsApi.predecessorsOf(task.id));
     else setPredecessorIds([]);
     setPredecessorPick("");
-  }, [open, task?.id, depsApi.deps]);
+    setPredecessorSearch("");
+    // Default the project filter to the active project, if any.
+    const activePid = ((task as any)?.project_id ?? defaultProjectId ?? null) as string | null;
+    setPredecessorProjectFilter(activePid ? activePid : "__all__");
+  }, [open, task?.id, depsApi.deps, defaultProjectId]);
 
   useEffect(() => {
     if (open) {
