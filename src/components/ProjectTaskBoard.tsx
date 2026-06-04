@@ -413,6 +413,11 @@ function TaskRow({
   const isOverdue = !task.completed && task.scheduled_date < today;
   return (
     <div className={`grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
+      <Checkbox
+        checked={!!selected}
+        onCheckedChange={() => onSelectToggle?.()}
+        aria-label="Selecionar"
+      />
       <button
         type="button"
         onClick={onToggleComplete}
@@ -426,11 +431,6 @@ function TaskRow({
       >
         {task.completed ? <CheckCircle2 className="h-4 w-4 fill-current" /> : <Circle className="h-4 w-4" strokeWidth={1.5} />}
       </button>
-      <Checkbox
-        checked={!!selected}
-        onCheckedChange={() => onSelectToggle?.()}
-        aria-label="Selecionar"
-      />
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
