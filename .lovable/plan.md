@@ -1,56 +1,72 @@
-## 1. Tela "Hoje" — esconder responsável
+# Colunas customizáveis — Planejar/Tarefas (Hoje)
 
-`TaskCard` ganha prop opcional `hideAssignee`. Na rota `/` (Hoje), passa `hideAssignee` em todas as instâncias. O chip do responsável continua aparecendo em projetos, agenda, semana e Tarefas.
+## Objetivo
+Permitir que cada usuário ajuste a tabela de tarefas da tela Hoje: mostrar/ocultar colunas, arrastar para redimensionar, e reordenar via drag — com a configuração salva e restaurada entre sessões.
 
-## 2. Menu "Minhas tarefas" → "Tarefas"
+## Escopo
+- **Tela:** apenas `/` (Planejar/Tarefas — Hoje). Semana e Minhas Tarefas seguem com layout fixo.
+- **Colunas controláveis:** Tarefa, Projeto, Papel, Duração, Vencimento, Status.
+- **Colunas fixas (sempre visíveis, não move):** drag handle, checkbox de concluir, ações (timer + menu) — são UI estrutural.
+- **Mobile (<768px):** controles desabilitados; usa o layout empilhado já corrigido.
 
-- `AppSidebar`: renomear label.
-- `src/routes/minhas-tarefas.tsx`: título + meta = "Tarefas". (Manter URL `/minhas-tarefas` para não quebrar links/atalho.)
-- Substituir o filtro atual `kindFilter` por um **toggle principal** com 3 opções: **Todas** · **Minhas** (criadas por mim ou onde sou responsável) · **De outros** (tarefas em projetos compartilhados onde o dono e o responsável não sou eu). Mantém demais filtros.
-- Backend `listMyAssignedTasks` já retorna own + delegadas. Para "de outros" precisamos também trazer tarefas de projetos compartilhados onde eu **não** sou owner nem assignee. Vou ampliar o serverFn para incluir tarefas dos projetos onde sou membro/equipe, marcando `kind: 'shared'`.
+## UX
 
-## 3. Card de projeto mostra o Líder
+### Controles
+- Botão **"Colunas"** no topo da lista (ao lado dos filtros existentes), abre popover com:
+  - Lista de colunas com checkbox (mostrar/ocultar) e handle de arrastar (reordenar).
+  - Botão "Restaurar padrão".
+- **Redimensionar:** arrastar a borda direita do cabeçalho de cada coluna. Cursor `col-resize`, faixa visual de 4px no hover.
+- **Reordenar:** também direto no header — segurar e arrastar uma coluna para nova posição (além do popover).
 
-`ProjectCard` (em `projetos.index.tsx`) exibe um chip "Líder: Nome" usando `useProfiles` para resolver o `project.user_id`. Também aparece na visão Tabela.
-
-## 4. Renomear "Admin" → "Líder"
-
-Conceito: **Líder = `projects.user_id`** (quem criou, por padrão). Manager e member continuam em `project_members`. Renomeação é **UI-only**:
-
-- `ProjectMembersSection`, helpers e labels: trocar todos os "Admin"/"admin (papel)" exibidos → "Líder". O valor `role='admin'` em `project_members` continua existindo no banco, mas não é mais oferecido na UI (líder é único e definido pelo `user_id` do projeto).
-- Adicionar ação **"Transferir liderança"** no `ProjectDialog` (visível só para o líder atual): seleciona um membro existente, e via `updateProject({ user_id: novoLider })`. Inclui confirmação. RLS atual já permite manager+ atualizar projeto, então a transferência funciona; depois da troca o ex-líder vira manager automaticamente (insert em `project_members`).
-
-## 5. Modelo de permissões (confirmar/explicitar)
-
-Já está mapeado nas RLS atuais — só precisamos garantir consistência na UI:
-
-- **Líder** (`projects.user_id`): tudo — edita projeto, qualquer tarefa, gerencia membros, transfere liderança.
-- **Manager** (`project_members.role = 'manager'` ou `team_members.role='manager'`): edita qualquer tarefa do projeto (já permitido por `is_project_manager_or_above`), **mas não edita dados do projeto**. Vou ajustar a RLS de UPDATE em `projects` para exigir **líder apenas** (hoje aceita manager+) e ajustar `ProjectDialog` para esconder campos para não-líder.
-- **Member**: só edita tarefas onde é `user_id` ou `assignee_id` (já garantido pelo trigger `enforce_member_task_constraints` + RLS `Tasks update own assigned or as manager`).
-
-### Migração necessária
-
-```sql
--- Restringir UPDATE de projects ao líder (owner)
-DROP POLICY "Project update by manager or above" ON public.projects;
-CREATE POLICY "Project update by leader only"
-ON public.projects FOR UPDATE TO authenticated
-USING (auth.uid() = user_id);
-
--- Quando o líder transfere a liderança, garantir que o antigo líder vire manager:
--- feito via código (insert em project_members) no fluxo de transferência.
+### Persistência
+Salva por usuário em `localStorage` com chave `today-table-columns-v1`. Estrutura:
+```json
+{
+  "order": ["title","project","role","duration","due","status"],
+  "hidden": ["role"],
+  "widths": { "title": "1.5fr", "project": "2fr", "role": "7rem", ... }
+}
 ```
+Sem ida ao banco — preferência puramente client-side, sincroniza entre abas via `storage` event.
 
-## Arquivos afetados
+## Implementação técnica
 
-- `src/components/TaskCard.tsx` (prop `hideAssignee`)
-- `src/routes/index.tsx` (passar prop)
-- `src/components/AppSidebar.tsx` (rename label)
-- `src/routes/minhas-tarefas.tsx` (título + toggle)
-- `src/lib/myTasks.functions.ts` (incluir tarefas "de outros" em projetos compartilhados)
-- `src/routes/projetos.index.tsx` (chip Líder no card/tabela)
-- `src/components/ProjectMembersSection.tsx` (rename Admin → Líder na UI)
-- `src/components/ProjectDialog.tsx` (botão "Transferir liderança"; esconder edição p/ não-líder)
-- Migração RLS em `projects`.
+### Novo hook
+`src/hooks/useTaskColumns.ts` — gerencia state + localStorage + defaults. Expõe:
+- `columns`: array ordenado de `{ key, label, visible, width }`
+- `setWidth(key, width)`, `toggleVisible(key)`, `reorder(from, to)`, `reset()`
+- `gridTemplate`: string pronta para `grid-template-columns` (concatena fixos + dinâmicos).
 
-Pronto para implementar?
+### Refatorar `TaskListRow.tsx`
+- Receber `columns` como prop (vindo do container `routes/index.tsx`).
+- Substituir o grid-template hardcoded por `style={{ gridTemplateColumns: gridTemplate }}`.
+- Renderizar cada cell condicionalmente baseado em `visible` e na ordem do array.
+- Cells viram um pequeno map `{ title: <TitleCell/>, project: <ProjectCell/>, ... }` para reordenação.
+
+### Refatorar `TaskListHeader`
+- Mesmo `gridTemplate`.
+- Cada `<SortBtn>` ganha:
+  - Wrapper com handle de resize na borda direita (`onPointerDown` → captura, calcula delta em px, converte para fr/rem).
+  - Suporte a drag-to-reorder (usar `@dnd-kit` que já está no projeto, com `SortableContext` horizontal).
+
+### Container (`src/routes/index.tsx`)
+- Importar `useTaskColumns`, passar `columns` e `gridTemplate` para header + rows.
+- Adicionar botão "Colunas" + popover com `ColumnSettingsPopover`.
+
+### Novo componente
+`src/components/ColumnSettingsPopover.tsx` — lista checkbox + drag list (dnd-kit vertical).
+
+## Arquivos
+
+**Criar:**
+- `src/hooks/useTaskColumns.ts`
+- `src/components/ColumnSettingsPopover.tsx`
+
+**Editar:**
+- `src/components/TaskListRow.tsx` (gridTemplate dinâmico, cells condicionais)
+- `src/routes/index.tsx` (wiring + botão Colunas)
+
+## Fora de escopo (poderia vir depois)
+- Múltiplas "visualizações nomeadas" (ex: "Foco", "Revisão") salvas por usuário no banco.
+- Sincronização cross-device (hoje fica em localStorage).
+- Aplicar mesma config em Semana/Minhas Tarefas.
