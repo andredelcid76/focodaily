@@ -1230,7 +1230,7 @@ export type Database = {
           origin_source_label?: string | null
           origin_source_url?: string | null
           original_date?: string
-          planned_date?: string
+          planned_date: string
           planner_etag?: string | null
           planner_task_id?: string | null
           position?: number
