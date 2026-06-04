@@ -557,19 +557,8 @@ function TaskRow({
         onCheckedChange={() => onSelectToggle?.()}
         aria-label="Selecionar"
       />
-      <button
-        type="button"
-        onClick={onToggleComplete}
-        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all ${
-          task.completed
-            ? "border-emerald-500 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
-            : "border-muted-foreground/30 text-muted-foreground/50 hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
-        }`}
-        aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-        title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-      >
-        {task.completed ? <CheckCircle2 className="h-4 w-4 fill-current" /> : <Circle className="h-4 w-4" strokeWidth={1.5} />}
-      </button>
+      <TaskCompleteButton completed={!!task.completed} onToggle={onToggleComplete} size="md" />
+
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
