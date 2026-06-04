@@ -641,35 +641,89 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   })}
                 </div>
               )}
-              <Select
-                value={predecessorPick}
-                onValueChange={(v) => {
-                  if (v && !predecessorIds.includes(v) && v !== task?.id) {
-                    setPredecessorIds((prev) => [...prev, v]);
-                  }
-                  setPredecessorPick("");
-                }}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Adicionar predecessora…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allOpenTasks
-                    .filter((t) => t.id !== task?.id && !predecessorIds.includes(t.id))
-                    .slice(0, 100)
-                    .map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        <span className="inline-flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground tabular-nums">{t.scheduled_date}</span>
-                          <span className="max-w-[18rem] truncate">{t.title}</span>
-                        </span>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Select
+                  value={predecessorProjectFilter}
+                  onValueChange={(v) => setPredecessorProjectFilter(v)}
+                >
+                  <SelectTrigger className="h-9 sm:w-[200px]">
+                    <SelectValue placeholder="Filtrar por projeto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Todos os projetos</SelectItem>
+                    <SelectItem value="__none__">Sem projeto</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="max-w-[16rem] truncate">{p.name}</span>
                       </SelectItem>
                     ))}
-                  {allOpenTasks.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhuma tarefa em aberto.</div>
-                  )}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+                <Popover open={predecessorPopoverOpen} onOpenChange={setPredecessorPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className="h-9 flex-1 justify-between font-normal"
+                    >
+                      <span className="text-muted-foreground">Buscar e adicionar predecessora…</span>
+                      <Link2 className="h-3.5 w-3.5 opacity-60" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Digite o nome da tarefa…"
+                        value={predecessorSearch}
+                        onValueChange={setPredecessorSearch}
+                      />
+                      <CommandList>
+                        <CommandEmpty>Nenhuma tarefa encontrada.</CommandEmpty>
+                        <CommandGroup>
+                          {(() => {
+                            const q = predecessorSearch.trim().toLowerCase();
+                            const candidates = allOpenTasks
+                              .filter((t) => t.id !== task?.id && !predecessorIds.includes(t.id))
+                              .filter((t) => {
+                                if (predecessorProjectFilter === "__all__") return true;
+                                if (predecessorProjectFilter === "__none__") return t.project_id == null;
+                                return t.project_id === predecessorProjectFilter;
+                              })
+                              .filter((t) => q.length === 0 || t.title.toLowerCase().includes(q))
+                              .slice(0, 50);
+                            if (candidates.length === 0) return null;
+                            return candidates.map((t) => {
+                              const proj = projects.find((p) => p.id === t.project_id);
+                              return (
+                                <CommandItem
+                                  key={t.id}
+                                  value={t.id}
+                                  onSelect={() => {
+                                    setPredecessorIds((prev) => prev.includes(t.id) ? prev : [...prev, t.id]);
+                                    setPredecessorPopoverOpen(false);
+                                    setPredecessorSearch("");
+                                  }}
+                                >
+                                  <div className="flex w-full items-center gap-2">
+                                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">{t.scheduled_date}</span>
+                                    <span className="truncate flex-1">{t.title}</span>
+                                    {proj && (
+                                      <span className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground max-w-[8rem] truncate">
+                                        {proj.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              );
+                            });
+                          })()}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
               <p className="text-[11px] text-muted-foreground">
                 Quando a predecessora for adiada ou concluída, a data desta tarefa será ajustada automaticamente.
               </p>
