@@ -222,6 +222,38 @@ function TodayInner({ userId }: { userId: string }) {
       ),
     [dayTasks, showCompleted, normalizedQuery, filters]
   );
+  const sortedVisibleDayTasks = useMemo(() => {
+    if (!sortKey) return visibleDayTasks;
+    const arr = visibleDayTasks.slice();
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: Task, b: Task): number => {
+      switch (sortKey) {
+        case "title":
+          return a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }) * dir;
+        case "project": {
+          const an = a.project_id ? projectsById.get(a.project_id)?.name ?? "" : "";
+          const bn = b.project_id ? projectsById.get(b.project_id)?.name ?? "" : "";
+          return an.localeCompare(bn, "pt-BR", { sensitivity: "base" }) * dir;
+        }
+        case "role": {
+          const an = a.role_id ? rolesById.get(a.role_id)?.name ?? "" : "";
+          const bn = b.role_id ? rolesById.get(b.role_id)?.name ?? "" : "";
+          return an.localeCompare(bn, "pt-BR", { sensitivity: "base" }) * dir;
+        }
+        case "duration":
+          return (a.duration_minutes - b.duration_minutes) * dir;
+        case "due":
+          return a.scheduled_date.localeCompare(b.scheduled_date) * dir;
+        case "status": {
+          const order = { todo: 0, doing: 1, done: 2 } as const;
+          const as = (a.status ?? (a.completed ? "done" : "todo")) as keyof typeof order;
+          const bs = (b.status ?? (b.completed ? "done" : "todo")) as keyof typeof order;
+          return (order[as] - order[bs]) * dir;
+        }
+      }
+    };
+    return arr.sort(cmp);
+  }, [visibleDayTasks, sortKey, sortDir, projectsById, rolesById]);
   const nonNegotiablePending = useMemo(
     () => visibleDayTasks.filter((t) => (t as any).non_negotiable && !t.completed),
     [visibleDayTasks]
