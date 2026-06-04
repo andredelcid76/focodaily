@@ -9,6 +9,7 @@ import {
   CalendarClock, Copy, Repeat2, ArrowRight, Lock, Check, Circle, ListChecks,
   MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
+import { TaskCompleteButton } from "./TaskCompleteButton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
