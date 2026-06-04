@@ -151,7 +151,7 @@ function TodayInner({ userId }: { userId: string }) {
       return next;
     });
   };
-  const selectionMode = selectionActive || selectedIds.size > 0;
+  const selectionMode = selectedIds.size > 0;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
