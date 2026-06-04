@@ -20,6 +20,8 @@ import { formatTimer } from "@/hooks/useActiveTimer";
 import type { Task, TaskStatus } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
+import type { TaskColumnDef, TaskColumnKey } from "@/hooks/useTaskColumns";
+import { DEFAULT_COLUMNS } from "@/hooks/useTaskColumns";
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "A fazer",
