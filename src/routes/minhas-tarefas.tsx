@@ -711,6 +711,20 @@ function MyTasksPage() {
                           {t.title}
                         </button>
                       </div>
+                      {blockedByMap.get(t.id) && !t.completed && (
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                                <Link2 className="h-2.5 w-2.5" /> Bloqueada
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[260px] text-xs">
+                              Aguardando: {blockedByMap.get(t.id)!.join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {t.delegated_by_name && (
                         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
                           delegada por {t.delegated_by_name}
