@@ -90,7 +90,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [predecessorIds, setPredecessorIds] = useState<string[]>([]);
   const [predecessorPick, setPredecessorPick] = useState<string>("");
   const depsApi = useTaskDependencies(user?.id);
-  const [allOpenTasks, setAllOpenTasks] = useState<Array<{ id: string; title: string; scheduled_date: string }>>([]);
+  const [allOpenTasks, setAllOpenTasks] = useState<Array<{ id: string; title: string; scheduled_date: string; project_id: string | null }>>([]);
+  const [predecessorSearch, setPredecessorSearch] = useState("");
+  const [predecessorProjectFilter, setPredecessorProjectFilter] = useState<string>("__active__");
+  const [predecessorPopoverOpen, setPredecessorPopoverOpen] = useState(false);
 
   // Load other open tasks of the user (candidates for predecessors)
   useEffect(() => {
@@ -99,12 +102,12 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     (async () => {
       const { data } = await supabase
         .from("tasks")
-        .select("id,title,scheduled_date")
+        .select("id,title,scheduled_date,project_id")
         .eq("user_id", user.id)
         .eq("completed", false)
         .order("scheduled_date", { ascending: true })
-        .limit(200);
-      if (!cancelled) setAllOpenTasks((data ?? []) as Array<{ id: string; title: string; scheduled_date: string }>);
+        .limit(500);
+      if (!cancelled) setAllOpenTasks((data ?? []) as Array<{ id: string; title: string; scheduled_date: string; project_id: string | null }>);
     })();
     return () => { cancelled = true; };
   }, [open, user?.id]);
