@@ -59,6 +59,10 @@ type Props = {
   onSelectToggle?: () => void;
   subtaskCount?: { total: number; completed: number };
   blockedBy?: string[];
+  /** Custom column config (order + visibility). Defaults to all default columns visible. */
+  columns?: TaskColumnDef[];
+  /** CSS grid-template-columns value matching `columns`. */
+  gridTemplate?: string;
 };
 
 /**
@@ -72,6 +76,7 @@ export function TaskListRow({
   onPostpone, onDuplicate, onFollowUp,
   selected, onSelectToggle,
   subtaskCount, blockedBy,
+  columns, gridTemplate,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
