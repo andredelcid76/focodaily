@@ -820,7 +820,15 @@ function TodayInner({ userId }: { userId: string }) {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={sortedVisibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-                <TaskListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <TaskListHeader
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                  columns={taskColumns.columns}
+                  gridTemplate={taskColumns.gridTemplate}
+                  onResizeColumn={(key, px) => taskColumns.setWidth(key, `${Math.round(px)}px`)}
+                  onReorderColumn={taskColumns.reorder}
+                />
                 <div className="divide-y divide-border/40">
                   {sortedVisibleDayTasks.map((t, i) => (
                     <TaskListRow
@@ -845,6 +853,8 @@ function TodayInner({ userId }: { userId: string }) {
                       onSelectToggle={() => toggleSelect(t.id)}
                       subtaskCount={subtaskCounts[t.id]}
                       blockedBy={blockedByMap.get(t.id)}
+                      columns={taskColumns.columns}
+                      gridTemplate={taskColumns.gridTemplate}
                     />
                   ))}
                 </div>
