@@ -188,13 +188,14 @@ export function ProjectTaskBoard({
    Table view
 ============================================================ */
 function TableView({
-  tasks, grouping, members, memberById, rolesById, ownerId,
+  tasks, grouping, members, memberById, roles, rolesById, ownerId,
   onEdit, onSetStatus, onUpdate, onToggleComplete, onBulkDelete,
 }: {
   tasks: Task[];
   grouping: Grouping;
   members: Member[];
   memberById: Map<string, Member>;
+  roles: Role[];
   rolesById: Map<string, Role>;
   ownerId: string;
   onEdit: (t: Task) => void;
@@ -203,6 +204,7 @@ function TableView({
   onToggleComplete: (t: Task) => Promise<void> | void;
   onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
+
   const today = todayISO();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
