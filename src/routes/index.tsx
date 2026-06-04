@@ -448,17 +448,27 @@ function TodayInner({ userId }: { userId: string }) {
 
   // Wrap toggleComplete: if a task is being completed and the timer is on it,
   // stop and persist the elapsed seconds so we don't lose tracked time.
+  // Also: if the task is blocked by open predecessors, ask the user to confirm.
   const toggleCompleteWithTimer = useCallback(
     async (t: Task) => {
-      if (!t.completed && timer.activeTaskId === t.id) {
-        const stopped = timer.stop();
-        if (stopped && stopped.deltaSeconds > 0) {
-          await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+      if (!t.completed) {
+        const blockers = blockedByMap.get(t.id);
+        if (blockers && blockers.length > 0) {
+          const ok = window.confirm(
+            `Esta tarefa está aguardando: ${blockers.join(", ")}.\n\nConcluir mesmo assim?`,
+          );
+          if (!ok) return;
+        }
+        if (timer.activeTaskId === t.id) {
+          const stopped = timer.stop();
+          if (stopped && stopped.deltaSeconds > 0) {
+            await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+          }
         }
       }
       await tasksApi.toggleComplete(t);
     },
-    [timer, tasksApi],
+    [timer, tasksApi, blockedByMap],
   );
 
   const dayLabel = isViewingToday
