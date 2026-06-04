@@ -74,26 +74,35 @@ function AnaliseInner({ userId }: { userId: string }) {
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
-  const cutoff = useMemo(() => {
-    if (period === "all") return null;
+  const { cutoff, upper } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (period === "all") return { cutoff: null as Date | null, upper: null as Date | null };
+    if (period === "today") {
+      const end = new Date(today); end.setDate(end.getDate() + 1);
+      return { cutoff: today, upper: end };
+    }
+    if (period === "yesterday") {
+      const start = new Date(today); start.setDate(start.getDate() - 1);
+      return { cutoff: start, upper: today };
+    }
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - days + 1);
-    return d;
+    const d = new Date(today); d.setDate(d.getDate() - days + 1);
+    return { cutoff: d, upper: null };
   }, [period]);
 
   const inRange = (iso?: string | null) => {
     if (!iso) return false;
     if (!cutoff) return true;
-    return new Date(iso) >= cutoff;
+    const d = new Date(iso);
+    if (d < cutoff) return false;
+    if (upper && d >= upper) return false;
+    return true;
   };
 
   const scoped = useMemo(() => {
     return tasks.filter((t) => {
-      // Tarefas atribuídas ao usuário (criador ou responsável)
       if (t.user_id !== userId && t.assignee_id !== userId) return false;
-      // Janela: planejada/criada/completada dentro do período
       if (!cutoff) return true;
       return (
         inRange(t.scheduled_date) ||
@@ -102,7 +111,7 @@ function AnaliseInner({ userId }: { userId: string }) {
         inRange(t.created_at)
       );
     });
-  }, [tasks, userId, cutoff]);
+  }, [tasks, userId, cutoff, upper]);
 
   // KPIs
   const kpis = useMemo(() => {
