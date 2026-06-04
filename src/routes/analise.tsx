@@ -259,7 +259,7 @@ function AnaliseInner({ userId }: { userId: string }) {
           </p>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
-          {(["7d", "30d", "90d", "all"] as Period[]).map((p) => (
+          {(["today", "yesterday", "7d", "30d", "90d", "all"] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
