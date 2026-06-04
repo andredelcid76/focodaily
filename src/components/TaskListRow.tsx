@@ -113,14 +113,20 @@ export function TaskListRow({
 
   const dragProps = selected ? {} : { ...attributes, ...listeners };
 
+  const cols = columns ?? DEFAULT_COLUMNS;
+  const visibleCols = cols.filter((c) => c.visible);
+  const computedGridTemplate =
+    gridTemplate ??
+    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 2.25rem`;
+
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, ...(typeof window !== "undefined" ? { "--row-grid": computedGridTemplate } as React.CSSProperties : {}) }}
       data-task-card="true"
       onClick={handleRowClick}
       className={`group relative flex flex-wrap items-center gap-2 md:gap-3 md:grid rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
-        md:grid-cols-[1rem_1.75rem_minmax(0,1.5fr)_minmax(0,2fr)_7rem_4.5rem_6rem_8rem_2.25rem]
+        md:[grid-template-columns:var(--row-grid)]
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
