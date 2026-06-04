@@ -155,166 +155,179 @@ export function TaskListRow({
       <TaskCompleteButton completed={!!task.completed} onToggle={onToggle} />
 
 
-      {/* Title column (with #, category icon, badges) */}
-      <div className="min-w-0 flex-1 basis-full md:basis-auto md:flex-none" data-no-select="true">
-        <div className="flex items-center gap-1.5">
-          {typeof index === "number" && (
-            <span
-              className={`inline-flex h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground ${
-                task.completed ? "line-through" : ""
-              }`}
-              aria-label={`Posição ${index}`}
-            >
-              {index}
-            </span>
-          )}
-          <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
-          {(task as any).non_negotiable && !task.completed && (
-            <Lock className="h-3 w-3 text-overdue shrink-0" aria-label="Inegociável hoje" />
-          )}
-          <div
-            className={`min-w-0 flex-1 text-sm font-medium leading-snug ${
-              task.completed ? "line-through text-muted-foreground" : ""
-            }`}
-          >
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onEdit(); } }}
-              className="inline cursor-pointer hover:underline decoration-from-font underline-offset-2 break-words [overflow-wrap:anywhere]"
-            >
-              {task.title}
-            </span>
-          </div>
-        </div>
-        {/* Compact secondary line: timer / subtasks / recurrence / blockers */}
-        {(totalSpent > 0 || (subtaskCount && subtaskCount.total > 0)
-          || task.recurrence !== "none" || task.recurrence_parent_id
-          || (blockedBy && blockedBy.length > 0)
-          || (task.followup_count ?? 0) > 1
-          || (task.postpone_count ?? 0) >= 3
-          || (task as any).origin_source) && (
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-            {totalSpent > 0 && (
-              <span
-                className={`inline-flex items-center gap-1 ${
-                  running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
-                }`}
-                title="Tempo trabalhado"
-              >
-                <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
-              </span>
-            )}
-            {subtaskCount && subtaskCount.total > 0 && (
-              <span
-                className={`inline-flex items-center gap-1 ${
-                  subtaskCount.completed === subtaskCount.total ? "text-green-500" : ""
-                }`}
-                title={`${subtaskCount.completed} de ${subtaskCount.total} subtarefas concluídas`}
-              >
-                <ListChecks className="h-3 w-3" /> {subtaskCount.completed}/{subtaskCount.total}
-              </span>
-            )}
-            {(task.recurrence !== "none" || task.recurrence_parent_id) && (
-              <span className="inline-flex items-center gap-1" title="Recorrente">
-                <Repeat className="h-3 w-3" />
-              </span>
-            )}
-            {(task.followup_count ?? 0) > 1 && (
-              <span className="inline-flex items-center gap-1 text-circumstantial" title={`Follow-up #${task.followup_count}`}>
-                <Repeat2 className="h-3 w-3" /> #{task.followup_count}
-              </span>
-            )}
-            {blockedBy && blockedBy.length > 0 && !task.completed && (
-              <span
-                className="inline-flex items-center gap-1 text-amber-600"
-                title={`Aguardando: ${blockedBy.join(", ")}`}
-              >
-                <Lock className="h-3 w-3" /> Bloqueada
-              </span>
-            )}
-            {(task.postpone_count ?? 0) >= 3 && !task.completed && (
-              <span className="inline-flex items-center gap-1 text-overdue" title={`Adiada ${task.postpone_count} vezes`}>
-                <AlertCircle className="h-3 w-3" /> {task.postpone_count}× adiada
-              </span>
-            )}
-            {(task as any).origin_source && (() => {
-              const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
-              const url = (task as any).origin_source_url as string | null;
-              const label = (task as any).origin_source_label as string | null;
-              const meta =
-                src === "email"
-                  ? { l: "Outlook", c: "text-blue-600" }
-                  : src === "meeting"
-                  ? { l: "Fireflies", c: "text-purple-600" }
-                  : { l: "Pipedrive", c: "text-emerald-600" };
-              const inner = <span className={meta.c}>{meta.l}</span>;
-              return url ? (
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  title={label ?? meta.l}
+      {/* Dynamic cells rendered in order configured by `columns` */}
+      {visibleCols.map((col) => {
+        switch (col.key) {
+          case "title":
+            return (
+              <div key="title" className="min-w-0 flex-1 basis-full md:basis-auto md:flex-none" data-no-select="true">
+                <div className="flex items-center gap-1.5">
+                  {typeof index === "number" && (
+                    <span
+                      className={`inline-flex h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground ${
+                        task.completed ? "line-through" : ""
+                      }`}
+                      aria-label={`Posição ${index}`}
+                    >
+                      {index}
+                    </span>
+                  )}
+                  <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+                  {(task as any).non_negotiable && !task.completed && (
+                    <Lock className="h-3 w-3 text-overdue shrink-0" aria-label="Inegociável hoje" />
+                  )}
+                  <div
+                    className={`min-w-0 flex-1 text-sm font-medium leading-snug ${
+                      task.completed ? "line-through text-muted-foreground" : ""
+                    }`}
+                  >
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onEdit(); } }}
+                      className="inline cursor-pointer hover:underline decoration-from-font underline-offset-2 break-words [overflow-wrap:anywhere]"
+                    >
+                      {task.title}
+                    </span>
+                  </div>
+                </div>
+                {(totalSpent > 0 || (subtaskCount && subtaskCount.total > 0)
+                  || task.recurrence !== "none" || task.recurrence_parent_id
+                  || (blockedBy && blockedBy.length > 0)
+                  || (task.followup_count ?? 0) > 1
+                  || (task.postpone_count ?? 0) >= 3
+                  || (task as any).origin_source) && (
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                    {totalSpent > 0 && (
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
+                        }`}
+                        title="Tempo trabalhado"
+                      >
+                        <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
+                      </span>
+                    )}
+                    {subtaskCount && subtaskCount.total > 0 && (
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          subtaskCount.completed === subtaskCount.total ? "text-green-500" : ""
+                        }`}
+                        title={`${subtaskCount.completed} de ${subtaskCount.total} subtarefas concluídas`}
+                      >
+                        <ListChecks className="h-3 w-3" /> {subtaskCount.completed}/{subtaskCount.total}
+                      </span>
+                    )}
+                    {(task.recurrence !== "none" || task.recurrence_parent_id) && (
+                      <span className="inline-flex items-center gap-1" title="Recorrente">
+                        <Repeat className="h-3 w-3" />
+                      </span>
+                    )}
+                    {(task.followup_count ?? 0) > 1 && (
+                      <span className="inline-flex items-center gap-1 text-circumstantial" title={`Follow-up #${task.followup_count}`}>
+                        <Repeat2 className="h-3 w-3" /> #{task.followup_count}
+                      </span>
+                    )}
+                    {blockedBy && blockedBy.length > 0 && !task.completed && (
+                      <span
+                        className="inline-flex items-center gap-1 text-amber-600"
+                        title={`Aguardando: ${blockedBy.join(", ")}`}
+                      >
+                        <Lock className="h-3 w-3" /> Bloqueada
+                      </span>
+                    )}
+                    {(task.postpone_count ?? 0) >= 3 && !task.completed && (
+                      <span className="inline-flex items-center gap-1 text-overdue" title={`Adiada ${task.postpone_count} vezes`}>
+                        <AlertCircle className="h-3 w-3" /> {task.postpone_count}× adiada
+                      </span>
+                    )}
+                    {(task as any).origin_source && (() => {
+                      const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
+                      const url = (task as any).origin_source_url as string | null;
+                      const label = (task as any).origin_source_label as string | null;
+                      const meta =
+                        src === "email"
+                          ? { l: "Outlook", c: "text-blue-600" }
+                          : src === "meeting"
+                          ? { l: "Fireflies", c: "text-purple-600" }
+                          : { l: "Pipedrive", c: "text-emerald-600" };
+                      const inner = <span className={meta.c}>{meta.l}</span>;
+                      return url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                          title={label ?? meta.l}
+                        >
+                          {inner}
+                        </a>
+                      ) : (
+                        <span title={label ?? meta.l}>{inner}</span>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            );
+          case "project":
+            return (
+              <div key="project" className="min-w-0">
+                {project ? (
+                  <ProjectChip project={project} size="xs" />
+                ) : (
+                  <span className="text-[11px] text-muted-foreground/60">—</span>
+                )}
+              </div>
+            );
+          case "role":
+            return (
+              <div key="role" className="min-w-0">
+                {role ? (
+                  <RoleBadge role={role} size="xs" />
+                ) : (
+                  <span className="text-[11px] text-muted-foreground/60">—</span>
+                )}
+              </div>
+            );
+          case "duration":
+            return (
+              <div key="duration" className="text-xs text-muted-foreground tabular-nums">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}
+                </span>
+              </div>
+            );
+          case "due":
+            return (
+              <div key="due" className="min-w-0">
+                <span
+                  className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] tabular-nums ${
+                    isOverdue && !task.completed
+                      ? "border-overdue/40 bg-overdue/10 text-overdue"
+                      : "border-border/60 bg-muted/30 text-muted-foreground"
+                  }`}
+                  title={task.scheduled_date}
                 >
-                  {inner}
-                </a>
-              ) : (
-                <span title={label ?? meta.l}>{inner}</span>
-              );
-            })()}
-          </div>
-        )}
-      </div>
-
-      {/* Projeto */}
-      <div className="min-w-0">
-        {project ? (
-          <ProjectChip project={project} size="xs" />
-        ) : (
-          <span className="text-[11px] text-muted-foreground/60">—</span>
-        )}
-      </div>
-
-      {/* Papel */}
-      <div className="min-w-0">
-        {role ? (
-          <RoleBadge role={role} size="xs" />
-        ) : (
-          <span className="text-[11px] text-muted-foreground/60">—</span>
-        )}
-      </div>
-
-      {/* Duração */}
-      <div className="text-xs text-muted-foreground tabular-nums">
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}
-        </span>
-      </div>
-
-      {/* Vencimento */}
-      <div className="min-w-0">
-        <span
-          className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] tabular-nums ${
-            isOverdue && !task.completed
-              ? "border-overdue/40 bg-overdue/10 text-overdue"
-              : "border-border/60 bg-muted/30 text-muted-foreground"
-          }`}
-          title={task.scheduled_date}
-        >
-          {isOverdue && !task.completed && <AlertCircle className="h-3 w-3" />}
-          {formatShort(task.scheduled_date)}
-        </span>
-      </div>
-
-      {/* Status */}
-      <div className="min-w-0">
-        <span className={`inline-flex w-full items-center justify-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${STATUS_COLOR[status]}`}>
-          {STATUS_LABEL[status]}
-        </span>
-      </div>
+                  {isOverdue && !task.completed && <AlertCircle className="h-3 w-3" />}
+                  {formatShort(task.scheduled_date)}
+                </span>
+              </div>
+            );
+          case "status":
+            return (
+              <div key="status" className="min-w-0">
+                <span className={`inline-flex w-full items-center justify-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${STATUS_COLOR[status]}`}>
+                  {STATUS_LABEL[status]}
+                </span>
+              </div>
+            );
+          default:
+            return null;
+        }
+      })}
 
       {/* Actions: timer + quick-actions popover */}
       <div
