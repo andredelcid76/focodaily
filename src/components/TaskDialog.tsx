@@ -15,10 +15,11 @@ import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
-import { FolderKanban, Lock, CheckCircle2, RotateCcw, User } from "lucide-react";
+import { FolderKanban, Lock, CheckCircle2, RotateCcw, User, Link2, X } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
 import { useAuth } from "@/lib/auth";
 import { listProjectMembers } from "@/lib/team.functions";
+import { useTaskDependencies } from "@/hooks/useTaskDependencies";
 
 type Props = {
   open: boolean;
