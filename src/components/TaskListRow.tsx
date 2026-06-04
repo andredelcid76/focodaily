@@ -122,7 +122,7 @@ export function TaskListRow({
   return (
     <div
       ref={setNodeRef}
-      style={{ ...style, ...(typeof window !== "undefined" ? { "--row-grid": computedGridTemplate } as React.CSSProperties : {}) }}
+      style={{ ...style, gridTemplateColumns: computedGridTemplate }}
       data-task-card="true"
       onClick={handleRowClick}
       className={`group relative flex flex-wrap items-center gap-2 md:gap-3 md:grid rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
