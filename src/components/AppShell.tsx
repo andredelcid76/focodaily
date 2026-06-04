@@ -11,18 +11,21 @@ import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
 
-const PAGE_META: { match: (path: string) => boolean; eyebrow: string; title: string }[] = [
-  { match: (p) => p === "/", eyebrow: "Foco", title: "Hoje" },
-  { match: (p) => p.startsWith("/semana"), eyebrow: "Planejar", title: "Semana" },
-  { match: (p) => p.startsWith("/agenda"), eyebrow: "Planejar", title: "Agenda" },
-  { match: (p) => p.startsWith("/projetos"), eyebrow: "Trabalho", title: "Projetos" },
-  { match: (p) => p.startsWith("/papeis"), eyebrow: "Trabalho", title: "Papéis" },
-  { match: (p) => p.startsWith("/inbox"), eyebrow: "Trabalho", title: "Caixa de entrada" },
-  { match: (p) => p.startsWith("/configuracoes"), eyebrow: "Sistema", title: "Integrações" },
+const PAGE_META: { match: (path: string) => boolean; eyebrow: string; eyebrowHref: string; title: string }[] = [
+  { match: (p) => p === "/", eyebrow: "Planejar", eyebrowHref: "/", title: "Hoje" },
+  { match: (p) => p.startsWith("/semana"), eyebrow: "Planejar", eyebrowHref: "/", title: "Semana" },
+  { match: (p) => p.startsWith("/agenda"), eyebrow: "Planejar", eyebrowHref: "/", title: "Agenda" },
+  { match: (p) => p.startsWith("/minhas-tarefas"), eyebrow: "Planejar", eyebrowHref: "/", title: "Tarefas" },
+  { match: (p) => p.startsWith("/projetos"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Projetos" },
+  { match: (p) => p.startsWith("/equipes"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Equipes" },
+  { match: (p) => p.startsWith("/papeis"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Papéis" },
+  { match: (p) => p.startsWith("/inbox"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Caixa de entrada" },
+  { match: (p) => p.startsWith("/analise"), eyebrow: "Insights", eyebrowHref: "/analise", title: "Análise estratégica" },
+  { match: (p) => p.startsWith("/configuracoes"), eyebrow: "Sistema", eyebrowHref: "/configuracoes", title: "Configurações" },
 ];
 
 function pageMetaFor(pathname: string) {
-  return PAGE_META.find((m) => m.match(pathname)) ?? { eyebrow: "Foco", title: "" };
+  return PAGE_META.find((m) => m.match(pathname)) ?? { eyebrow: "Foco", eyebrowHref: "/", title: "" };
 }
 
 function Shell({ children }: { children: ReactNode }) {
@@ -86,7 +89,7 @@ function Shell({ children }: { children: ReactNode }) {
 
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <Link
-                to="/"
+                to={meta.eyebrowHref}
                 className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
               >
                 {meta.eyebrow}

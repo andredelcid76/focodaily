@@ -209,11 +209,7 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                               {inboxCount > 99 ? "99+" : inboxCount}
                             </span>
                           )}
-                          {!showBadge && item.shortcut && !collapsed && (
-                            <kbd className="ml-auto hidden rounded bg-muted/40 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70 group-hover/nav:inline-flex">
-                              {item.shortcut}
-                            </kbd>
-                          )}
+                          {!showBadge && !collapsed && null}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
