@@ -674,24 +674,11 @@ function MyTasksPage() {
                       </button>
                     </TableCell>
                     <TableCell>
-                      <button
-                        type="button"
-                        onClick={() => toggleComplete(t)}
-                        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all ${
-                          t.completed
-                            ? "border-emerald-500 bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
-                            : "border-muted-foreground/30 text-muted-foreground/50 hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
-                        }`}
-                        aria-label={t.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-                        aria-pressed={t.completed}
-                        title={t.completed ? "Reabrir tarefa" : "Concluir tarefa"}
-                      >
-                        {t.completed ? (
-                          <CheckCircle2 className="h-4 w-4 fill-current" />
-                        ) : (
-                          <Circle className="h-4 w-4" strokeWidth={1.5} />
-                        )}
-                      </button>
+                      <TaskCompleteButton
+                        completed={!!t.completed}
+                        onToggle={() => toggleComplete(t)}
+                        size="md"
+                      />
                     </TableCell>
 
                     <TableCell className="max-w-[280px]">
