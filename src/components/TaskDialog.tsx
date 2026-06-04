@@ -52,7 +52,7 @@ type Props = {
       recurrence_monthly_pattern: { week: number; weekday: number } | null;
     },
     scope?: RecurrenceScope
-  ) => Promise<void>;
+  ) => Promise<string | void>;
   onDelete?: (scope?: RecurrenceScope) => Promise<void>;
   onToggleComplete?: () => Promise<void> | void;
 };
