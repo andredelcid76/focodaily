@@ -86,6 +86,35 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [monthlyWeek, setMonthlyWeek] = useState<number>(1); // 1..5 or -1
   const [monthlyWeekday, setMonthlyWeekday] = useState<number>(1); // 0..6
   const [saving, setSaving] = useState(false);
+  const [predecessorIds, setPredecessorIds] = useState<string[]>([]);
+  const [predecessorPick, setPredecessorPick] = useState<string>("");
+  const depsApi = useTaskDependencies(user?.id);
+  const [allOpenTasks, setAllOpenTasks] = useState<Array<{ id: string; title: string; scheduled_date: string }>>([]);
+
+  // Load other open tasks of the user (candidates for predecessors)
+  useEffect(() => {
+    if (!open || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select("id,title,scheduled_date")
+        .eq("user_id", user.id)
+        .eq("completed", false)
+        .order("scheduled_date", { ascending: true })
+        .limit(200);
+      if (!cancelled) setAllOpenTasks((data ?? []) as Array<{ id: string; title: string; scheduled_date: string }>);
+    })();
+    return () => { cancelled = true; };
+  }, [open, user?.id]);
+
+  // Seed predecessors when opening
+  useEffect(() => {
+    if (!open) return;
+    if (task?.id) setPredecessorIds(depsApi.predecessorsOf(task.id));
+    else setPredecessorIds([]);
+    setPredecessorPick("");
+  }, [open, task?.id, depsApi.deps]);
 
   useEffect(() => {
     if (open) {
