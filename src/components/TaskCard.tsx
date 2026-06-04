@@ -387,6 +387,7 @@ export function TaskCard({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
