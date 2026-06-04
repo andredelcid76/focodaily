@@ -603,6 +603,71 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             </div>
           )}
 
+          {task?.id && !isSeed && (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2">
+              <Label className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                <Link2 className="h-3.5 w-3.5" /> Depende de
+              </Label>
+              {predecessorIds.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhuma. A tarefa pode começar a qualquer momento.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {predecessorIds.map((pid) => {
+                    const p = allOpenTasks.find((t) => t.id === pid);
+                    const label = p?.title ?? "Tarefa concluída/desconhecida";
+                    return (
+                      <span key={pid} className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                        <Link2 className="h-3 w-3" />
+                        <span className="max-w-[12rem] truncate">{label}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPredecessorIds((prev) => prev.filter((x) => x !== pid))}
+                          className="hover:text-destructive"
+                          aria-label="Remover dependência"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <Select
+                value={predecessorPick}
+                onValueChange={(v) => {
+                  if (v && !predecessorIds.includes(v) && v !== task?.id) {
+                    setPredecessorIds((prev) => [...prev, v]);
+                  }
+                  setPredecessorPick("");
+                }}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Adicionar predecessora…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allOpenTasks
+                    .filter((t) => t.id !== task?.id && !predecessorIds.includes(t.id))
+                    .slice(0, 100)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground tabular-nums">{t.scheduled_date}</span>
+                          <span className="max-w-[18rem] truncate">{t.title}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  {allOpenTasks.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhuma tarefa em aberto.</div>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Quando a predecessora for adiada ou concluída, a data desta tarefa será ajustada automaticamente.
+              </p>
+            </div>
+          )}
+
+
           {task?.id && !isSeed && user?.id ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
               <SubtasksList taskId={task.id} userId={user.id} />
