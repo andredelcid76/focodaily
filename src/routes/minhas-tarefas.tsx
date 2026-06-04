@@ -43,6 +43,9 @@ import { useRoles } from "@/hooks/useRoles";
 import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
+import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Link2 } from "lucide-react";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
@@ -86,6 +89,24 @@ function MyTasksPage() {
 
   const today = todayISO();
   const tasks = data?.tasks ?? [];
+  const { deps } = useTaskDependencies(userId);
+  const blockedByMap = useMemo(() => {
+    const taskMap = new Map(tasks.map((t) => [t.id, { title: t.title, completed: t.completed }]));
+    const m = new Map<string, string[]>();
+    for (const t of tasks) {
+      const blockers = blockingPredecessorTitles(t.id, deps, taskMap);
+      if (blockers.length > 0) m.set(t.id, blockers);
+    }
+    return m;
+  }, [tasks, deps]);
+
+  const confirmIfBlocked = (id: string): boolean => {
+    const blockers = blockedByMap.get(id);
+    if (!blockers || blockers.length === 0) return true;
+    return window.confirm(
+      `Esta tarefa está aguardando: ${blockers.join(", ")}. Concluir mesmo assim?`,
+    );
+  };
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -151,6 +172,7 @@ function MyTasksPage() {
   const handleDialogToggleComplete = async () => {
     if (!editingTask) return;
     const next = !editingTask.completed;
+    if (next && !confirmIfBlocked(editingTask.id)) return;
     const { error } = await supabase
       .from("tasks")
       .update({
@@ -362,6 +384,7 @@ function MyTasksPage() {
 
   const toggleComplete = async (t: MyTaskRow) => {
     const next = !t.completed;
+    if (next && !confirmIfBlocked(t.id)) return;
     await updateOne(t.id, {
       completed: next,
       completed_at: next ? new Date().toISOString() : null,
@@ -371,6 +394,7 @@ function MyTasksPage() {
   };
 
   const setStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
+    if (status === "done" && !t.completed && !confirmIfBlocked(t.id)) return;
     const patch: Parameters<typeof updateOne>[1] = { status };
     if (status === "done") {
       patch.completed = true;
@@ -385,7 +409,19 @@ function MyTasksPage() {
 
   const bulkStatus = async (status: MyTaskRow["status"]) => {
     if (selected.size === 0) return;
-    const ids = Array.from(selected);
+    let ids = Array.from(selected);
+    if (status === "done") {
+      const blocked = ids
+        .map((id) => ({ id, blockers: blockedByMap.get(id) }))
+        .filter((x) => x.blockers && x.blockers.length > 0);
+      if (blocked.length > 0) {
+        const ok = window.confirm(
+          `${blocked.length} tarefa(s) selecionada(s) estão bloqueadas por dependências. Concluir todas mesmo assim?`,
+        );
+        if (!ok) ids = ids.filter((id) => !blockedByMap.get(id)?.length);
+        if (ids.length === 0) return;
+      }
+    }
     const patch: Parameters<typeof updateOne>[1] = { status };
     if (status === "done") {
       patch.completed = true;
@@ -675,6 +711,20 @@ function MyTasksPage() {
                           {t.title}
                         </button>
                       </div>
+                      {blockedByMap.get(t.id) && !t.completed && (
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                                <Link2 className="h-2.5 w-2.5" /> Bloqueada
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[260px] text-xs">
+                              Aguardando: {blockedByMap.get(t.id)!.join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {t.delegated_by_name && (
                         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
                           delegada por {t.delegated_by_name}
