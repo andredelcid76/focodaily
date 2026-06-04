@@ -318,12 +318,22 @@ function TableView({
               ))}
             </SelectContent>
           </Select>
+          <Select onValueChange={(v) => bulkRole(v === "__none" ? null : v)}>
+            <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Papel…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Sem papel</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             type="date"
             onChange={(e) => bulkDate(e.target.value)}
             className="h-7 w-36 text-xs"
             title="Mover vencimento"
           />
+
           {onBulkDelete && (
             <Button size="sm" variant="ghost" onClick={bulkDelete} className="h-7 text-destructive hover:text-destructive">
               <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
