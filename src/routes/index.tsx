@@ -122,6 +122,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
   const [sortKey, setSortKey] = useState<TaskSortKey | null>(null);
   const [sortDir, setSortDir] = useState<TaskSortDir>("asc");
+  const taskColumns = useTaskColumns();
   const handleSort = (k: TaskSortKey) => {
     if (sortKey === k) {
       if (sortDir === "asc") setSortDir("desc");
