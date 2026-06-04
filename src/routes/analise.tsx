@@ -336,6 +336,28 @@ function AnaliseInner({ userId }: { userId: string }) {
         </Card>
       </div>
 
+      <Card title="Evolução diária — últimos 7 dias" icon={<TrendingUp className="h-4 w-4" />}>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={snapshot}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="concluidas" fill="#3ddc9a" name="Concluídas" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adiadas" fill="#f87171" name="Adiadas" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="criadas" fill="#e8c468" name="Criadas" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Snapshot independente do filtro acima — mostra sempre os últimos 7 dias para acompanhar a evolução.
+        </p>
+      </Card>
+
+
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Desempenho por papel" icon={<BarChart3 className="h-4 w-4" />}>
           {byRole.length === 0 ? (
