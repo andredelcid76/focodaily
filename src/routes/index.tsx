@@ -10,6 +10,8 @@ import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListRow, TaskListHeader, type TaskSortKey, type TaskSortDir } from "@/components/TaskListRow";
 import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
+import { useTaskColumns } from "@/hooks/useTaskColumns";
+import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
 
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { Button } from "@/components/ui/button";
@@ -120,6 +122,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
   const [sortKey, setSortKey] = useState<TaskSortKey | null>(null);
   const [sortDir, setSortDir] = useState<TaskSortDir>("asc");
+  const taskColumns = useTaskColumns();
   const handleSort = (k: TaskSortKey) => {
     if (sortKey === k) {
       if (sortDir === "asc") setSortDir("desc");
@@ -775,12 +778,24 @@ function TodayInner({ userId }: { userId: string }) {
               </button>
             )}
           </div>
-          <TaskFiltersBar
-            filters={filters}
-            onChange={setFilters}
-            roles={roles}
-            projects={projects}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex-1 min-w-[200px]">
+              <TaskFiltersBar
+                filters={filters}
+                onChange={setFilters}
+                roles={roles}
+                projects={projects}
+              />
+            </div>
+            {taskView === "list" && (
+              <ColumnSettingsPopover
+                columns={taskColumns.columns}
+                onToggleVisible={taskColumns.toggleVisible}
+                onReorder={taskColumns.reorder}
+                onReset={taskColumns.reset}
+              />
+            )}
+          </div>
         </div>
         {visibleDayTasks.length === 0 ? (
           normalizedQuery ? (
@@ -805,7 +820,15 @@ function TodayInner({ userId }: { userId: string }) {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={sortedVisibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-                <TaskListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <TaskListHeader
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={handleSort}
+                  columns={taskColumns.columns}
+                  gridTemplate={taskColumns.gridTemplate}
+                  onResizeColumn={(key, px) => taskColumns.setWidth(key, `${Math.round(px)}px`)}
+                  onReorderColumn={taskColumns.reorder}
+                />
                 <div className="divide-y divide-border/40">
                   {sortedVisibleDayTasks.map((t, i) => (
                     <TaskListRow
@@ -830,6 +853,8 @@ function TodayInner({ userId }: { userId: string }) {
                       onSelectToggle={() => toggleSelect(t.id)}
                       subtaskCount={subtaskCounts[t.id]}
                       blockedBy={blockedByMap.get(t.id)}
+                      columns={taskColumns.columns}
+                      gridTemplate={taskColumns.gridTemplate}
                     />
                   ))}
                 </div>
