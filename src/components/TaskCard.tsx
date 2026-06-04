@@ -74,6 +74,7 @@ export function TaskCard({
   onSelectToggle,
   subtaskCount,
   hideAssignee,
+  blockedBy,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
