@@ -37,13 +37,26 @@ export const Route = createFileRoute("/analise")({
   ),
 });
 
-type Period = "7d" | "30d" | "90d" | "all";
+type Period = "today" | "yesterday" | "7d" | "30d" | "90d" | "all";
 
 const PERIOD_LABEL: Record<Period, string> = {
-  "7d": "Últimos 7 dias",
-  "30d": "Últimos 30 dias",
-  "90d": "Últimos 90 dias",
-  all: "Todo o período",
+  today: "Hoje",
+  yesterday: "Ontem",
+  "7d": "7 dias",
+  "30d": "30 dias",
+  "90d": "90 dias",
+  all: "Tudo",
+};
+
+const periodDays = (p: Period): number => {
+  switch (p) {
+    case "today": return 1;
+    case "yesterday": return 1;
+    case "7d": return 7;
+    case "30d": return 30;
+    case "90d": return 90;
+    case "all": return 60;
+  }
 };
 
 function AnalisePage() {
