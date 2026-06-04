@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
 import { CategoryIcon } from "./CategoryBadge";
+import { TaskCompleteButton } from "./TaskCompleteButton";
 import { formatShort, todayISO, addDays } from "@/lib/date";
 import { listProjectMembers } from "@/lib/team.functions";
 import type { Task, TaskStatus } from "@/hooks/useTasks";
