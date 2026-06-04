@@ -809,11 +809,11 @@ function TodayInner({ userId }: { userId: string }) {
           )
         ) : taskView === "list" ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={visibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={sortedVisibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-                <TaskListHeader />
+                <TaskListHeader sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 <div className="divide-y divide-border/40">
-                  {visibleDayTasks.map((t, i) => (
+                  {sortedVisibleDayTasks.map((t, i) => (
                     <TaskListRow
                       key={t.id}
                       task={t}
