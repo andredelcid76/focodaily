@@ -73,7 +73,7 @@ export function TaskListRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
-    disabled: selected ? false : !!onSelectToggle && (selected !== undefined),
+    disabled: !!selected,
   });
 
   const style = {
