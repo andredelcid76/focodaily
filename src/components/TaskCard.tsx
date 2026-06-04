@@ -270,6 +270,9 @@ export function TaskCard({
             )}
             {(() => {
               if (task.completed || !task.planned_date) return null;
+              // Skip the "behind plan" badge for recurring child instances —
+              // their planned_date intentionally matches each occurrence.
+              if (task.recurrence_parent_id) return null;
               const planned = new Date(task.planned_date + "T00:00:00").getTime();
               const sched = new Date(task.scheduled_date + "T00:00:00").getTime();
               const days = Math.round((sched - planned) / 86400000);
