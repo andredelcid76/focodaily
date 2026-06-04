@@ -87,6 +87,22 @@ function TodayInner({ userId }: { userId: string }) {
   const [viewDate, setViewDate] = useState(today);
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
+  const depsApi = useTaskDependencies(userId);
+
+  // Map taskId -> array of blocking predecessor titles (open ones only)
+  const blockedByMap = useMemo(() => {
+    const taskMap = new Map(tasksApi.tasks.map((t) => [t.id, t]));
+    const out = new Map<string, string[]>();
+    for (const d of depsApi.deps) {
+      const pre = taskMap.get(d.predecessor_id);
+      if (pre && !pre.completed) {
+        const list = out.get(d.successor_id) ?? [];
+        list.push(pre.title);
+        out.set(d.successor_id, list);
+      }
+    }
+    return out;
+  }, [tasksApi.tasks, depsApi.deps]);
   const { roles } = useRoles(userId);
   const subtaskCounts = useSubtaskCounts(userId);
   const { projects } = useProjects(userId);
