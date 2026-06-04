@@ -347,9 +347,9 @@ function TableView({
       )}
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-        <div className="grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <span />
+        <div className="grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
+          <span />
           <span>Tarefa</span>
           <span>Vencimento</span>
           <span>Responsável</span>
@@ -412,7 +412,12 @@ function TaskRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const isOverdue = !task.completed && task.scheduled_date < today;
   return (
-    <div className={`grid grid-cols-[1.5rem_1.25rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
+    <div className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
+      <Checkbox
+        checked={!!selected}
+        onCheckedChange={() => onSelectToggle?.()}
+        aria-label="Selecionar"
+      />
       <button
         type="button"
         onClick={onToggleComplete}
@@ -426,11 +431,6 @@ function TaskRow({
       >
         {task.completed ? <CheckCircle2 className="h-4 w-4 fill-current" /> : <Circle className="h-4 w-4" strokeWidth={1.5} />}
       </button>
-      <Checkbox
-        checked={!!selected}
-        onCheckedChange={() => onSelectToggle?.()}
-        aria-label="Selecionar"
-      />
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
