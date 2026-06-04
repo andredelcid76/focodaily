@@ -118,6 +118,17 @@ function TodayInner({ userId }: { userId: string }) {
   const [bulkPickerDate, setBulkPickerDate] = useState<Date>(() => new Date());
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<TaskFilters>(() => emptyFilters());
+  const [sortKey, setSortKey] = useState<TaskSortKey | null>(null);
+  const [sortDir, setSortDir] = useState<TaskSortDir>("asc");
+  const handleSort = (k: TaskSortKey) => {
+    if (sortKey === k) {
+      if (sortDir === "asc") setSortDir("desc");
+      else { setSortKey(null); setSortDir("asc"); }
+    } else {
+      setSortKey(k);
+      setSortDir("asc");
+    }
+  };
   const [taskView, setTaskView] = useState<"list" | "cards" | "kanban">(() => {
     if (typeof window === "undefined") return "list";
     const v = window.localStorage.getItem("focodaily.taskView");
