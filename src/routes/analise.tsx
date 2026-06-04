@@ -37,13 +37,26 @@ export const Route = createFileRoute("/analise")({
   ),
 });
 
-type Period = "7d" | "30d" | "90d" | "all";
+type Period = "today" | "yesterday" | "7d" | "30d" | "90d" | "all";
 
 const PERIOD_LABEL: Record<Period, string> = {
-  "7d": "Últimos 7 dias",
-  "30d": "Últimos 30 dias",
-  "90d": "Últimos 90 dias",
-  all: "Todo o período",
+  today: "Hoje",
+  yesterday: "Ontem",
+  "7d": "7 dias",
+  "30d": "30 dias",
+  "90d": "90 dias",
+  all: "Tudo",
+};
+
+const periodDays = (p: Period): number => {
+  switch (p) {
+    case "today": return 1;
+    case "yesterday": return 1;
+    case "7d": return 7;
+    case "30d": return 30;
+    case "90d": return 90;
+    case "all": return 60;
+  }
 };
 
 function AnalisePage() {
@@ -61,26 +74,35 @@ function AnaliseInner({ userId }: { userId: string }) {
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
-  const cutoff = useMemo(() => {
-    if (period === "all") return null;
+  const { cutoff, upper } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (period === "all") return { cutoff: null as Date | null, upper: null as Date | null };
+    if (period === "today") {
+      const end = new Date(today); end.setDate(end.getDate() + 1);
+      return { cutoff: today, upper: end };
+    }
+    if (period === "yesterday") {
+      const start = new Date(today); start.setDate(start.getDate() - 1);
+      return { cutoff: start, upper: today };
+    }
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - days + 1);
-    return d;
+    const d = new Date(today); d.setDate(d.getDate() - days + 1);
+    return { cutoff: d, upper: null };
   }, [period]);
 
   const inRange = (iso?: string | null) => {
     if (!iso) return false;
     if (!cutoff) return true;
-    return new Date(iso) >= cutoff;
+    const d = new Date(iso);
+    if (d < cutoff) return false;
+    if (upper && d >= upper) return false;
+    return true;
   };
 
   const scoped = useMemo(() => {
     return tasks.filter((t) => {
-      // Tarefas atribuídas ao usuário (criador ou responsável)
       if (t.user_id !== userId && t.assignee_id !== userId) return false;
-      // Janela: planejada/criada/completada dentro do período
       if (!cutoff) return true;
       return (
         inRange(t.scheduled_date) ||
@@ -89,7 +111,7 @@ function AnaliseInner({ userId }: { userId: string }) {
         inRange(t.created_at)
       );
     });
-  }, [tasks, userId, cutoff]);
+  }, [tasks, userId, cutoff, upper]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -106,19 +128,28 @@ function AnaliseInner({ userId }: { userId: string }) {
     return { total, done, overdue, postponed, critical, completionRate, avgPostpone, totalPostpones };
   }, [scoped]);
 
-  // Atividade diária (concluídas vs criadas)
+  // Evolução diária (concluídas, criadas e adiadas por dia)
+  // Para 'today' e 'yesterday' mostramos 14 dias de contexto para a evolução.
   const daily = useMemo(() => {
-    const map = new Map<string, { date: string; concluidas: number; criadas: number }>();
-    const days = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 60;
+    const windowDays =
+      period === "today" || period === "yesterday" ? 14 : periodDays(period);
+    const map = new Map<
+      string,
+      { date: string; concluidas: number; criadas: number; adiadas: number }
+    >();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    for (let i = days - 1; i >= 0; i--) {
+    for (let i = windowDays - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().slice(0, 10);
-      map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0 });
+      map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0, adiadas: 0 });
     }
-    for (const t of scoped) {
+    // Usa todas as tarefas do usuário para a evolução, não apenas o recorte do período.
+    const userTasks = tasks.filter(
+      (t) => t.user_id === userId || t.assignee_id === userId,
+    );
+    for (const t of userTasks) {
       if (t.completed_at) {
         const iso = t.completed_at.slice(0, 10);
         const entry = map.get(iso);
@@ -129,9 +160,24 @@ function AnaliseInner({ userId }: { userId: string }) {
         const entry = map.get(iso);
         if (entry) entry.criadas += 1;
       }
+      // Adiada nesse dia: estava planejada para o dia mas foi remarcada para depois
+      if (
+        t.planned_date &&
+        t.scheduled_date &&
+        t.scheduled_date > t.planned_date &&
+        (t.postpone_count ?? 0) > 0
+      ) {
+        const entry = map.get(t.planned_date);
+        if (entry) entry.adiadas += 1;
+      }
     }
     return Array.from(map.values());
-  }, [scoped, period]);
+  }, [tasks, userId, period]);
+
+  // Snapshot diário recente (últimos 7 dias) para a "evolução"
+  const snapshot = useMemo(() => {
+    return daily.slice(-7);
+  }, [daily]);
 
   // Por papel
   const byRole = useMemo(() => {
@@ -213,7 +259,7 @@ function AnaliseInner({ userId }: { userId: string }) {
           </p>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
-          {(["7d", "30d", "90d", "all"] as Period[]).map((p) => (
+          {(["today", "yesterday", "7d", "30d", "90d", "all"] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
@@ -263,6 +309,7 @@ function AnaliseInner({ userId }: { userId: string }) {
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Line type="monotone" dataKey="concluidas" stroke="#3ddc9a" strokeWidth={2} dot={false} name="Concluídas" />
                 <Line type="monotone" dataKey="criadas" stroke="#e8c468" strokeWidth={2} dot={false} name="Criadas" />
+                <Line type="monotone" dataKey="adiadas" stroke="#f87171" strokeWidth={2} dot={false} name="Adiadas" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -288,6 +335,28 @@ function AnaliseInner({ userId }: { userId: string }) {
           </div>
         </Card>
       </div>
+
+      <Card title="Evolução diária — últimos 7 dias" icon={<TrendingUp className="h-4 w-4" />}>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={snapshot}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="concluidas" fill="#3ddc9a" name="Concluídas" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adiadas" fill="#f87171" name="Adiadas" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="criadas" fill="#e8c468" name="Criadas" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Snapshot independente do filtro acima — mostra sempre os últimos 7 dias para acompanhar a evolução.
+        </p>
+      </Card>
+
+
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Desempenho por papel" icon={<BarChart3 className="h-4 w-4" />}>
