@@ -15,10 +15,12 @@ import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
-import { FolderKanban, Lock, CheckCircle2, RotateCcw, User } from "lucide-react";
+import { FolderKanban, Lock, CheckCircle2, RotateCcw, User, Link2, X } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
 import { useAuth } from "@/lib/auth";
 import { listProjectMembers } from "@/lib/team.functions";
+import { useTaskDependencies } from "@/hooks/useTaskDependencies";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   open: boolean;
@@ -85,6 +87,35 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [monthlyWeek, setMonthlyWeek] = useState<number>(1); // 1..5 or -1
   const [monthlyWeekday, setMonthlyWeekday] = useState<number>(1); // 0..6
   const [saving, setSaving] = useState(false);
+  const [predecessorIds, setPredecessorIds] = useState<string[]>([]);
+  const [predecessorPick, setPredecessorPick] = useState<string>("");
+  const depsApi = useTaskDependencies(user?.id);
+  const [allOpenTasks, setAllOpenTasks] = useState<Array<{ id: string; title: string; scheduled_date: string }>>([]);
+
+  // Load other open tasks of the user (candidates for predecessors)
+  useEffect(() => {
+    if (!open || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select("id,title,scheduled_date")
+        .eq("user_id", user.id)
+        .eq("completed", false)
+        .order("scheduled_date", { ascending: true })
+        .limit(200);
+      if (!cancelled) setAllOpenTasks((data ?? []) as Array<{ id: string; title: string; scheduled_date: string }>);
+    })();
+    return () => { cancelled = true; };
+  }, [open, user?.id]);
+
+  // Seed predecessors when opening
+  useEffect(() => {
+    if (!open) return;
+    if (task?.id) setPredecessorIds(depsApi.predecessorsOf(task.id));
+    else setPredecessorIds([]);
+    setPredecessorPick("");
+  }, [open, task?.id, depsApi.deps]);
 
   useEffect(() => {
     if (open) {
@@ -173,6 +204,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         },
         scope
       );
+      // Persist dependencies on existing tasks (new tasks: deps can be added after creation)
+      if (task?.id) {
+        try {
+          await depsApi.setPredecessors(task.id, predecessorIds);
+        } catch (e: any) {
+          toast.error(e.message ?? "Erro ao salvar dependências");
+        }
+      }
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
@@ -563,6 +602,71 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               )}
             </div>
           )}
+
+          {task?.id && !isSeed && (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2">
+              <Label className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                <Link2 className="h-3.5 w-3.5" /> Depende de
+              </Label>
+              {predecessorIds.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhuma. A tarefa pode começar a qualquer momento.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {predecessorIds.map((pid) => {
+                    const p = allOpenTasks.find((t) => t.id === pid);
+                    const label = p?.title ?? "Tarefa concluída/desconhecida";
+                    return (
+                      <span key={pid} className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                        <Link2 className="h-3 w-3" />
+                        <span className="max-w-[12rem] truncate">{label}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPredecessorIds((prev) => prev.filter((x) => x !== pid))}
+                          className="hover:text-destructive"
+                          aria-label="Remover dependência"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <Select
+                value={predecessorPick}
+                onValueChange={(v) => {
+                  if (v && !predecessorIds.includes(v) && v !== task?.id) {
+                    setPredecessorIds((prev) => [...prev, v]);
+                  }
+                  setPredecessorPick("");
+                }}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Adicionar predecessora…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allOpenTasks
+                    .filter((t) => t.id !== task?.id && !predecessorIds.includes(t.id))
+                    .slice(0, 100)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground tabular-nums">{t.scheduled_date}</span>
+                          <span className="max-w-[18rem] truncate">{t.title}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  {allOpenTasks.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhuma tarefa em aberto.</div>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Quando a predecessora for adiada ou concluída, a data desta tarefa será ajustada automaticamente.
+              </p>
+            </div>
+          )}
+
 
           {task?.id && !isSeed && user?.id ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-3">

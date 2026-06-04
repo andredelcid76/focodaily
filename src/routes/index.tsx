@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
+import { useTaskDependencies } from "@/hooks/useTaskDependencies";
 import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
@@ -86,6 +87,22 @@ function TodayInner({ userId }: { userId: string }) {
   const [viewDate, setViewDate] = useState(today);
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
+  const depsApi = useTaskDependencies(userId);
+
+  // Map taskId -> array of blocking predecessor titles (open ones only)
+  const blockedByMap = useMemo(() => {
+    const taskMap = new Map(tasksApi.tasks.map((t) => [t.id, t]));
+    const out = new Map<string, string[]>();
+    for (const d of depsApi.deps) {
+      const pre = taskMap.get(d.predecessor_id);
+      if (pre && !pre.completed) {
+        const list = out.get(d.successor_id) ?? [];
+        list.push(pre.title);
+        out.set(d.successor_id, list);
+      }
+    }
+    return out;
+  }, [tasksApi.tasks, depsApi.deps]);
   const { roles } = useRoles(userId);
   const subtaskCounts = useSubtaskCounts(userId);
   const { projects } = useProjects(userId);
@@ -431,17 +448,27 @@ function TodayInner({ userId }: { userId: string }) {
 
   // Wrap toggleComplete: if a task is being completed and the timer is on it,
   // stop and persist the elapsed seconds so we don't lose tracked time.
+  // Also: if the task is blocked by open predecessors, ask the user to confirm.
   const toggleCompleteWithTimer = useCallback(
     async (t: Task) => {
-      if (!t.completed && timer.activeTaskId === t.id) {
-        const stopped = timer.stop();
-        if (stopped && stopped.deltaSeconds > 0) {
-          await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+      if (!t.completed) {
+        const blockers = blockedByMap.get(t.id);
+        if (blockers && blockers.length > 0) {
+          const ok = window.confirm(
+            `Esta tarefa está aguardando: ${blockers.join(", ")}.\n\nConcluir mesmo assim?`,
+          );
+          if (!ok) return;
+        }
+        if (timer.activeTaskId === t.id) {
+          const stopped = timer.stop();
+          if (stopped && stopped.deltaSeconds > 0) {
+            await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
+          }
         }
       }
       await tasksApi.toggleComplete(t);
     },
-    [timer, tasksApi],
+    [timer, tasksApi, blockedByMap],
   );
 
   const dayLabel = isViewingToday
@@ -599,6 +626,7 @@ function TodayInner({ userId }: { userId: string }) {
                 onFollowUp={(date) => handleFollowUp(t, date)}
                 subtaskCount={subtaskCounts[t.id]}
                 hideAssignee
+                blockedBy={blockedByMap.get(t.id)}
               />
             ))}
           </div>
@@ -639,6 +667,7 @@ function TodayInner({ userId }: { userId: string }) {
                     onSelectToggle={() => toggleSelect(t.id)}
                     subtaskCount={subtaskCounts[t.id]}
                     hideAssignee
+                    blockedBy={blockedByMap.get(t.id)}
                   />
                 </div>
                 <Button variant="outline" size="sm" onClick={() => moveOverdueToToday(t)}>
@@ -760,6 +789,7 @@ function TodayInner({ userId }: { userId: string }) {
                     onSelectToggle={() => toggleSelect(t.id)}
                     subtaskCount={subtaskCounts[t.id]}
                     hideAssignee
+                    blockedBy={blockedByMap.get(t.id)}
                   />
                 ))}
               </div>
