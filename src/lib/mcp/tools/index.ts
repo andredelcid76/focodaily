@@ -254,6 +254,86 @@ export const deleteTask = defineTool({
   },
 });
 
+export const listTaskDependencies = defineTool({
+  name: "list_task_dependencies",
+  description:
+    "Lista as dependências entre tarefas do usuário (predecessoras → sucessoras). Use task_id para filtrar uma tarefa específica e ver suas antecessoras e sucessoras. Dependências são em cadeia: mudar a data da predecessora propaga para todas sucessoras.",
+  parameters: z.object({
+    task_id: z.string().optional().describe("Se informado, retorna só dependências em que essa tarefa participa."),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    let q = db(ctx.auth)
+      .from("task_dependencies")
+      .select("id,predecessor_id,successor_id,lag_days,dep_type,predecessor:tasks!task_dependencies_predecessor_id_fkey(id,title,scheduled_date,completed),successor:tasks!task_dependencies_successor_id_fkey(id,title,scheduled_date,completed)")
+      .eq("user_id", userId);
+    if (args.task_id) {
+      q = q.or(`predecessor_id.eq.${args.task_id},successor_id.eq.${args.task_id}`);
+    }
+    const { data, error } = await q;
+    if (error) {
+      // Fallback without joins if FK alias not present
+      const plain = await db(ctx.auth)
+        .from("task_dependencies")
+        .select("id,predecessor_id,successor_id,lag_days,dep_type")
+        .eq("user_id", userId);
+      if (plain.error) throw new Error(plain.error.message);
+      return JSON.stringify(plain.data ?? []);
+    }
+    return JSON.stringify(data ?? []);
+  },
+});
+
+export const addTaskDependency = defineTool({
+  name: "add_task_dependency",
+  description:
+    "Vincula uma tarefa antecessora a uma sucessora (tipo Finish-to-Start). A sucessora só deve começar após a antecessora terminar. Mudanças de data da antecessora propagam automaticamente em cadeia.",
+  parameters: z.object({
+    predecessor_id: z.string().describe("Tarefa que precisa terminar primeiro."),
+    successor_id: z.string().describe("Tarefa que depende da antecessora."),
+    lag_days: z.number().int().min(0).max(365).optional().describe("Dias de folga entre término da antecessora e início da sucessora. Padrão 0."),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const { data, error } = await db(ctx.auth)
+      .from("task_dependencies")
+      .insert({
+        user_id: userId,
+        predecessor_id: args.predecessor_id,
+        successor_id: args.successor_id,
+        lag_days: args.lag_days ?? 0,
+        dep_type: "FS",
+      } as never)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true, dependency: data });
+  },
+});
+
+export const removeTaskDependency = defineTool({
+  name: "remove_task_dependency",
+  description: "Remove uma dependência entre duas tarefas (informe predecessor_id e successor_id, ou o id da dependência).",
+  parameters: z.object({
+    id: z.string().optional(),
+    predecessor_id: z.string().optional(),
+    successor_id: z.string().optional(),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    let q = db(ctx.auth).from("task_dependencies").delete().eq("user_id", userId);
+    if (args.id) q = q.eq("id", args.id);
+    else if (args.predecessor_id && args.successor_id) {
+      q = q.eq("predecessor_id", args.predecessor_id).eq("successor_id", args.successor_id);
+    } else {
+      throw new Error("Informe id ou (predecessor_id + successor_id).");
+    }
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true });
+  },
+});
+
 async function fireflies(userId: string, query: string, variables: Record<string, unknown>) {
   const { data: conn } = await adminDb()
     .from("fireflies_connections")
@@ -342,6 +422,9 @@ export const allTools = [
   createTask,
   updateTask,
   deleteTask,
+  listTaskDependencies,
+  addTaskDependency,
+  removeTaskDependency,
   listFirefliesMeetings,
   getFirefliesTranscript,
 ];

@@ -52,7 +52,7 @@ type Props = {
       recurrence_monthly_pattern: { week: number; weekday: number } | null;
     },
     scope?: RecurrenceScope
-  ) => Promise<void>;
+  ) => Promise<string | void>;
   onDelete?: (scope?: RecurrenceScope) => Promise<void>;
   onToggleComplete?: () => Promise<void> | void;
 };
@@ -190,7 +190,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const doSave = async (scope?: RecurrenceScope) => {
     setSaving(true);
     try {
-      await onSave(
+      const result = await onSave(
         {
           title: title.trim(),
           description: description.trim() || null,
@@ -213,10 +213,11 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         },
         scope
       );
-      // Persist dependencies on existing tasks (new tasks: deps can be added after creation)
-      if (task?.id) {
+      // Persist dependencies — for new tasks, use the id returned by onSave.
+      const targetId = task?.id ?? (typeof result === "string" ? result : undefined);
+      if (targetId && (predecessorIds.length > 0 || task?.id)) {
         try {
-          await depsApi.setPredecessors(task.id, predecessorIds);
+          await depsApi.setPredecessors(targetId, predecessorIds);
         } catch (e: any) {
           toast.error(e.message ?? "Erro ao salvar dependências");
         }

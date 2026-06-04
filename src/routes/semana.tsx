@@ -124,9 +124,11 @@ function WeekInner({ userId }: { userId: string }) {
     if (editing) {
       await tasksApi.updateTask(editing.id, data);
       toast.success("Tarefa atualizada");
+      return editing.id;
     } else {
-      await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: 999 });
+      const inserted = await tasksApi.createTask({ ...data, original_date: data.scheduled_date, position: 999 });
       toast.success("Tarefa criada");
+      return inserted?.id;
     }
   };
 

@@ -371,13 +371,15 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
               await tasksApi.updateTask(editingTask.id, data as any);
             }
             toast.success("Subtarefa atualizada");
+            return editingTask.id;
           } else {
-            await tasksApi.createTask({
+            const inserted = await tasksApi.createTask({
               ...(data as any),
               original_date: data.scheduled_date,
               position: tasksApi.topPositionForDay(data.scheduled_date),
             });
             toast.success("Subtarefa criada");
+            return inserted?.id;
           }
         }}
         onDelete={editingTask ? async (scope?: RecurrenceScope) => {
