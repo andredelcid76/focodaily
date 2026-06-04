@@ -173,11 +173,11 @@ export function TaskListRow({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className={`min-w-0 flex-1 text-left text-sm font-medium leading-snug hover:underline ${
+            className={`min-w-0 flex-1 text-left text-sm font-medium leading-snug cursor-pointer ${
               task.completed ? "line-through text-muted-foreground" : ""
             }`}
           >
-            <span className="block line-clamp-2 break-words">{task.title}</span>
+            <span className="block line-clamp-2 break-words hover:underline">{task.title}</span>
           </button>
         </div>
         {/* Compact secondary line: timer / subtasks / recurrence / blockers */}
