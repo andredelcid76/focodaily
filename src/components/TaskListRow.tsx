@@ -7,7 +7,7 @@ import { ProjectChip } from "./ProjectChip";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
   CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks,
-  MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle,
+  MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
