@@ -11,8 +11,8 @@ export function ProjectChip({
   size?: "xs" | "sm";
   asLink?: boolean;
 }) {
-  const className = `inline-flex items-center gap-1 rounded-md border font-medium ${
-    size === "xs" ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5 text-xs"
+  const className = `inline-flex items-start gap-1 rounded-md border font-medium ${
+    size === "xs" ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-xs"
   }`;
   const style = {
     backgroundColor: `${project.color}20`,
@@ -22,8 +22,8 @@ export function ProjectChip({
 
   const content = (
     <>
-      <FolderKanban className={size === "xs" ? "h-2.5 w-2.5" : "h-3 w-3"} />
-      <span className="max-w-[10rem] truncate">{project.name}</span>
+      <FolderKanban className={`${size === "xs" ? "h-2.5 w-2.5" : "h-3 w-3"} mt-[1px] shrink-0`} />
+      <span className="line-clamp-2 break-words whitespace-normal leading-tight">{project.name}</span>
     </>
   );
 
