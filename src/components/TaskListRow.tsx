@@ -6,7 +6,7 @@ import { RoleBadge } from "./RoleBadge";
 import { ProjectChip } from "./ProjectChip";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
-  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock, Check, Circle, ListChecks,
   MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 import {
@@ -52,7 +52,6 @@ type Props = {
   onDuplicate?: (date: string) => void;
   onFollowUp?: (date: string) => void;
   // Bulk selection
-  selectionMode?: boolean;
   selected?: boolean;
   onSelectToggle?: () => void;
   subtaskCount?: { total: number; completed: number };
@@ -61,20 +60,20 @@ type Props = {
 
 /**
  * Tabular row presentation for tasks on the Today/Week pages.
- * Columns: [sel][drag][done][#] Title | Projeto | Papel | Dur | Vencimento | Status | Actions
+ * Columns: [drag][done] Title | Projeto | Papel | Dur | Vencimento | Status | Actions
  */
 export function TaskListRow({
   task, role, project, onToggle, onEdit, isOverdue, index,
   isActive, isPaused, liveSeconds,
   onStart, onPause, onResume, onStop,
   onPostpone, onDuplicate, onFollowUp,
-  selectionMode, selected, onSelectToggle,
+  selected, onSelectToggle,
   subtaskCount, blockedBy,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
-    disabled: !!selectionMode,
+    disabled: !!selected,
   });
 
   const style = {
@@ -88,15 +87,32 @@ export function TaskListRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
 
-  const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
+  // Click anywhere on the row toggles selection, unless clicking on interactive elements
+  const handleRowClick = (e: React.MouseEvent) => {
+    // If clicking on an interactive element or its child, don't toggle
+    const target = e.target as HTMLElement;
+    if (
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("[data-no-select]") ||
+      target.closest("[role='dialog']") ||
+      target.closest("[data-radix-popper-content-wrapper]")
+    ) {
+      return;
+    }
+    onSelectToggle?.();
+  };
+
+  const dragProps = selected ? {} : { ...attributes, ...listeners };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       data-task-card="true"
-      className={`group relative grid items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none
-        grid-cols-[1.5rem_1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]
+      onClick={handleRowClick}
+      className={`group relative grid items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
+        grid-cols-[1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
@@ -109,54 +125,36 @@ export function TaskListRow({
         ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}
       `}
     >
-      {/* Select */}
-      {onSelectToggle ? (
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); onSelectToggle(); }}
-          className={`grid h-4 w-4 place-items-center rounded-sm border transition-colors ${
-            selected
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-muted-foreground/40 bg-background hover:border-foreground/60"
-          }`}
-          aria-label={selected ? "Desmarcar" : "Selecionar"}
-          aria-pressed={selected}
-        >
-          {selected && <CheckCircle2 className="h-3 w-3" />}
-        </button>
-      ) : <span />}
-
       {/* Drag handle */}
       <span
         {...dragProps}
+        onClick={(e) => e.stopPropagation()}
         className={`text-muted-foreground/40 group-hover:text-muted-foreground/80 ${
-          selectionMode ? "" : "cursor-grab active:cursor-grabbing"
+          selected ? "" : "cursor-grab active:cursor-grabbing"
         }`}
         aria-label="Reordenar"
       >
         <GripVertical className="h-4 w-4" />
       </span>
 
-      {/* Complete */}
+      {/* Complete — Notion/Linear style rounded square */}
       <button
         type="button"
-        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all ${
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border transition-all ${
           task.completed
-            ? "border-green-500 bg-green-500/15 text-green-500 hover:bg-green-500/25"
-            : "border-muted-foreground/30 text-muted-foreground/50 hover:border-green-500 hover:bg-green-500/10 hover:text-green-500"
+            ? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-600"
+            : "border-muted-foreground/25 bg-transparent text-transparent hover:border-emerald-500/60 hover:bg-emerald-500/10"
         }`}
         aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
         title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
         aria-pressed={task.completed}
       >
-        {task.completed ? <CheckCircle2 className="h-4 w-4 fill-current" /> : <Circle className="h-4 w-4" strokeWidth={1.5} />}
+        <Check className="h-3 w-3" strokeWidth={3} />
       </button>
 
       {/* Title column (with #, category icon, badges) */}
-      <div className="min-w-0">
+      <div className="min-w-0" data-no-select="true">
         <div className="flex items-center gap-1.5">
           {typeof index === "number" && (
             <span
@@ -174,7 +172,6 @@ export function TaskListRow({
           )}
           <button
             type="button"
-            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className={`min-w-0 flex-1 text-left text-sm font-medium leading-snug hover:underline ${
               task.completed ? "line-through text-muted-foreground" : ""
@@ -314,8 +311,7 @@ export function TaskListRow({
       {/* Actions: timer + quick-actions popover */}
       <div
         className="flex items-center justify-end gap-0.5"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
+        data-no-select="true"
       >
         {!task.completed && (onStart || onPause || onStop) && (
           <>
@@ -374,25 +370,23 @@ export function TaskListRow({
   );
 }
 
-export type TaskSortKey = "title" | "project" | "role" | "duration" | "due" | "status";
+export type TaskSortKey = "position" | "title" | "project" | "role" | "duration" | "due" | "status";
 export type TaskSortDir = "asc" | "desc";
 
 /** Header row matching TaskListRow's grid template. */
 export function TaskListHeader({
-  showSelect = true,
   sortKey,
   sortDir,
   onSort,
 }: {
-  showSelect?: boolean;
   sortKey?: TaskSortKey | null;
   sortDir?: TaskSortDir;
   onSort?: (key: TaskSortKey) => void;
 }) {
-  const SortBtn = ({ k, label, align = "left" }: { k: TaskSortKey; label: string; align?: "left" | "center" }) => {
+  const SortBtn = ({ k, label, align = "left", narrow = false }: { k: TaskSortKey; label: string; align?: "left" | "center"; narrow?: boolean }) => {
     const active = sortKey === k;
     if (!onSort) {
-      return <span className={align === "center" ? "text-center" : ""}>{label}</span>;
+      return <span className={`${align === "center" ? "text-center" : ""} ${narrow ? "justify-self-center" : ""}`}>{label}</span>;
     }
     return (
       <button
@@ -400,7 +394,7 @@ export function TaskListHeader({
         onClick={() => onSort(k)}
         className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${
           align === "center" ? "justify-center" : ""
-        } ${active ? "text-foreground" : ""}`}
+        } ${narrow ? "justify-self-center" : ""} ${active ? "text-foreground" : ""}`}
         aria-label={`Ordenar por ${label}`}
       >
         <span>{label}</span>
@@ -419,11 +413,10 @@ export function TaskListHeader({
   return (
     <div
       className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40
-        grid-cols-[1.5rem_1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]"
+        grid-cols-[1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]"
     >
-      <span aria-hidden="true">{showSelect ? "" : ""}</span>
-      <span />
-      <span />
+      <span aria-hidden="true" />
+      <SortBtn k="position" label="#" narrow />
       <SortBtn k="title" label="Tarefa" />
       <SortBtn k="project" label="Projeto" />
       <SortBtn k="role" label="Papel" />
