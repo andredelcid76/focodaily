@@ -20,6 +20,7 @@ import { SubtasksList } from "@/components/SubtasksList";
 import { useAuth } from "@/lib/auth";
 import { listProjectMembers } from "@/lib/team.functions";
 import { useTaskDependencies } from "@/hooks/useTaskDependencies";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   open: boolean;
