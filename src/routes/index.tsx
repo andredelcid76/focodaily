@@ -244,12 +244,16 @@ function TodayInner({ userId }: { userId: string }) {
           return (a.duration_minutes - b.duration_minutes) * dir;
         case "due":
           return a.scheduled_date.localeCompare(b.scheduled_date) * dir;
+        case "position":
+          return (a.position - b.position) * dir;
         case "status": {
           const order = { todo: 0, doing: 1, done: 2 } as const;
           const as = (a.status ?? (a.completed ? "done" : "todo")) as keyof typeof order;
           const bs = (b.status ?? (b.completed ? "done" : "todo")) as keyof typeof order;
           return (order[as] - order[bs]) * dir;
         }
+        default:
+          return 0;
       }
     };
     return arr.sort(cmp);
