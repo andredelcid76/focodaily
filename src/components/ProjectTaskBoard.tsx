@@ -210,14 +210,94 @@ function TableView({
   const today = todayISO();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // ---- Column filters & sort -------------------------------------------------
+  type SortKey = "title" | "scheduled_date" | "assignee" | "status";
+  type SortDir = "asc" | "desc";
+  type DueFilter = "all" | "overdue" | "today" | "week" | "later" | "no_date" | "done";
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all"); // "all" | "__none" | uid
+  const [roleFilter, setRoleFilter] = useState<string>("all"); // "all" | "__none" | rid
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir("asc"); }
+  };
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setAssigneeFilter("all");
+    setRoleFilter("all");
+    setDueFilter("all");
+  };
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (assigneeFilter !== "all" ? 1 : 0) +
+    (roleFilter !== "all" ? 1 : 0) +
+    (dueFilter !== "all" ? 1 : 0);
+
+  const in7 = useMemo(() => addDays(today, 7), [today]);
+
+  const matchesFilters = (t: Task) => {
+    const status = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
+    if (statusFilter !== "all" && status !== statusFilter) return false;
+    if (assigneeFilter !== "all") {
+      if (assigneeFilter === "__none" ? !!t.assignee_id : t.assignee_id !== assigneeFilter) return false;
+    }
+    if (roleFilter !== "all") {
+      if (roleFilter === "__none" ? !!t.role_id : t.role_id !== roleFilter) return false;
+    }
+    if (dueFilter !== "all") {
+      const sd = t.scheduled_date;
+      switch (dueFilter) {
+        case "overdue": if (!(sd && sd < today && !t.completed)) return false; break;
+        case "today":   if (sd !== today) return false; break;
+        case "week":    if (!sd || sd < today || sd > in7) return false; break;
+        case "later":   if (!sd || sd <= in7) return false; break;
+        case "no_date": if (sd) return false; break;
+        case "done":    if (!t.completed) return false; break;
+      }
+    }
+    return true;
+  };
+
+  const sortTasks = (arr: Task[]) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const cmp = (a: Task, b: Task) => {
+      switch (sortKey) {
+        case "title":
+          return a.title.localeCompare(b.title) * dir;
+        case "scheduled_date":
+          return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~") * dir;
+        case "assignee": {
+          const an = a.assignee_id ? nameOf(memberById.get(a.assignee_id)) : "~";
+          const bn = b.assignee_id ? nameOf(memberById.get(b.assignee_id)) : "~";
+          return an.localeCompare(bn) * dir;
+        }
+        case "status": {
+          const as = (a.status ?? (a.completed ? "done" : "todo")) as TaskStatus;
+          const bs = (b.status ?? (b.completed ? "done" : "todo")) as TaskStatus;
+          return as.localeCompare(bs) * dir;
+        }
+      }
+    };
+    return [...arr].sort(cmp);
+  };
+
+  const clearSel = () => setSelected(new Set());
   const toggleSel = (id: string) =>
     setSelected((s) => {
       const next = new Set(s);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  const clearSel = () => setSelected(new Set());
-  const allIds = tasks.map((t) => t.id);
+
+  const visibleTasks = useMemo(() => tasks.filter(matchesFilters),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tasks, statusFilter, assigneeFilter, roleFilter, dueFilter, today, in7]);
+
+  const allIds = visibleTasks.map((t) => t.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
   const toggleAll = () => setSelected(allChecked ? new Set() : new Set(allIds));
 
@@ -255,33 +335,32 @@ function TableView({
   };
 
   const groups = useMemo(() => {
-    if (grouping === "none") return [{ key: "all", label: "", tasks: sortByDate(tasks) }];
+    if (grouping === "none") return [{ key: "all", label: "", tasks: sortTasks(visibleTasks) }];
     if (grouping === "status") {
       const order: TaskStatus[] = ["doing", "todo", "done"];
       return order.map((s) => ({
         key: s,
         label: STATUS_LABEL[s],
-        tasks: sortByDate(tasks.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s)),
+        tasks: sortTasks(visibleTasks.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s)),
       })).filter((g) => g.tasks.length > 0);
     }
     if (grouping === "assignee") {
       const map = new Map<string, Task[]>();
-      for (const t of tasks) {
+      for (const t of visibleTasks) {
         const aid = (t.assignee_id ?? "__unassigned") as string;
         map.set(aid, [...(map.get(aid) ?? []), t]);
       }
       const arr = Array.from(map.entries()).map(([uid, ts]) => ({
         key: uid,
         label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
-        tasks: sortByDate(ts),
+        tasks: sortTasks(ts),
       }));
       arr.sort((a, b) => b.tasks.length - a.tasks.length);
       return arr;
     }
     // due
     const buckets = { overdue: [] as Task[], today: [] as Task[], week: [] as Task[], later: [] as Task[], done: [] as Task[] };
-    const in7 = addDays(today, 7);
-    for (const t of tasks) {
+    for (const t of visibleTasks) {
       if (t.completed) buckets.done.push(t);
       else if (t.scheduled_date < today) buckets.overdue.push(t);
       else if (t.scheduled_date === today) buckets.today.push(t);
@@ -289,13 +368,15 @@ function TableView({
       else buckets.later.push(t);
     }
     return [
-      { key: "overdue", label: "Atrasadas", tasks: sortByDate(buckets.overdue) },
-      { key: "today", label: "Hoje", tasks: sortByDate(buckets.today) },
-      { key: "week", label: "Próximos 7 dias", tasks: sortByDate(buckets.week) },
-      { key: "later", label: "Mais tarde", tasks: sortByDate(buckets.later) },
-      { key: "done", label: "Concluídas", tasks: sortByDate(buckets.done) },
+      { key: "overdue", label: "Atrasadas", tasks: sortTasks(buckets.overdue) },
+      { key: "today", label: "Hoje", tasks: sortTasks(buckets.today) },
+      { key: "week", label: "Próximos 7 dias", tasks: sortTasks(buckets.week) },
+      { key: "later", label: "Mais tarde", tasks: sortTasks(buckets.later) },
+      { key: "done", label: "Concluídas", tasks: sortTasks(buckets.done) },
     ].filter((g) => g.tasks.length > 0);
-  }, [tasks, grouping, ownerId, memberById, today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTasks, grouping, memberById, today, in7, sortKey, sortDir]);
+
 
   return (
     <div className="space-y-2">
