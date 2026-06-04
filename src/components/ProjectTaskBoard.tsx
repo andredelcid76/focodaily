@@ -1206,3 +1206,32 @@ function sortByDate(arr: Task[]) {
     (a, b) => a.scheduled_date.localeCompare(b.scheduled_date) || a.position - b.position,
   );
 }
+
+function SortColHeader<K extends string>({
+  label, k, sortKey, sortDir, onSort,
+}: {
+  label: string;
+  k: K;
+  sortKey: K;
+  sortDir: "asc" | "desc";
+  onSort: (k: K) => void;
+}) {
+  const active = sortKey === k;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(k)}
+      className={`inline-flex items-center gap-1 text-left text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      {active ? (
+        sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-50" />
+      )}
+    </button>
+  );
+}
+
