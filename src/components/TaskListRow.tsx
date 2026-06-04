@@ -177,7 +177,7 @@ export function TaskListRow({
               task.completed ? "line-through text-muted-foreground" : ""
             }`}
           >
-            <span className="block line-clamp-2 break-words hover:underline">{task.title}</span>
+            <span className="line-clamp-2 break-words [&>span]:hover:underline"><span>{task.title}</span></span>
           </button>
         </div>
         {/* Compact secondary line: timer / subtasks / recurrence / blockers */}
