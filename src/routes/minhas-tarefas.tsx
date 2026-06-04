@@ -89,6 +89,24 @@ function MyTasksPage() {
 
   const today = todayISO();
   const tasks = data?.tasks ?? [];
+  const { deps } = useTaskDependencies(userId);
+  const blockedByMap = useMemo(() => {
+    const taskMap = new Map(tasks.map((t) => [t.id, { title: t.title, completed: t.completed }]));
+    const m = new Map<string, string[]>();
+    for (const t of tasks) {
+      const blockers = blockingPredecessorTitles(t.id, deps, taskMap);
+      if (blockers.length > 0) m.set(t.id, blockers);
+    }
+    return m;
+  }, [tasks, deps]);
+
+  const confirmIfBlocked = (id: string): boolean => {
+    const blockers = blockedByMap.get(id);
+    if (!blockers || blockers.length === 0) return true;
+    return window.confirm(
+      `Esta tarefa está aguardando: ${blockers.join(", ")}. Concluir mesmo assim?`,
+    );
+  };
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
