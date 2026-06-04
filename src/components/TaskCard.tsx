@@ -46,6 +46,8 @@ type Props = {
   subtaskCount?: { total: number; completed: number };
   /** When true, hides the assignee avatar/chip (e.g. on the "Today" page where only "my" tasks are shown). */
   hideAssignee?: boolean;
+  /** Titles of open predecessor tasks blocking this one. */
+  blockedBy?: string[];
 };
 
 export function TaskCard({
