@@ -325,6 +325,7 @@ export function useTasks(userId: string | undefined) {
         ensureRecurring().then(refresh);
       }
     }
+    return inserted ?? null;
   };
 
   const updateTask = async (id: string, patch: Partial<Task>) => {
