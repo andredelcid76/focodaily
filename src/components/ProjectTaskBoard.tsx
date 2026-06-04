@@ -171,6 +171,7 @@ export function ProjectTaskBoard({
           onEdit={onEdit}
           onSetStatus={onSetStatus}
           onUpdate={onUpdate}
+          onToggleComplete={onToggleComplete}
         />
       ) : (
         <TimelineView
