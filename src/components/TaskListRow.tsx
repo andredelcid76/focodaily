@@ -112,8 +112,8 @@ export function TaskListRow({
       style={style}
       data-task-card="true"
       onClick={handleRowClick}
-      className={`group relative grid items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
-        grid-cols-[1rem_1.75rem_minmax(0,1.5fr)_minmax(0,2fr)_7rem_4.5rem_6rem_8rem_2.25rem]
+      className={`group relative flex flex-wrap items-center gap-2 md:gap-3 md:grid rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
+        md:grid-cols-[1rem_1.75rem_minmax(0,1.5fr)_minmax(0,2fr)_7rem_4.5rem_6rem_8rem_2.25rem]
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
@@ -143,7 +143,7 @@ export function TaskListRow({
 
 
       {/* Title column (with #, category icon, badges) */}
-      <div className="min-w-0" data-no-select="true">
+      <div className="min-w-0 flex-1 basis-full md:basis-auto md:flex-none" data-no-select="true">
         <div className="flex items-center gap-1.5">
           {typeof index === "number" && (
             <span
