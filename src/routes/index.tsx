@@ -8,6 +8,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
+import { TaskListRow, TaskListHeader } from "@/components/TaskListRow";
 import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
 
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
@@ -766,34 +767,36 @@ function TodayInner({ userId }: { userId: string }) {
         ) : taskView === "list" ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={visibleDayTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
-                {visibleDayTasks.map((t, i) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
-                    project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                    onToggle={() => toggleCompleteWithTimer(t)}
-                    onEdit={() => openEdit(t)}
-                    index={i + 1}
-                    isActive={timer.activeTaskId === t.id}
-                    isPaused={timer.activeTaskId === t.id && timer.isPaused}
-                    liveSeconds={timer.elapsedSeconds}
-                    onStart={() => handleStartTimer(t)}
-                    onPause={handlePauseTimer}
-                    onResume={handleResumeTimer}
-                    onStop={handleStopTimer}
-                    onPostpone={(date) => handlePostpone(t, date)}
-                    onDuplicate={(date) => handleDuplicate(t, date)}
-                    onFollowUp={(date) => handleFollowUp(t, date)}
-                    selectionMode={selectionMode}
-                    selected={selectedIds.has(t.id)}
-                    onSelectToggle={() => toggleSelect(t.id)}
-                    subtaskCount={subtaskCounts[t.id]}
-                    hideAssignee
-                    blockedBy={blockedByMap.get(t.id)}
-                  />
-                ))}
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+                <TaskListHeader />
+                <div className="divide-y divide-border/40">
+                  {visibleDayTasks.map((t, i) => (
+                    <TaskListRow
+                      key={t.id}
+                      task={t}
+                      role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                      project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
+                      onToggle={() => toggleCompleteWithTimer(t)}
+                      onEdit={() => openEdit(t)}
+                      index={i + 1}
+                      isActive={timer.activeTaskId === t.id}
+                      isPaused={timer.activeTaskId === t.id && timer.isPaused}
+                      liveSeconds={timer.elapsedSeconds}
+                      onStart={() => handleStartTimer(t)}
+                      onPause={handlePauseTimer}
+                      onResume={handleResumeTimer}
+                      onStop={handleStopTimer}
+                      onPostpone={(date) => handlePostpone(t, date)}
+                      onDuplicate={(date) => handleDuplicate(t, date)}
+                      onFollowUp={(date) => handleFollowUp(t, date)}
+                      selectionMode={selectionMode}
+                      selected={selectedIds.has(t.id)}
+                      onSelectToggle={() => toggleSelect(t.id)}
+                      subtaskCount={subtaskCounts[t.id]}
+                      blockedBy={blockedByMap.get(t.id)}
+                    />
+                  ))}
+                </div>
               </div>
             </SortableContext>
           </DndContext>

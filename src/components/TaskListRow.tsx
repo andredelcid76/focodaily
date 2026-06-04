@@ -1,0 +1,514 @@
+import { useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { CategoryIcon } from "./CategoryBadge";
+import { RoleBadge } from "./RoleBadge";
+import { ProjectChip } from "./ProjectChip";
+import {
+  GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
+  CalendarClock, Copy, Repeat2, ArrowRight, Lock, CheckCircle2, Circle, ListChecks,
+  MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle,
+} from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { formatMinutes, formatShort, toISODate, todayISO, addDays } from "@/lib/date";
+import { formatTimer } from "@/hooks/useActiveTimer";
+import type { Task, TaskStatus } from "@/hooks/useTasks";
+import type { Role } from "@/hooks/useRoles";
+import type { Project } from "@/hooks/useProjects";
+
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  todo: "A fazer",
+  doing: "Em andamento",
+  done: "Concluída",
+};
+const STATUS_COLOR: Record<TaskStatus, string> = {
+  todo: "border-border/60 bg-muted/30 text-muted-foreground",
+  doing: "border-primary/40 bg-primary/10 text-primary",
+  done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+};
+
+type Props = {
+  task: Task;
+  role?: Role | null;
+  project?: Project | null;
+  onToggle: () => void;
+  onEdit: () => void;
+  isOverdue?: boolean;
+  index?: number;
+  // Timer
+  isActive?: boolean;
+  isPaused?: boolean;
+  liveSeconds?: number;
+  onStart?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onStop?: () => void;
+  // Quick actions
+  onPostpone?: (date: string) => void;
+  onDuplicate?: (date: string) => void;
+  onFollowUp?: (date: string) => void;
+  // Bulk selection
+  selectionMode?: boolean;
+  selected?: boolean;
+  onSelectToggle?: () => void;
+  subtaskCount?: { total: number; completed: number };
+  blockedBy?: string[];
+};
+
+/**
+ * Tabular row presentation for tasks on the Today/Week pages.
+ * Columns: [sel][drag][done][#] Title | Projeto | Papel | Dur | Vencimento | Status | Actions
+ */
+export function TaskListRow({
+  task, role, project, onToggle, onEdit, isOverdue, index,
+  isActive, isPaused, liveSeconds,
+  onStart, onPause, onResume, onStop,
+  onPostpone, onDuplicate, onFollowUp,
+  selectionMode, selected, onSelectToggle,
+  subtaskCount, blockedBy,
+}: Props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { task },
+    disabled: !!selectionMode,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
+  const running = isActive && !isPaused;
+  const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
+  const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
+
+  const dragProps = selectionMode ? {} : { ...attributes, ...listeners };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-task-card="true"
+      className={`group relative grid items-center gap-3 rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none
+        grid-cols-[1.5rem_1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]
+        px-3 py-2
+        ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
+        ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
+        ${(task as any).non_negotiable && !task.completed ? "border-l-4 border-l-overdue pl-2" : ""}
+        ${isActive && !task.completed
+          ? running
+            ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
+            : "border-circumstantial/60 ring-1 ring-circumstantial/30"
+          : ""}
+        ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}
+      `}
+    >
+      {/* Select */}
+      {onSelectToggle ? (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onSelectToggle(); }}
+          className={`grid h-4 w-4 place-items-center rounded-sm border transition-colors ${
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-muted-foreground/40 bg-background hover:border-foreground/60"
+          }`}
+          aria-label={selected ? "Desmarcar" : "Selecionar"}
+          aria-pressed={selected}
+        >
+          {selected && <CheckCircle2 className="h-3 w-3" />}
+        </button>
+      ) : <span />}
+
+      {/* Drag handle */}
+      <span
+        {...dragProps}
+        className={`text-muted-foreground/40 group-hover:text-muted-foreground/80 ${
+          selectionMode ? "" : "cursor-grab active:cursor-grabbing"
+        }`}
+        aria-label="Reordenar"
+      >
+        <GripVertical className="h-4 w-4" />
+      </span>
+
+      {/* Complete */}
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all ${
+          task.completed
+            ? "border-green-500 bg-green-500/15 text-green-500 hover:bg-green-500/25"
+            : "border-muted-foreground/30 text-muted-foreground/50 hover:border-green-500 hover:bg-green-500/10 hover:text-green-500"
+        }`}
+        aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
+        title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
+        aria-pressed={task.completed}
+      >
+        {task.completed ? <CheckCircle2 className="h-4 w-4 fill-current" /> : <Circle className="h-4 w-4" strokeWidth={1.5} />}
+      </button>
+
+      {/* Title column (with #, category icon, badges) */}
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          {typeof index === "number" && (
+            <span
+              className={`inline-flex h-4 min-w-4 items-center justify-center rounded border border-border/60 bg-muted/40 px-1 text-[10px] font-semibold tabular-nums text-muted-foreground ${
+                task.completed ? "line-through" : ""
+              }`}
+              aria-label={`Posição ${index}`}
+            >
+              {index}
+            </span>
+          )}
+          <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+          {(task as any).non_negotiable && !task.completed && (
+            <Lock className="h-3 w-3 text-overdue shrink-0" aria-label="Inegociável hoje" />
+          )}
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className={`min-w-0 flex-1 text-left text-sm font-medium leading-tight hover:underline ${
+              task.completed ? "line-through text-muted-foreground" : ""
+            }`}
+          >
+            <span className="block truncate">{task.title}</span>
+          </button>
+        </div>
+        {/* Compact secondary line: timer / subtasks / recurrence / blockers */}
+        {(totalSpent > 0 || (subtaskCount && subtaskCount.total > 0)
+          || task.recurrence !== "none" || task.recurrence_parent_id
+          || (blockedBy && blockedBy.length > 0)
+          || (task.followup_count ?? 0) > 1
+          || (task.postpone_count ?? 0) >= 3
+          || (task as any).origin_source) && (
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+            {totalSpent > 0 && (
+              <span
+                className={`inline-flex items-center gap-1 ${
+                  running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
+                }`}
+                title="Tempo trabalhado"
+              >
+                <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
+              </span>
+            )}
+            {subtaskCount && subtaskCount.total > 0 && (
+              <span
+                className={`inline-flex items-center gap-1 ${
+                  subtaskCount.completed === subtaskCount.total ? "text-green-500" : ""
+                }`}
+                title={`${subtaskCount.completed} de ${subtaskCount.total} subtarefas concluídas`}
+              >
+                <ListChecks className="h-3 w-3" /> {subtaskCount.completed}/{subtaskCount.total}
+              </span>
+            )}
+            {(task.recurrence !== "none" || task.recurrence_parent_id) && (
+              <span className="inline-flex items-center gap-1" title="Recorrente">
+                <Repeat className="h-3 w-3" />
+              </span>
+            )}
+            {(task.followup_count ?? 0) > 1 && (
+              <span className="inline-flex items-center gap-1 text-circumstantial" title={`Follow-up #${task.followup_count}`}>
+                <Repeat2 className="h-3 w-3" /> #{task.followup_count}
+              </span>
+            )}
+            {blockedBy && blockedBy.length > 0 && !task.completed && (
+              <span
+                className="inline-flex items-center gap-1 text-amber-600"
+                title={`Aguardando: ${blockedBy.join(", ")}`}
+              >
+                <Lock className="h-3 w-3" /> Bloqueada
+              </span>
+            )}
+            {(task.postpone_count ?? 0) >= 3 && !task.completed && (
+              <span className="inline-flex items-center gap-1 text-overdue" title={`Adiada ${task.postpone_count} vezes`}>
+                <AlertCircle className="h-3 w-3" /> {task.postpone_count}× adiada
+              </span>
+            )}
+            {(task as any).origin_source && (() => {
+              const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
+              const url = (task as any).origin_source_url as string | null;
+              const label = (task as any).origin_source_label as string | null;
+              const meta =
+                src === "email"
+                  ? { l: "Outlook", c: "text-blue-600" }
+                  : src === "meeting"
+                  ? { l: "Fireflies", c: "text-purple-600" }
+                  : { l: "Pipedrive", c: "text-emerald-600" };
+              const inner = <span className={meta.c}>{meta.l}</span>;
+              return url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  title={label ?? meta.l}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <span title={label ?? meta.l}>{inner}</span>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+
+      {/* Projeto */}
+      <div className="min-w-0">
+        {project ? (
+          <ProjectChip project={project} size="xs" />
+        ) : (
+          <span className="text-[11px] text-muted-foreground/60">—</span>
+        )}
+      </div>
+
+      {/* Papel */}
+      <div className="min-w-0">
+        {role ? (
+          <RoleBadge role={role} size="xs" />
+        ) : (
+          <span className="text-[11px] text-muted-foreground/60">—</span>
+        )}
+      </div>
+
+      {/* Duração */}
+      <div className="text-xs text-muted-foreground tabular-nums">
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}
+        </span>
+      </div>
+
+      {/* Vencimento */}
+      <div className="min-w-0">
+        <span
+          className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] tabular-nums ${
+            isOverdue && !task.completed
+              ? "border-overdue/40 bg-overdue/10 text-overdue"
+              : "border-border/60 bg-muted/30 text-muted-foreground"
+          }`}
+          title={task.scheduled_date}
+        >
+          {isOverdue && !task.completed && <AlertCircle className="h-3 w-3" />}
+          {formatShort(task.scheduled_date)}
+        </span>
+      </div>
+
+      {/* Status */}
+      <div className="min-w-0">
+        <span className={`inline-flex w-full items-center justify-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${STATUS_COLOR[status]}`}>
+          {STATUS_LABEL[status]}
+        </span>
+      </div>
+
+      {/* Actions: timer + quick-actions popover */}
+      <div
+        className="flex items-center justify-end gap-0.5"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {!task.completed && (onStart || onPause || onStop) && (
+          <>
+            {!isActive ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onStart?.(); }}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary hover:bg-primary/25"
+                aria-label="Iniciar"
+                title="Iniciar"
+              >
+                <Play className="h-3 w-3 fill-current" />
+              </button>
+            ) : running ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPause?.(); }}
+                className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-1.5 text-[10px] font-medium text-primary-foreground hover:opacity-90"
+                aria-label="Pausar"
+                title="Pausar"
+              >
+                <Pause className="h-3 w-3 fill-current" />
+                <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onResume?.(); }}
+                className="inline-flex h-7 items-center gap-1 rounded-md bg-circumstantial/20 px-1.5 text-[10px] font-medium text-circumstantial hover:bg-circumstantial/30"
+                aria-label="Retomar"
+                title="Retomar"
+              >
+                <Play className="h-3 w-3 fill-current" />
+                <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+              </button>
+            )}
+            {isActive && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onStop?.(); }}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+                aria-label="Parar"
+                title="Parar e zerar"
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </button>
+            )}
+          </>
+        )}
+        {!task.completed && hasActions && (
+          <QuickActionsMenu
+            task={task}
+            onPostpone={onPostpone}
+            onDuplicate={onDuplicate}
+            onFollowUp={onFollowUp}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Header row matching TaskListRow's grid template. */
+export function TaskListHeader({ showSelect = true }: { showSelect?: boolean }) {
+  return (
+    <div
+      className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40
+        grid-cols-[1.5rem_1rem_1.75rem_minmax(0,1fr)_9rem_7rem_4.5rem_6rem_8rem_2.25rem]"
+    >
+      <span aria-hidden="true">{showSelect ? "" : ""}</span>
+      <span />
+      <span />
+      <span>Tarefa</span>
+      <span>Projeto</span>
+      <span>Papel</span>
+      <span>Duração</span>
+      <span>Vencimento</span>
+      <span className="text-center">Status</span>
+      <span />
+    </div>
+  );
+}
+
+function QuickActionsMenu({
+  task,
+  onPostpone,
+  onDuplicate,
+  onFollowUp,
+}: {
+  task: Task;
+  onPostpone?: (date: string) => void;
+  onDuplicate?: (date: string) => void;
+  onFollowUp?: (date: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<null | "postpone" | "duplicate" | "followup">(null);
+  const today = todayISO();
+  const tomorrow = addDays(today, 1);
+  const [pickerDate, setPickerDate] = useState<Date>(() => {
+    const [y, m, d] = tomorrow.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  });
+
+  const closePicker = () => setPickerMode(null);
+  const confirmPicker = () => {
+    const iso = toISODate(pickerDate);
+    if (pickerMode === "postpone") onPostpone?.(iso);
+    else if (pickerMode === "duplicate") onDuplicate?.(iso);
+    else if (pickerMode === "followup") onFollowUp?.(iso);
+    closePicker();
+    setOpen(false);
+  };
+
+  const isToday = task.scheduled_date === today;
+
+  return (
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            aria-label="Mais ações"
+            title="Mais ações"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-44 p-1">
+          {onPostpone && !isToday && (
+            <MenuItem icon={<ArrowRight className="h-3.5 w-3.5" />} onClick={() => { onPostpone(today); setOpen(false); }}>
+              Mover para hoje
+            </MenuItem>
+          )}
+          {onPostpone && (
+            <MenuItem icon={<CalendarClock className="h-3.5 w-3.5" />} onClick={() => setPickerMode("postpone")}>
+              Mover para…
+            </MenuItem>
+          )}
+          {onDuplicate && (
+            <MenuItem icon={<Copy className="h-3.5 w-3.5" />} onClick={() => setPickerMode("duplicate")}>
+              Duplicar em…
+            </MenuItem>
+          )}
+          {onFollowUp && (
+            <MenuItem icon={<Repeat2 className="h-3.5 w-3.5" />} onClick={() => setPickerMode("followup")}>
+              Follow-up em…
+            </MenuItem>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <Dialog open={pickerMode !== null} onOpenChange={(o: boolean) => !o && closePicker()}>
+        <DialogContent className="w-auto max-w-[20rem] p-0">
+          <DialogHeader className="border-b border-border/60 p-3">
+            <DialogTitle className="text-sm">
+              {pickerMode === "postpone" && "Mover para…"}
+              {pickerMode === "duplicate" && "Duplicar em…"}
+              {pickerMode === "followup" && "Follow-up em…"}
+            </DialogTitle>
+          </DialogHeader>
+          <Calendar
+            mode="single"
+            selected={pickerDate}
+            onSelect={(d) => d && setPickerDate(d)}
+            initialFocus
+            className="p-3 pointer-events-auto"
+          />
+          <div className="flex justify-end gap-2 border-t border-border/60 p-2">
+            <button
+              onClick={closePicker}
+              className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent/40"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmPicker}
+              className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+            >
+              Confirmar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function MenuItem({ icon, children, onClick }: { icon: React.ReactNode; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent/60"
+    >
+      <span className="text-muted-foreground">{icon}</span>
+      {children}
+    </button>
+  );
+}
