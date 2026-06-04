@@ -422,6 +422,9 @@ export const allTools = [
   createTask,
   updateTask,
   deleteTask,
+  listTaskDependencies,
+  addTaskDependency,
+  removeTaskDependency,
   listFirefliesMeetings,
   getFirefliesTranscript,
 ];
