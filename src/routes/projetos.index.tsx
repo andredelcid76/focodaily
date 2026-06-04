@@ -32,7 +32,13 @@ import {
   Layers,
   GanttChart,
   Crown,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  X,
+  Search,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useProfiles } from "@/hooks/useProfiles";
 import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
@@ -519,6 +525,11 @@ function RoleChip({ role }: { role: { name: string; color: string } }) {
 
 // ============== LIST VIEW ==============
 
+type SortKey = "name" | "status" | "role" | "progress" | "tasks" | "deadline" | "nextTask";
+type SortDir = "asc" | "desc";
+type DeadlineFilter = "all" | "overdue" | "today" | "week" | "later" | "none";
+type ProgressFilter = "all" | "not_started" | "in_progress" | "done";
+
 function ListView({
   projects, rolesById, tasksByProject, today, onEdit, canEdit,
 }: {
@@ -529,106 +540,284 @@ function ListView({
   onEdit: (p: Project) => void;
   canEdit: (p: Project) => boolean;
 }) {
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
+  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>("all");
+  const [progressFilter, setProgressFilter] = useState<ProgressFilter>("all");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const rows = useMemo(() => {
+    const enriched = projects.map((p) => {
+      const stats = computeProjectStats(p, tasksByProject.get(p.id) ?? [], today);
+      const role = p.role_id ? rolesById.get(p.role_id) ?? null : null;
+      return { p, stats, role };
+    });
+
+    const inWeek = (iso: string) => {
+      const d = new Date(iso).getTime();
+      const t = new Date(today).getTime();
+      const diff = (d - t) / (1000 * 60 * 60 * 24);
+      return diff >= 0 && diff <= 7;
+    };
+
+    const filtered = enriched.filter(({ p, stats }) => {
+      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (progressFilter === "not_started" && stats.progress > 0) return false;
+      if (progressFilter === "in_progress" && (stats.progress === 0 || stats.progress >= 1)) return false;
+      if (progressFilter === "done" && stats.progress < 1) return false;
+      if (deadlineFilter !== "all") {
+        if (deadlineFilter === "none" && p.deadline) return false;
+        if (deadlineFilter !== "none" && !p.deadline) return false;
+        if (deadlineFilter === "overdue" && !(p.deadline && p.deadline < today)) return false;
+        if (deadlineFilter === "today" && !(p.deadline && p.deadline === today)) return false;
+        if (deadlineFilter === "week" && !(p.deadline && inWeek(p.deadline))) return false;
+        if (deadlineFilter === "later" && !(p.deadline && p.deadline > today && !inWeek(p.deadline))) return false;
+      }
+      return true;
+    });
+
+    const cmp = (a: typeof enriched[number], b: typeof enriched[number]) => {
+      const dir = sortDir === "asc" ? 1 : -1;
+      const nullLast = (v: any) => (v === null || v === undefined || v === "" ? 1 : 0);
+      switch (sortKey) {
+        case "name":
+          return dir * a.p.name.localeCompare(b.p.name);
+        case "status":
+          return dir * (PROJECT_STATUS_ORDER.indexOf(a.p.status) - PROJECT_STATUS_ORDER.indexOf(b.p.status));
+        case "role": {
+          const an = a.role?.name ?? "";
+          const bn = b.role?.name ?? "";
+          const nl = nullLast(an) - nullLast(bn);
+          if (nl !== 0) return nl;
+          return dir * an.localeCompare(bn);
+        }
+        case "progress":
+          return dir * (a.stats.progress - b.stats.progress);
+        case "tasks":
+          return dir * (a.stats.total - b.stats.total);
+        case "deadline": {
+          const nl = nullLast(a.p.deadline) - nullLast(b.p.deadline);
+          if (nl !== 0) return nl;
+          return dir * String(a.p.deadline ?? "").localeCompare(String(b.p.deadline ?? ""));
+        }
+        case "nextTask": {
+          const nl = nullLast(a.stats.nextTaskDate) - nullLast(b.stats.nextTaskDate);
+          if (nl !== 0) return nl;
+          return dir * String(a.stats.nextTaskDate ?? "").localeCompare(String(b.stats.nextTaskDate ?? ""));
+        }
+      }
+    };
+
+    return [...filtered].sort(cmp);
+  }, [projects, tasksByProject, rolesById, today, search, statusFilter, deadlineFilter, progressFilter, sortKey, sortDir]);
+
+  const hasFilters = search !== "" || statusFilter !== "all" || deadlineFilter !== "all" || progressFilter !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setDeadlineFilter("all");
+    setProgressFilter("all");
+  };
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/30 text-muted-foreground">
-            <tr className="text-left text-xs uppercase tracking-wider">
-              <th className="px-3 py-2 font-semibold">Projeto</th>
-              <th className="px-3 py-2 font-semibold">Status</th>
-              <th className="px-3 py-2 font-semibold">Papel</th>
-              <th className="px-3 py-2 font-semibold text-right">Progresso</th>
-              <th className="px-3 py-2 font-semibold text-right">Tarefas</th>
-              <th className="px-3 py-2 font-semibold">Prazo</th>
-              <th className="px-3 py-2 font-semibold">Próxima tarefa</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((p) => {
-              const stats = computeProjectStats(p, tasksByProject.get(p.id) ?? [], today);
-              const pct = Math.round(stats.progress * 100);
-              const role = p.role_id ? rolesById.get(p.role_id) ?? null : null;
-              return (
-                <tr key={p.id} className="border-t border-border/40 hover:bg-muted/20">
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                      <Link
-                        to="/projetos/$id"
-                        params={{ id: p.id }}
-                        className="font-medium hover:text-primary"
-                      >
-                        {p.name}
-                      </Link>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <ProjectStatusBadge status={p.status} />
-                  </td>
-                  <td className="px-3 py-2">
-                    {role ? <RoleChip role={role} /> : <span className="text-xs text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: p.color }} />
-                      </div>
-                      <span className="tabular-nums text-xs w-9 text-right">{pct}%</span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-xs">
-                    {stats.done}/{stats.total}
-                    {stats.overdueTasks > 0 && (
-                      <span className="ml-1 text-overdue">({stats.overdueTasks}↓)</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {p.deadline ? (
-                      <span className={stats.isOverdue ? "text-overdue font-medium" : "text-muted-foreground"}>
-                        {formatHuman(p.deadline)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {stats.nextTaskDate ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className={`capitalize ${stats.nextTaskOverdue ? "text-overdue font-medium" : ""}`}>
-                          {formatShort(stats.nextTaskDate)}
-                        </span>
-                        <span
-                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
-                            stats.nextTaskOverdue
-                              ? "bg-overdue/15 text-overdue border border-overdue/40"
-                              : "bg-green-500/15 text-green-600 border border-green-500/40"
-                          }`}
-                        >
-                          {stats.nextTaskOverdue ? "Atrasada" : "OK"}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {canEdit(p) && (
-                      <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
-                        Editar
-                      </button>
-                    )}
-                  </td>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/40 p-2 backdrop-blur-sm">
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar projeto..."
+            className="h-8 pl-7 text-sm"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ProjectStatus | "all")}>
+          <SelectTrigger className="h-8 w-[150px] text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos status</SelectItem>
+            {PROJECT_STATUS_ORDER.map((s) => (
+              <SelectItem key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={deadlineFilter} onValueChange={(v) => setDeadlineFilter(v as DeadlineFilter)}>
+          <SelectTrigger className="h-8 w-[150px] text-xs">
+            <SelectValue placeholder="Prazo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos prazos</SelectItem>
+            <SelectItem value="overdue">Atrasados</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="week">Próxima semana</SelectItem>
+            <SelectItem value="later">Mais tarde</SelectItem>
+            <SelectItem value="none">Sem prazo</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={progressFilter} onValueChange={(v) => setProgressFilter(v as ProgressFilter)}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="Progresso" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo progresso</SelectItem>
+            <SelectItem value="not_started">Não iniciado</SelectItem>
+            <SelectItem value="in_progress">Em andamento</SelectItem>
+            <SelectItem value="done">Concluído</SelectItem>
+          </SelectContent>
+        </Select>
+        {hasFilters && (
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clearFilters}>
+            <X className="mr-1 h-3 w-3" /> Limpar
+          </Button>
+        )}
+        <span className="ml-auto text-xs text-muted-foreground">
+          {rows.length} de {projects.length}
+        </span>
+      </div>
 
+      <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-muted-foreground">
+              <tr className="text-left text-xs uppercase tracking-wider">
+                <SortTh label="Projeto" k="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                <SortTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                <SortTh label="Papel" k="role" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                <SortTh label="Progresso" k="progress" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                <SortTh label="Tarefas" k="tasks" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                <SortTh label="Prazo" k="deadline" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                <SortTh label="Próxima tarefa" k="nextTask" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-3 py-6 text-center text-xs text-muted-foreground">
+                    Nenhum projeto corresponde aos filtros.
+                  </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : rows.map(({ p, stats, role }) => {
+                const pct = Math.round(stats.progress * 100);
+                return (
+                  <tr key={p.id} className="border-t border-border/40 hover:bg-muted/20">
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                        <Link
+                          to="/projetos/$id"
+                          params={{ id: p.id }}
+                          className="font-medium hover:text-primary"
+                        >
+                          {p.name}
+                        </Link>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <ProjectStatusBadge status={p.status} />
+                    </td>
+                    <td className="px-3 py-2">
+                      {role ? <RoleChip role={role} /> : <span className="text-xs text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: p.color }} />
+                        </div>
+                        <span className="tabular-nums text-xs w-9 text-right">{pct}%</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-xs">
+                      {stats.done}/{stats.total}
+                      {stats.overdueTasks > 0 && (
+                        <span className="ml-1 text-overdue">({stats.overdueTasks}↓)</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {p.deadline ? (
+                        <span className={stats.isOverdue ? "text-overdue font-medium" : "text-muted-foreground"}>
+                          {formatHuman(p.deadline)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {stats.nextTaskDate ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`capitalize ${stats.nextTaskOverdue ? "text-overdue font-medium" : ""}`}>
+                            {formatShort(stats.nextTaskDate)}
+                          </span>
+                          <span
+                            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                              stats.nextTaskOverdue
+                                ? "bg-overdue/15 text-overdue border border-overdue/40"
+                                : "bg-green-500/15 text-green-600 border border-green-500/40"
+                            }`}
+                          >
+                            {stats.nextTaskOverdue ? "Atrasada" : "OK"}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {canEdit(p) && (
+                        <button onClick={() => onEdit(p)} className="text-xs text-muted-foreground hover:text-foreground">
+                          Editar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+  );
+}
+
+function SortTh({
+  label, k, sortKey, sortDir, onClick, align,
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onClick: (k: SortKey) => void;
+  align?: "left" | "right";
+}) {
+  const active = sortKey === k;
+  return (
+    <th className={`px-3 py-2 font-semibold ${align === "right" ? "text-right" : "text-left"}`}>
+      <button
+        onClick={() => onClick(k)}
+        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${active ? "text-foreground" : ""}`}
+      >
+        {label}
+        {active ? (
+          sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </th>
   );
 }
 
