@@ -8,7 +8,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
-import { TaskListRow, TaskListHeader } from "@/components/TaskListRow";
+import { TaskListRow, TaskListHeader, type TaskSortKey, type TaskSortDir } from "@/components/TaskListRow";
 import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
 
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
