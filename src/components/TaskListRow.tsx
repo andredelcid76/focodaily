@@ -126,7 +126,6 @@ export function TaskListRow({
       data-task-card="true"
       onClick={handleRowClick}
       className={`group relative flex flex-wrap items-center gap-2 md:gap-3 md:grid rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
-        md:[grid-template-columns:var(--row-grid)]
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
