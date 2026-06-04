@@ -752,16 +752,6 @@ function TodayInner({ userId }: { userId: string }) {
                   : `Mostrar concluídas (${completedCount})`}
               </button>
             )}
-            {(visibleDayTasks.length > 0 || visibleOverdue.length > 0) && taskView === "list" && (
-              <button
-                type="button"
-                data-selection-toggle="true"
-                onClick={selectionMode ? clearSelection : enterSelectionMode}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {selectionMode ? "Cancelar seleção" : "Selecionar"}
-              </button>
-            )}
           </div>
         </div>
         <div className="mb-3 flex gap-2">
