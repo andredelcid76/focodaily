@@ -152,6 +152,7 @@ export function ProjectTaskBoard({
           grouping={grouping}
           members={members}
           memberById={memberById}
+          roles={roles}
           rolesById={rolesById}
           ownerId={ownerId}
           onEdit={onEdit}
@@ -160,6 +161,7 @@ export function ProjectTaskBoard({
           onToggleComplete={onToggleComplete}
           onBulkDelete={onBulkDelete}
         />
+
       ) : view === "kanban" ? (
         <KanbanView
           tasks={filtered}
@@ -186,13 +188,14 @@ export function ProjectTaskBoard({
    Table view
 ============================================================ */
 function TableView({
-  tasks, grouping, members, memberById, rolesById, ownerId,
+  tasks, grouping, members, memberById, roles, rolesById, ownerId,
   onEdit, onSetStatus, onUpdate, onToggleComplete, onBulkDelete,
 }: {
   tasks: Task[];
   grouping: Grouping;
   members: Member[];
   memberById: Map<string, Member>;
+  roles: Role[];
   rolesById: Map<string, Role>;
   ownerId: string;
   onEdit: (t: Task) => void;
@@ -201,6 +204,7 @@ function TableView({
   onToggleComplete: (t: Task) => Promise<void> | void;
   onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
+
   const today = todayISO();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -234,6 +238,12 @@ function TableView({
     toast.success("Datas atualizadas");
     clearSel();
   };
+  const bulkRole = async (rid: string | null) => {
+    await Promise.all(ids.map((id) => onUpdate(id, { role_id: rid } as any)));
+    toast.success(rid ? "Papel atualizado" : "Papel removido");
+    clearSel();
+  };
+
   const bulkDelete = async () => {
     if (!onBulkDelete) return;
     if (!window.confirm(`Excluir ${ids.length} subtarefa(s)?`)) return;
@@ -308,12 +318,22 @@ function TableView({
               ))}
             </SelectContent>
           </Select>
+          <Select onValueChange={(v) => bulkRole(v === "__none" ? null : v)}>
+            <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Papel…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">Sem papel</SelectItem>
+              {roles.map((r) => (
+                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             type="date"
             onChange={(e) => bulkDate(e.target.value)}
             className="h-7 w-36 text-xs"
             title="Mover vencimento"
           />
+
           {onBulkDelete && (
             <Button size="sm" variant="ghost" onClick={bulkDelete} className="h-7 text-destructive hover:text-destructive">
               <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
