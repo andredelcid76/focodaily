@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
+import { useTaskDependencies } from "@/hooks/useTaskDependencies";
 import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
