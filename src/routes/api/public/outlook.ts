@@ -241,7 +241,7 @@ export async function syncOutlookCalendar(userId: string) {
   const expiresAt = new Date(conn.expires_at as string).getTime();
 
   if (expiresAt - Date.now() < 120_000) {
-    const refreshed = await refreshAccessToken(conn.refresh_token as string);
+    const refreshed = await refreshAccessToken(conn.refresh_token as string, userId);
     accessToken = refreshed.access_token;
 
     const { error } = await supabaseAdmin
