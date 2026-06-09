@@ -159,7 +159,27 @@ async function authenticateRequest(request: Request) {
   return { supabase, userId: data.claims.sub };
 }
 
-async function refreshAccessToken(refreshToken: string) {
+class OutlookReauthError extends Error {
+  code = "REAUTH_REQUIRED" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "OutlookReauthError";
+  }
+}
+
+function isInvalidGrant(payload: unknown): boolean {
+  const s = JSON.stringify(payload ?? "");
+  return (
+    s.includes('"invalid_grant"') ||
+    s.includes("AADSTS65001") ||
+    s.includes("AADSTS70008") ||
+    s.includes("AADSTS50173") ||
+    s.includes("AADSTS700082") ||
+    s.includes("AADSTS700084")
+  );
+}
+
+async function refreshAccessToken(refreshToken: string, userId?: string) {
   const clientId = process.env.MS_CLIENT_ID;
   const clientSecret = process.env.MS_CLIENT_SECRET;
 
@@ -183,6 +203,14 @@ async function refreshAccessToken(refreshToken: string) {
 
   const json = await response.json();
   if (!response.ok) {
+    if (isInvalidGrant(json)) {
+      if (userId) {
+        await supabaseAdmin.from("outlook_connections").delete().eq("user_id", userId);
+      }
+      throw new OutlookReauthError(
+        "Sua conexão com o Outlook expirou. Reconecte para continuar sincronizando.",
+      );
+    }
     throw new Error(`Refresh token failed [${response.status}]: ${JSON.stringify(json)}`);
   }
 
@@ -213,7 +241,7 @@ export async function syncOutlookCalendar(userId: string) {
   const expiresAt = new Date(conn.expires_at as string).getTime();
 
   if (expiresAt - Date.now() < 120_000) {
-    const refreshed = await refreshAccessToken(conn.refresh_token as string);
+    const refreshed = await refreshAccessToken(conn.refresh_token as string, userId);
     accessToken = refreshed.access_token;
 
     const { error } = await supabaseAdmin
@@ -357,6 +385,10 @@ function json(payload: unknown, status = 200) {
 function handleRouteError(error: unknown) {
   if (error instanceof Response) {
     return error;
+  }
+
+  if (error instanceof OutlookReauthError) {
+    return json({ error: error.message, code: "REAUTH_REQUIRED" }, 401);
   }
 
   if (error instanceof z.ZodError) {
