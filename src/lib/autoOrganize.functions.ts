@@ -116,18 +116,20 @@ async function refineWithAI(
     postponed: t.postpone_count,
     recurring: t.recurrence !== "none" || !!t.recurrence_parent_id,
     from: t.origin_source ?? null,
+    project_id: t.project_id,
+    role_id: t.role_id,
   }));
 
   const totalMin = open.reduce((s, t) => s + t.duration_minutes, 0);
 
   const system = `Você é um especialista em GTD e produtividade. Reordene tarefas do dia priorizando energia, contexto e impacto.
-Regras inegociáveis:
+Regras inegociáveis (nesta ordem):
 1) Tarefas de "organizar caixa de entrada / inbox" SEMPRE primeiro.
-2) Tarefas de "planejar / organizar amanhã" SEMPRE por último.
-3) Tarefas marcadas como non_negotiable vêm logo após inbox.
-4) Tarefas muito adiadas (postponed >= 2) sobem.
-5) Categoria: urgent > important > circumstantial.
-6) Agrupe tarefas do mesmo contexto/projeto quando possível.
+2) Tarefas SEM projeto (project_id null) vêm antes de tarefas COM projeto.
+3) Tarefas do MESMO project_id devem ficar CONTÍGUAS (agrupadas em bloco).
+4) Dentro de um projeto, tarefas do MESMO role_id devem ficar CONTÍGUAS.
+5) Tarefas de "planejar / organizar amanhã" SEMPRE por último.
+6) Dentro de cada grupo: non_negotiable primeiro, depois postponed alto, depois urgent > important > circumstantial.
 Responda APENAS JSON válido: {"ordered_ids": ["id1","id2",...], "reasoning": "1 frase curta"}`;
 
   const user = `Capacidade do dia: ${capacityMinutes}min. Soma das tarefas abertas: ${totalMin}min.
