@@ -186,7 +186,15 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
       await meetingsApi.refresh();
       await refreshOutlookStatus();
     } catch (e: any) {
-      toast.error(e.message ?? "Erro ao sincronizar");
+      if (e?.code === "REAUTH_REQUIRED") {
+        setOutlook({ connected: false });
+        toast.error(e.message ?? "Reconecte o Outlook", {
+          duration: 10000,
+          action: { label: "Reconectar", onClick: () => onConnect() },
+        });
+      } else {
+        toast.error(e.message ?? "Erro ao sincronizar");
+      }
     } finally {
       setSyncing(false);
     }
