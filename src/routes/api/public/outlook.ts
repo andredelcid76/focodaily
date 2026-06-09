@@ -159,7 +159,27 @@ async function authenticateRequest(request: Request) {
   return { supabase, userId: data.claims.sub };
 }
 
-async function refreshAccessToken(refreshToken: string) {
+class OutlookReauthError extends Error {
+  code = "REAUTH_REQUIRED" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "OutlookReauthError";
+  }
+}
+
+function isInvalidGrant(payload: unknown): boolean {
+  const s = JSON.stringify(payload ?? "");
+  return (
+    s.includes('"invalid_grant"') ||
+    s.includes("AADSTS65001") ||
+    s.includes("AADSTS70008") ||
+    s.includes("AADSTS50173") ||
+    s.includes("AADSTS700082") ||
+    s.includes("AADSTS700084")
+  );
+}
+
+async function refreshAccessToken(refreshToken: string, userId?: string) {
   const clientId = process.env.MS_CLIENT_ID;
   const clientSecret = process.env.MS_CLIENT_SECRET;
 
@@ -183,6 +203,14 @@ async function refreshAccessToken(refreshToken: string) {
 
   const json = await response.json();
   if (!response.ok) {
+    if (isInvalidGrant(json)) {
+      if (userId) {
+        await supabaseAdmin.from("outlook_connections").delete().eq("user_id", userId);
+      }
+      throw new OutlookReauthError(
+        "Sua conexão com o Outlook expirou. Reconecte para continuar sincronizando.",
+      );
+    }
     throw new Error(`Refresh token failed [${response.status}]: ${JSON.stringify(json)}`);
   }
 
