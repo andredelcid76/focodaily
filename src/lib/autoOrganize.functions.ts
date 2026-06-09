@@ -48,20 +48,54 @@ function heuristicOrder(tasks: DbTask[]): DbTask[] {
     else middle.push(t);
   }
 
-  middle.sort((a, b) => {
-    // Non-negotiable first
-    if (a.non_negotiable !== b.non_negotiable) return a.non_negotiable ? -1 : 1;
-    // More postponed = higher priority
-    if (b.postpone_count !== a.postpone_count) return b.postpone_count - a.postpone_count;
-    // Category rank
-    const ca = CATEGORY_RANK[a.category] ?? 1;
-    const cb = CATEGORY_RANK[b.category] ?? 1;
-    if (ca !== cb) return ca - cb;
-    // Preserve position
-    return a.position - b.position;
-  });
+  // Intra-group priority score (lower = earlier)
+  const score = (t: DbTask) => {
+    let s = 0;
+    if (!t.non_negotiable) s += 1000;
+    s -= t.postpone_count * 100;
+    s += (CATEGORY_RANK[t.category] ?? 1) * 10;
+    s += t.position * 0.001;
+    return s;
+  };
 
-  return [...inboxOrg, ...middle, ...nextDayPlan, ...completed];
+  // Rule 3: tasks without project first, with project at the end
+  const noProject = middle.filter((t) => !t.project_id).sort((a, b) => score(a) - score(b));
+  const withProject = middle.filter((t) => !!t.project_id);
+
+  // Rule 1: group by project (contiguous); order projects by best-scoring task
+  const projectGroups = new Map<string, DbTask[]>();
+  for (const t of withProject) {
+    const k = t.project_id!;
+    if (!projectGroups.has(k)) projectGroups.set(k, []);
+    projectGroups.get(k)!.push(t);
+  }
+  const orderedProjectGroups = [...projectGroups.values()]
+    .map((g) => {
+      g.sort((a, b) => score(a) - score(b));
+      return g;
+    })
+    .sort((a, b) => score(a[0]) - score(b[0]));
+
+  // Rule 2: within each project group, keep same role contiguous
+  const groupByRoleContiguous = (g: DbTask[]) => {
+    const byRole = new Map<string, DbTask[]>();
+    const roleOrder: string[] = [];
+    for (const t of g) {
+      const k = t.role_id ?? "__none__";
+      if (!byRole.has(k)) {
+        byRole.set(k, []);
+        roleOrder.push(k);
+      }
+      byRole.get(k)!.push(t);
+    }
+    return roleOrder.flatMap((k) => byRole.get(k)!);
+  };
+  const projectsFlat = orderedProjectGroups.flatMap(groupByRoleContiguous);
+
+  // Also keep no-project tasks grouped by role contiguously
+  const noProjectGrouped = groupByRoleContiguous(noProject);
+
+  return [...inboxOrg, ...noProjectGrouped, ...projectsFlat, ...nextDayPlan, ...completed];
 }
 
 async function refineWithAI(
