@@ -387,6 +387,10 @@ function handleRouteError(error: unknown) {
     return error;
   }
 
+  if (error instanceof OutlookReauthError) {
+    return json({ error: error.message, code: "REAUTH_REQUIRED" }, 401);
+  }
+
   if (error instanceof z.ZodError) {
     return json({ error: "Requisição inválida" }, 400);
   }
