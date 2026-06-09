@@ -73,7 +73,11 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload.error ?? "Erro ao comunicar com Outlook");
+      const err = new Error(payload.error ?? "Erro ao comunicar com Outlook") as Error & {
+        code?: string;
+      };
+      if (payload?.code) err.code = payload.code;
+      throw err;
     }
 
     return payload as T;
