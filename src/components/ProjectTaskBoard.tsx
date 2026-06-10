@@ -755,12 +755,32 @@ function KanbanCard({
 type Zoom = "day" | "week" | "month" | "quarter";
 type TLGroup = "none" | "status" | "assignee";
 
-const ZOOM_PX: Record<Zoom, number> = { day: 56, week: 22, month: 9, quarter: 4 };
+const ZOOM_PX: Record<Zoom, number> = { day: 72, week: 32, month: 14, quarter: 7 };
 const ZOOM_LABEL: Record<Zoom, string> = { day: "Dia", week: "Semana", month: "Mês", quarter: "Trimestre" };
 
 function startOfMonth(iso: string) {
   const [y, m] = iso.split("-").map(Number);
   return `${y}-${String(m).padStart(2, "0")}-01`;
+}
+function startOfWeek(iso: string) {
+  // Monday-based start of week, returns YYYY-MM-DD.
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const dow = dt.getDay(); // 0=Sun..6=Sat
+  const delta = dow === 0 ? -6 : 1 - dow;
+  dt.setDate(dt.getDate() + delta);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+function isoWeekNumber(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = dt.getUTCDay() || 7;
+  dt.setUTCDate(dt.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+  return Math.ceil(((dt.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 function diffDays(a: string, b: string) {
   const at = new Date(a + "T00:00:00").getTime();
