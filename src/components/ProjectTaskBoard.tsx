@@ -854,7 +854,48 @@ function TimelineView({
     }
   }
 
+  // Week markers + per-week progress (built always; rendered below).
+  const weeks: {
+    iso: string;
+    left: number;
+    width: number;
+    label: string;
+    total: number;
+    done: number;
+    pct: number;
+    isCurrent: boolean;
+  }[] = [];
+  {
+    const currentWeekStart = startOfWeek(today);
+    let wCursor = startOfWeek(minDate);
+    while (wCursor <= maxDate) {
+      const next = addDays(wCursor, 7);
+      const startOff = Math.max(0, diffDays(minDate, wCursor));
+      const endOff = Math.min(totalDays, diffDays(minDate, next));
+      const inWeek = sorted.filter(
+        (t) => t.scheduled_date >= wCursor && t.scheduled_date < next,
+      );
+      const done = inWeek.filter((t) => t.completed).length;
+      weeks.push({
+        iso: wCursor,
+        left: startOff * pxPerDay,
+        width: Math.max(0, (endOff - startOff) * pxPerDay),
+        label: `S${isoWeekNumber(wCursor)}`,
+        total: inWeek.length,
+        done,
+        pct: inWeek.length ? Math.round((done / inWeek.length) * 100) : 0,
+        isCurrent: wCursor === currentWeekStart,
+      });
+      wCursor = next;
+    }
+  }
+
   const todayLeft = diffDays(minDate, today) * pxPerDay;
+
+  // Overall progress
+  const totalCount = sorted.length;
+  const doneCount = sorted.filter((t) => t.completed).length;
+  const overallPct = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
 
   // Grouping
   const groups = useMemo(() => {
