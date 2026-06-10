@@ -281,9 +281,9 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           <DialogTitle className="text-lg">{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-0 overflow-hidden">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-0 overflow-y-auto lg:overflow-hidden">
           {/* LEFT — Title + Description (focal) */}
-          <div className="flex flex-col min-h-0 border-r border-border/60 p-6 gap-4 overflow-y-auto">
+          <div className="flex flex-col lg:min-h-0 border-b lg:border-b-0 lg:border-r border-border/60 p-6 gap-4 lg:overflow-y-auto min-w-0">
             <div>
               <Label htmlFor="t-title" className="text-xs uppercase tracking-wide text-muted-foreground">Título</Label>
               <Input
@@ -295,14 +295,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                 className="mt-1.5 h-11 text-base font-medium"
               />
             </div>
-            <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex flex-col">
               <Label htmlFor="t-desc" className="text-xs uppercase tracking-wide text-muted-foreground">Descrição</Label>
               <Textarea
                 id="t-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Detalhes, contexto, links, critérios de aceitação…"
-                className="mt-1.5 flex-1 min-h-[200px] resize-none text-sm leading-relaxed"
+                className="mt-1.5 min-h-[140px] resize-y text-sm leading-relaxed"
               />
             </div>
 
@@ -315,10 +315,128 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                 Salve a tarefa para adicionar subtarefas.
               </div>
             )}
+
+            {task?.id && !isSeed && (
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2 min-w-0">
+                <Label className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+                  <Link2 className="h-3.5 w-3.5" /> Depende de
+                </Label>
+                {predecessorIds.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma. A tarefa pode começar a qualquer momento.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {predecessorIds.map((pid) => {
+                      const p = allOpenTasks.find((t) => t.id === pid);
+                      const label = p?.title ?? "Tarefa concluída/desconhecida";
+                      return (
+                        <span key={pid} className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs text-primary max-w-full">
+                          <Link2 className="h-3 w-3 shrink-0" />
+                          <span className="max-w-[12rem] truncate">{label}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPredecessorIds((prev) => prev.filter((x) => x !== pid))}
+                            className="hover:text-destructive shrink-0"
+                            aria-label="Remover dependência"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row min-w-0">
+                  <Select
+                    value={predecessorProjectFilter}
+                    onValueChange={(v) => setPredecessorProjectFilter(v)}
+                  >
+                    <SelectTrigger className="h-9 sm:w-[200px] shrink-0">
+                      <SelectValue placeholder="Filtrar por projeto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Todos os projetos</SelectItem>
+                      <SelectItem value="__none__">Sem projeto</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="max-w-[16rem] truncate">{p.name}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Popover open={predecessorPopoverOpen} onOpenChange={setPredecessorPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className="h-9 flex-1 min-w-0 justify-between font-normal"
+                      >
+                        <span className="text-muted-foreground truncate">Buscar e adicionar predecessora…</span>
+                        <Link2 className="h-3.5 w-3.5 opacity-60 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Digite o nome da tarefa…"
+                          value={predecessorSearch}
+                          onValueChange={setPredecessorSearch}
+                        />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma tarefa encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {(() => {
+                              const q = predecessorSearch.trim().toLowerCase();
+                              const candidates = allOpenTasks
+                                .filter((t) => t.id !== task?.id && !predecessorIds.includes(t.id))
+                                .filter((t) => {
+                                  if (predecessorProjectFilter === "__all__") return true;
+                                  if (predecessorProjectFilter === "__none__") return t.project_id == null;
+                                  return t.project_id === predecessorProjectFilter;
+                                })
+                                .filter((t) => q.length === 0 || t.title.toLowerCase().includes(q))
+                                .slice(0, 50);
+                              if (candidates.length === 0) return null;
+                              return candidates.map((t) => {
+                                const proj = projects.find((p) => p.id === t.project_id);
+                                return (
+                                  <CommandItem
+                                    key={t.id}
+                                    value={t.id}
+                                    onSelect={() => {
+                                      setPredecessorIds((prev) => prev.includes(t.id) ? prev : [...prev, t.id]);
+                                      setPredecessorPopoverOpen(false);
+                                      setPredecessorSearch("");
+                                    }}
+                                  >
+                                    <div className="flex w-full items-center gap-2">
+                                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">{t.scheduled_date}</span>
+                                      <span className="truncate flex-1">{t.title}</span>
+                                      {proj && (
+                                        <span className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground max-w-[8rem] truncate">
+                                          {proj.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              });
+                            })()}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Quando a predecessora for adiada ou concluída, a data desta tarefa será ajustada automaticamente.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* RIGHT — Metadata */}
-          <div className="flex flex-col min-h-0 overflow-y-auto p-6 gap-4 bg-muted/10">
+          <div className="flex flex-col lg:min-h-0 lg:overflow-y-auto p-6 gap-4 bg-muted/10 min-w-0">
           <div className={`grid gap-3 ${delegatedToOther ? "grid-cols-1" : "grid-cols-2"}`}>
             <div>
               <Label>Categoria</Label>
@@ -639,124 +757,6 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   </p>
                 </div>
               )}
-            </div>
-          )}
-
-          {task?.id && !isSeed && (
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2">
-              <Label className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-                <Link2 className="h-3.5 w-3.5" /> Depende de
-              </Label>
-              {predecessorIds.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Nenhuma. A tarefa pode começar a qualquer momento.</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {predecessorIds.map((pid) => {
-                    const p = allOpenTasks.find((t) => t.id === pid);
-                    const label = p?.title ?? "Tarefa concluída/desconhecida";
-                    return (
-                      <span key={pid} className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                        <Link2 className="h-3 w-3" />
-                        <span className="max-w-[12rem] truncate">{label}</span>
-                        <button
-                          type="button"
-                          onClick={() => setPredecessorIds((prev) => prev.filter((x) => x !== pid))}
-                          className="hover:text-destructive"
-                          aria-label="Remover dependência"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Select
-                  value={predecessorProjectFilter}
-                  onValueChange={(v) => setPredecessorProjectFilter(v)}
-                >
-                  <SelectTrigger className="h-9 sm:w-[200px]">
-                    <SelectValue placeholder="Filtrar por projeto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Todos os projetos</SelectItem>
-                    <SelectItem value="__none__">Sem projeto</SelectItem>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <span className="max-w-[16rem] truncate">{p.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Popover open={predecessorPopoverOpen} onOpenChange={setPredecessorPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      className="h-9 flex-1 justify-between font-normal"
-                    >
-                      <span className="text-muted-foreground">Buscar e adicionar predecessora…</span>
-                      <Link2 className="h-3.5 w-3.5 opacity-60" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="Digite o nome da tarefa…"
-                        value={predecessorSearch}
-                        onValueChange={setPredecessorSearch}
-                      />
-                      <CommandList>
-                        <CommandEmpty>Nenhuma tarefa encontrada.</CommandEmpty>
-                        <CommandGroup>
-                          {(() => {
-                            const q = predecessorSearch.trim().toLowerCase();
-                            const candidates = allOpenTasks
-                              .filter((t) => t.id !== task?.id && !predecessorIds.includes(t.id))
-                              .filter((t) => {
-                                if (predecessorProjectFilter === "__all__") return true;
-                                if (predecessorProjectFilter === "__none__") return t.project_id == null;
-                                return t.project_id === predecessorProjectFilter;
-                              })
-                              .filter((t) => q.length === 0 || t.title.toLowerCase().includes(q))
-                              .slice(0, 50);
-                            if (candidates.length === 0) return null;
-                            return candidates.map((t) => {
-                              const proj = projects.find((p) => p.id === t.project_id);
-                              return (
-                                <CommandItem
-                                  key={t.id}
-                                  value={t.id}
-                                  onSelect={() => {
-                                    setPredecessorIds((prev) => prev.includes(t.id) ? prev : [...prev, t.id]);
-                                    setPredecessorPopoverOpen(false);
-                                    setPredecessorSearch("");
-                                  }}
-                                >
-                                  <div className="flex w-full items-center gap-2">
-                                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">{t.scheduled_date}</span>
-                                    <span className="truncate flex-1">{t.title}</span>
-                                    {proj && (
-                                      <span className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground max-w-[8rem] truncate">
-                                        {proj.name}
-                                      </span>
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              );
-                            });
-                          })()}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Quando a predecessora for adiada ou concluída, a data desta tarefa será ajustada automaticamente.
-              </p>
             </div>
           )}
           </div>
