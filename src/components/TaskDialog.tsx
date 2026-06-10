@@ -436,7 +436,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           </div>
 
           {/* RIGHT — Metadata */}
-          <div className="flex flex-col min-h-0 overflow-y-auto p-6 gap-4 bg-muted/10">
+          <div className="flex flex-col lg:min-h-0 lg:overflow-y-auto p-6 gap-4 bg-muted/10 min-w-0">
           <div className={`grid gap-3 ${delegatedToOther ? "grid-cols-1" : "grid-cols-2"}`}>
             <div>
               <Label>Categoria</Label>
