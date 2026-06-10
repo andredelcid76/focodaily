@@ -276,20 +276,49 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
+      <DialogContent className="w-[96vw] sm:max-w-[1100px] h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border/60 shrink-0">
+          <DialogTitle className="text-lg">{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div>
-            <Label htmlFor="t-title">Título</Label>
-            <Input id="t-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Revisar relatório semanal" autoFocus />
-          </div>
-          <div>
-            <Label htmlFor="t-desc">Descrição (opcional)</Label>
-            <Textarea id="t-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-0 overflow-hidden">
+          {/* LEFT — Title + Description (focal) */}
+          <div className="flex flex-col min-h-0 border-r border-border/60 p-6 gap-4 overflow-y-auto">
+            <div>
+              <Label htmlFor="t-title" className="text-xs uppercase tracking-wide text-muted-foreground">Título</Label>
+              <Input
+                id="t-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex.: Revisar relatório semanal"
+                autoFocus
+                className="mt-1.5 h-11 text-base font-medium"
+              />
+            </div>
+            <div className="flex flex-col flex-1 min-h-0">
+              <Label htmlFor="t-desc" className="text-xs uppercase tracking-wide text-muted-foreground">Descrição</Label>
+              <Textarea
+                id="t-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Detalhes, contexto, links, critérios de aceitação…"
+                className="mt-1.5 flex-1 min-h-[200px] resize-none text-sm leading-relaxed"
+              />
+            </div>
+
+            {task?.id && !isSeed && user?.id ? (
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 shrink-0">
+                <SubtasksList taskId={task.id} userId={user.id} />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground shrink-0">
+                Salve a tarefa para adicionar subtarefas.
+              </div>
+            )}
           </div>
 
+          {/* RIGHT — Metadata */}
+          <div className="flex flex-col min-h-0 overflow-y-auto p-6 gap-4 bg-muted/10">
           <div className={`grid gap-3 ${delegatedToOther ? "grid-cols-1" : "grid-cols-2"}`}>
             <div>
               <Label>Categoria</Label>
@@ -427,7 +456,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   Inegociável neste dia
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Não pode ser adiada sem confirmação. Ideal para prazos e contas.
+                  Não pode ser adiada sem confirmação.
                 </div>
               </div>
             </div>
@@ -730,19 +759,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               </p>
             </div>
           )}
-
-
-          {task?.id && !isSeed && user?.id ? (
-            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-              <SubtasksList taskId={task.id} userId={user.id} />
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground">
-              Salve a tarefa para adicionar subtarefas.
-            </div>
-          )}
+          </div>
         </div>
-        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between px-6 py-3 border-t border-border/60 shrink-0 bg-background">
           <div className="flex gap-2">
             {task && onDelete && (
               <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={handleDeleteClick}>
@@ -772,6 +792,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           </div>
         </DialogFooter>
       </DialogContent>
+
 
       {/* Recurrence scope sub-dialog */}
       <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) { setScopeOpen(false); setPendingAction(null); } }}>
