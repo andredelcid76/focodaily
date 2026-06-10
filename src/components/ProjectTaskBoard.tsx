@@ -993,7 +993,10 @@ function TimelineView({
       <div className="flex">
         {/* Fixed left column header spacer + titles */}
         <div className="w-[220px] shrink-0 border-r border-border/60">
-          <div className="h-12 border-b border-border/60 bg-muted/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-end">
+          <div
+            className="border-b border-border/60 bg-muted/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-end"
+            style={{ height: showDayTicks ? 68 : 48 }}
+          >
             Tarefa
           </div>
           {groups.map((g) => (
