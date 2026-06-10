@@ -755,12 +755,32 @@ function KanbanCard({
 type Zoom = "day" | "week" | "month" | "quarter";
 type TLGroup = "none" | "status" | "assignee";
 
-const ZOOM_PX: Record<Zoom, number> = { day: 56, week: 22, month: 9, quarter: 4 };
+const ZOOM_PX: Record<Zoom, number> = { day: 72, week: 32, month: 14, quarter: 7 };
 const ZOOM_LABEL: Record<Zoom, string> = { day: "Dia", week: "Semana", month: "Mês", quarter: "Trimestre" };
 
 function startOfMonth(iso: string) {
   const [y, m] = iso.split("-").map(Number);
   return `${y}-${String(m).padStart(2, "0")}-01`;
+}
+function startOfWeek(iso: string) {
+  // Monday-based start of week, returns YYYY-MM-DD.
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const dow = dt.getDay(); // 0=Sun..6=Sat
+  const delta = dow === 0 ? -6 : 1 - dow;
+  dt.setDate(dt.getDate() + delta);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+function isoWeekNumber(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = dt.getUTCDay() || 7;
+  dt.setUTCDate(dt.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+  return Math.ceil(((dt.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 function diffDays(a: string, b: string) {
   const at = new Date(a + "T00:00:00").getTime();
@@ -834,7 +854,48 @@ function TimelineView({
     }
   }
 
+  // Week markers + per-week progress (built always; rendered below).
+  const weeks: {
+    iso: string;
+    left: number;
+    width: number;
+    label: string;
+    total: number;
+    done: number;
+    pct: number;
+    isCurrent: boolean;
+  }[] = [];
+  {
+    const currentWeekStart = startOfWeek(today);
+    let wCursor = startOfWeek(minDate);
+    while (wCursor <= maxDate) {
+      const next = addDays(wCursor, 7);
+      const startOff = Math.max(0, diffDays(minDate, wCursor));
+      const endOff = Math.min(totalDays, diffDays(minDate, next));
+      const inWeek = sorted.filter(
+        (t) => t.scheduled_date >= wCursor && t.scheduled_date < next,
+      );
+      const done = inWeek.filter((t) => t.completed).length;
+      weeks.push({
+        iso: wCursor,
+        left: startOff * pxPerDay,
+        width: Math.max(0, (endOff - startOff) * pxPerDay),
+        label: `S${isoWeekNumber(wCursor)}`,
+        total: inWeek.length,
+        done,
+        pct: inWeek.length ? Math.round((done / inWeek.length) * 100) : 0,
+        isCurrent: wCursor === currentWeekStart,
+      });
+      wCursor = next;
+    }
+  }
+
   const todayLeft = diffDays(minDate, today) * pxPerDay;
+
+  // Overall progress
+  const totalCount = sorted.length;
+  const doneCount = sorted.filter((t) => t.completed).length;
+  const overallPct = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
 
   // Grouping
   const groups = useMemo(() => {
@@ -916,15 +977,26 @@ function TimelineView({
         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={scrollToToday}>
           Ir para hoje
         </Button>
-        <div className="ml-auto text-[11px] text-muted-foreground">
-          {sorted.length} tarefas · {fmtDay(rawMin)} → {fmtDay(rawMax)} · arraste as barras para mudar a data
+        <div className="ml-auto flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span>
+            <span className="font-semibold text-foreground">{doneCount}</span>
+            <span className="mx-1">/</span>
+            <span>{totalCount}</span>
+            <span className="ml-1">concluídas</span>
+            <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">{overallPct}%</span>
+          </span>
+          <span className="hidden md:inline">{fmtDay(rawMin)} → {fmtDay(rawMax)}</span>
+          <span className="hidden lg:inline">arraste para mover</span>
         </div>
       </div>
 
       <div className="flex">
         {/* Fixed left column header spacer + titles */}
         <div className="w-[220px] shrink-0 border-r border-border/60">
-          <div className="h-12 border-b border-border/60 bg-muted/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-end">
+          <div
+            className="border-b border-border/60 bg-muted/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-end"
+            style={{ height: showDayTicks ? 68 : 48 }}
+          >
             Tarefa
           </div>
           {groups.map((g) => (
@@ -968,10 +1040,13 @@ function TimelineView({
             className="overflow-x-auto"
           >
             <div style={{ width: trackWidth }}>
-              {/* Header: months + days */}
-              <div className="relative h-12 border-b border-border/60 bg-muted/20">
+              {/* Header: months + weeks + days */}
+              <div
+                className="relative border-b border-border/60 bg-muted/20"
+                style={{ height: showDayTicks ? 68 : 48 }}
+              >
                 {/* Month row */}
-                <div className="relative h-6 border-b border-border/40">
+                <div className="relative h-5 border-b border-border/40">
                   {months.map((mo) => (
                     <div
                       key={mo.iso}
@@ -982,10 +1057,46 @@ function TimelineView({
                     </div>
                   ))}
                 </div>
-                {/* Day row */}
-                <div className="relative h-6">
-                  {showDayTicks ? (
-                    dayTicks.map((d) => {
+
+                {/* Week row: label + progress fill */}
+                <div className="relative h-7 border-b border-border/40">
+                  {weeks.map((w) => {
+                    const fill = (w.width * w.pct) / 100;
+                    return (
+                      <div
+                        key={`wk-${w.iso}`}
+                        className={`absolute top-0 h-full border-l ${
+                          w.isCurrent ? "border-primary/60 bg-primary/5" : "border-border/30"
+                        }`}
+                        style={{ left: w.left, width: w.width }}
+                        title={`${w.label} · ${w.done}/${w.total} (${w.pct}%)`}
+                      >
+                        {/* progress fill behind label */}
+                        {w.total > 0 && (
+                          <div
+                            className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-emerald-500/25"
+                            style={{ width: Math.max(0, fill) }}
+                          />
+                        )}
+                        <div className="relative flex h-full items-center justify-between px-1.5 text-[10px] tabular-nums">
+                          <span className={`font-semibold ${w.isCurrent ? "text-primary" : "text-foreground/70"}`}>
+                            {w.width >= 26 ? w.label : ""}
+                          </span>
+                          {w.width >= 56 && w.total > 0 && (
+                            <span className="text-muted-foreground">
+                              {w.done}/{w.total}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Day row (only at day/week zoom) */}
+                {showDayTicks && (
+                  <div className="relative h-5">
+                    {dayTicks.map((d) => {
                       const dd = d.iso.slice(8, 10);
                       const showLabel = zoom === "day" || pxPerDay >= 20;
                       return (
@@ -1001,19 +1112,9 @@ function TimelineView({
                           {showLabel ? dd : ""}
                         </div>
                       );
-                    })
-                  ) : (
-                    months.map((mo) => (
-                      <div
-                        key={mo.iso}
-                        className="absolute top-0 flex h-full items-center border-l border-border/30 px-1.5 text-[10px] text-muted-foreground"
-                        style={{ left: mo.left, width: mo.width }}
-                      >
-                        &nbsp;
-                      </div>
-                    ))
-                  )}
-                </div>
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Rows */}
