@@ -54,7 +54,7 @@ async function refreshOutlookToken(refreshToken: string) {
     client_secret: process.env.MS_CLIENT_SECRET!,
     grant_type: "refresh_token",
     refresh_token: refreshToken,
-    scope: "offline_access openid profile User.Read Mail.Read Calendars.ReadWrite Tasks.ReadWrite Group.Read.All",
+    scope: "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All",
   });
   const r = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
     method: "POST",

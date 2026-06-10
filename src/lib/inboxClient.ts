@@ -119,6 +119,33 @@ export async function acceptSuggestion(input: {
     .eq("id", input.id)
     .eq("user_id", input.userId);
 
+  // If the suggestion came from an Outlook email, tag the message with the
+  // "Foco App" category so future scans skip it (and any new replies in the
+  // same thread are still picked up, since the tag is per-message).
+  if (sug?.source === "email") {
+    try {
+      const { data: full } = await supabase
+        .from("inbox_suggestions")
+        .select("source_id")
+        .eq("id", input.id)
+        .maybeSingle();
+      const messageId = (full?.source_id as string | undefined) ?? undefined;
+      if (messageId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          await fetch(`${window.location.origin}/api/public/inbox/tag-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ message_id: messageId }),
+          });
+        }
+      }
+    } catch (e) {
+      console.error("tag-email after accept failed", e);
+    }
+  }
+
   return { task_id: task.id };
 }
 
