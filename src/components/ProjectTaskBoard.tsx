@@ -977,8 +977,16 @@ function TimelineView({
         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={scrollToToday}>
           Ir para hoje
         </Button>
-        <div className="ml-auto text-[11px] text-muted-foreground">
-          {sorted.length} tarefas · {fmtDay(rawMin)} → {fmtDay(rawMax)} · arraste as barras para mudar a data
+        <div className="ml-auto flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span>
+            <span className="font-semibold text-foreground">{doneCount}</span>
+            <span className="mx-1">/</span>
+            <span>{totalCount}</span>
+            <span className="ml-1">concluídas</span>
+            <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">{overallPct}%</span>
+          </span>
+          <span className="hidden md:inline">{fmtDay(rawMin)} → {fmtDay(rawMax)}</span>
+          <span className="hidden lg:inline">arraste para mover</span>
         </div>
       </div>
 
