@@ -1040,10 +1040,13 @@ function TimelineView({
             className="overflow-x-auto"
           >
             <div style={{ width: trackWidth }}>
-              {/* Header: months + days */}
-              <div className="relative h-12 border-b border-border/60 bg-muted/20">
+              {/* Header: months + weeks + days */}
+              <div
+                className="relative border-b border-border/60 bg-muted/20"
+                style={{ height: showDayTicks ? 68 : 48 }}
+              >
                 {/* Month row */}
-                <div className="relative h-6 border-b border-border/40">
+                <div className="relative h-5 border-b border-border/40">
                   {months.map((mo) => (
                     <div
                       key={mo.iso}
@@ -1054,10 +1057,46 @@ function TimelineView({
                     </div>
                   ))}
                 </div>
-                {/* Day row */}
-                <div className="relative h-6">
-                  {showDayTicks ? (
-                    dayTicks.map((d) => {
+
+                {/* Week row: label + progress fill */}
+                <div className="relative h-7 border-b border-border/40">
+                  {weeks.map((w) => {
+                    const fill = (w.width * w.pct) / 100;
+                    return (
+                      <div
+                        key={`wk-${w.iso}`}
+                        className={`absolute top-0 h-full border-l ${
+                          w.isCurrent ? "border-primary/60 bg-primary/5" : "border-border/30"
+                        }`}
+                        style={{ left: w.left, width: w.width }}
+                        title={`${w.label} · ${w.done}/${w.total} (${w.pct}%)`}
+                      >
+                        {/* progress fill behind label */}
+                        {w.total > 0 && (
+                          <div
+                            className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-emerald-500/25"
+                            style={{ width: Math.max(0, fill) }}
+                          />
+                        )}
+                        <div className="relative flex h-full items-center justify-between px-1.5 text-[10px] tabular-nums">
+                          <span className={`font-semibold ${w.isCurrent ? "text-primary" : "text-foreground/70"}`}>
+                            {w.width >= 26 ? w.label : ""}
+                          </span>
+                          {w.width >= 56 && w.total > 0 && (
+                            <span className="text-muted-foreground">
+                              {w.done}/{w.total}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Day row (only at day/week zoom) */}
+                {showDayTicks && (
+                  <div className="relative h-5">
+                    {dayTicks.map((d) => {
                       const dd = d.iso.slice(8, 10);
                       const showLabel = zoom === "day" || pxPerDay >= 20;
                       return (
@@ -1073,19 +1112,9 @@ function TimelineView({
                           {showLabel ? dd : ""}
                         </div>
                       );
-                    })
-                  ) : (
-                    months.map((mo) => (
-                      <div
-                        key={mo.iso}
-                        className="absolute top-0 flex h-full items-center border-l border-border/30 px-1.5 text-[10px] text-muted-foreground"
-                        style={{ left: mo.left, width: mo.width }}
-                      >
-                        &nbsp;
-                      </div>
-                    ))
-                  )}
-                </div>
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Rows */}
