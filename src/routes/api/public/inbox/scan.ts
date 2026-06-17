@@ -546,14 +546,21 @@ Regras estritas:
 - DEDUPLICAÇÃO CRÍTICA: Se a ação já existe na lista de "TAREFAS JÁ CADASTRADAS" abaixo (mesmo que com palavras ligeiramente diferentes, mesmo assunto/contato/objetivo), NÃO crie sugestão. Prefira pular a duplicar.
 - Para cada item de entrada, retorne 0 ou mais sugestões.
 - Categoria: "urgent" (prazo <= 2 dias OU e-mail pendente há > 7 dias), "important" (sem prazo crítico), "circumstantial" (rotina).
-- Duração em minutos: 15, 30, 60, 90 ou 120 (responder e-mail = 15 ou 30).
+- Duração em minutos — calibre RIGOROSAMENTE pelo esforço real:
+  • 5  → responder e-mail curto/objetivo, confirmar presença, dar ok, enviar link, mensagem rápida.
+  • 10 → responder e-mail com 1-2 parágrafos, revisar documento curto, follow-up simples no CRM.
+  • 15 → responder e-mail com contexto/anexos, atualizar status de deal, retorno com 2-3 perguntas.
+  • 30 → escrever proposta curta, preparar resposta detalhada, analisar ata e tirar próximos passos.
+  • 60 → preparar apresentação/documento, reunião de follow-up, análise mais profunda.
+  • 90 ou 120 → entregáveis complexos (raros — só quando o item descreve trabalho extenso explícito).
+  Padrão para "Responder <Nome>": 5 a 15 min. Use 30+ APENAS se o e-mail pede algo claramente trabalhoso (proposta, planilha, análise).
 - Data sugerida (YYYY-MM-DD): hoje ou próxima data útil razoável.
 - Título curto e acionável (verbo no infinitivo). Para e-mails: "Responder <Nome>: <tema>".
 
 ${existingBlock}
 
 Retorne JSON válido:
-{"results":[{"source_index":0,"suggestions":[{"title":"...","description":"...","suggested_category":"important","suggested_duration_minutes":30,"suggested_date":"${today}","reasoning":"..."}]}]}`,
+{"results":[{"source_index":0,"suggestions":[{"title":"...","description":"...","suggested_category":"important","suggested_duration_minutes":10,"suggested_date":"${today}","reasoning":"..."}]}]}`,
         },
         { role: "user", content: numbered },
       ],
