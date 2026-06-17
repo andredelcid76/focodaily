@@ -34,7 +34,7 @@ export function useRoles(userId: string | undefined) {
     if (!userId) return;
     refresh();
     const ch = supabase
-      .channel("roles-rt")
+      .channel(`roles-rt-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "roles", filter: `user_id=eq.${userId}` },
