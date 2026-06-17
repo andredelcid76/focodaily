@@ -34,13 +34,24 @@ export async function fetchInboxSuggestions(userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
 
+  const cutoffISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  // Auto-cleanup: apaga sugestões já acionadas (descartadas ou aceitas) com mais de 24h
+  await supabase
+    .from("inbox_suggestions")
+    .delete()
+    .eq("user_id", userId)
+    .neq("status", "pending")
+    .lt("acted_at", cutoffISO);
+
   const { data: history } = await supabase
     .from("inbox_suggestions")
     .select("*")
     .eq("user_id", userId)
     .neq("status", "pending")
+    .gte("acted_at", cutoffISO)
     .order("acted_at", { ascending: false })
-    .limit(5);
+    .limit(50);
 
   return {
     suggestions: (data ?? []) as InboxSuggestion[],
