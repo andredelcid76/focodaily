@@ -54,7 +54,7 @@ export function useProjects(userId: string | undefined) {
     if (!userId) return;
     refresh();
     const ch = supabase
-      .channel(`projects-rt-${userId}`)
+      .channel(`projects-rt-${userId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "projects", filter: `user_id=eq.${userId}` },
@@ -161,7 +161,7 @@ export function useProjectHistory(projectId: string | undefined) {
       if (active && data) setHistory(data);
     })();
     const ch = supabase
-      .channel(`project-history-${projectId}`)
+      .channel(`project-history-${projectId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "project_status_history", filter: `project_id=eq.${projectId}` },
