@@ -150,6 +150,7 @@ function Shell({ children }: { children: ReactNode }) {
 
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <MayaChat />
+        <QuickAddTaskButton />
       </div>
     </SidebarProvider>
   );
