@@ -205,65 +205,72 @@ function InboxPage() {
 
       {history.length > 0 && (
         <div className="pt-2 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <History className="h-4 w-4" /> Histórico recente
-            <span className="text-xs text-muted-foreground/70 font-normal">(últimas {history.length})</span>
-          </div>
-          <div className="space-y-2">
-            {history.map((h) => {
-              const meta = SOURCE_META[h.source];
-              const Icon = meta.icon;
-              const isAccepted = h.status === "accepted";
-              return (
-                <Card key={h.id} className="p-3 flex items-start justify-between gap-3 opacity-75 hover:opacity-100 transition-opacity">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className={meta.color}>
-                        <Icon className="h-3 w-3 mr-1" /> {meta.label}
-                      </Badge>
-                      {isAccepted ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">
-                          <CheckCircle2 className="h-3 w-3 mr-1" /> Aceita
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showHistory ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <History className="h-4 w-4" /> Histórico (últimas 24h)
+            <span className="text-xs text-muted-foreground/70 font-normal">· {history.length}</span>
+          </button>
+          {showHistory && (
+            <div className="space-y-2">
+              {history.map((h) => {
+                const meta = SOURCE_META[h.source];
+                const Icon = meta.icon;
+                const isAccepted = h.status === "accepted";
+                return (
+                  <Card key={h.id} className="p-3 flex items-start justify-between gap-3 opacity-75 hover:opacity-100 transition-opacity">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className={meta.color}>
+                          <Icon className="h-3 w-3 mr-1" /> {meta.label}
                         </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px]">
-                          <X className="h-3 w-3 mr-1" /> Descartada
-                        </Badge>
-                      )}
-                      {h.acted_at && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(h.acted_at), { addSuffix: true, locale: ptBR })}
-                        </span>
+                        {isAccepted ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Aceita
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px]">
+                            <X className="h-3 w-3 mr-1" /> Descartada
+                          </Badge>
+                        )}
+                        {h.acted_at && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(h.acted_at), { addSuffix: true, locale: ptBR })}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium truncate mt-1">{h.title}</div>
+                      {h.source_label && (
+                        <div className="text-xs text-muted-foreground truncate">{h.source_label}</div>
                       )}
                     </div>
-                    <div className="text-sm font-medium truncate mt-1">{h.title}</div>
-                    {h.source_label && (
-                      <div className="text-xs text-muted-foreground truncate">{h.source_label}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {h.source_url && (
-                      <Button asChild variant="ghost" size="sm">
-                        <a href={h.source_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                    )}
-                    {!isAccepted && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => reactivateMut.mutate(h.id)}
-                        disabled={reactivateMut.isPending}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reativar
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {h.source_url && (
+                        <Button asChild variant="ghost" size="sm">
+                          <a href={h.source_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      )}
+                      {!isAccepted && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => reactivateMut.mutate(h.id)}
+                          disabled={reactivateMut.isPending}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reativar
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
