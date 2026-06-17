@@ -362,7 +362,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
         task={editingTask}
         roles={roles}
         projects={projectsApi.projects}
-        lockedProjectId={project.id}
+        lockedProjectId={editingTask ? undefined : project.id}
         onSave={async (data, scope?: RecurrenceScope) => {
           if (editingTask) {
             if (scope && (editingTask.recurrence_parent_id || editingTask.recurrence !== "none")) {
