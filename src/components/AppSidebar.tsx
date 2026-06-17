@@ -108,6 +108,8 @@ function useNavHotkeys() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const map: Record<string, string> = {
       h: "/",
+      s: "/semana",
+      d: "/agenda",
       m: "/minhas-tarefas",
       p: "/projetos",
       e: "/equipes",
