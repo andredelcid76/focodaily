@@ -1,6 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BarChart3,
+  CalendarDays,
+  CalendarRange,
   FolderKanban,
   Inbox,
   ListTodo,
