@@ -42,6 +42,7 @@ function InboxPage() {
 
   const [editing, setEditing] = useState<InboxSuggestion | null>(null);
   const [tab, setTab] = useState<"all" | SourceKey>("all");
+  const [showHistory, setShowHistory] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["inbox-suggestions", userId],
