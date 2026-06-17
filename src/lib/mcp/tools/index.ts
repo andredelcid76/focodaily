@@ -20,6 +20,74 @@ export const listRoles = defineTool({
   },
 });
 
+export const createRole = defineTool({
+  name: "create_role",
+  description: "Cria um novo papel para o usuário (ex: CEO, Pessoal, Head de Vendas).",
+  parameters: z.object({
+    name: z.string().min(1).max(100),
+    color: z.string().optional().describe("Hex tipo #8b5cf6. Padrão violet."),
+    position: z.number().int().optional(),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const { data, error } = await db(ctx.auth)
+      .from("roles")
+      .insert({
+        user_id: userId,
+        name: args.name,
+        color: args.color ?? "#8b5cf6",
+        position: args.position ?? 0,
+      } as never)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true, role: data });
+  },
+});
+
+export const updateRole = defineTool({
+  name: "update_role",
+  description: "Atualiza um papel existente (renomear, mudar cor ou posição).",
+  parameters: z.object({
+    id: z.string(),
+    name: z.string().min(1).max(100).optional(),
+    color: z.string().optional(),
+    position: z.number().int().optional(),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const patch: Record<string, unknown> = {};
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.color !== undefined) patch.color = args.color;
+    if (args.position !== undefined) patch.position = args.position;
+    const { data, error } = await db(ctx.auth)
+      .from("roles")
+      .update(patch as never)
+      .eq("id", args.id)
+      .eq("user_id", userId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true, role: data });
+  },
+});
+
+export const deleteRole = defineTool({
+  name: "delete_role",
+  description: "Exclui um papel do usuário. As tarefas vinculadas perderão essa associação.",
+  parameters: z.object({ id: z.string() }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const { error } = await db(ctx.auth)
+      .from("roles")
+      .delete()
+      .eq("id", args.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true });
+  },
+});
+
 export const listTasks = defineTool({
   name: "list_tasks",
   description:
