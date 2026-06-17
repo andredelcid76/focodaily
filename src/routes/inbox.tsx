@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus, RotateCcw, History, CheckCircle2 } from "lucide-react";
+import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus, Pencil, RotateCcw, History, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +77,32 @@ function InboxPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const acceptMut = useMutation({
+    mutationFn: async (s: InboxSuggestion) => {
+      const date = s.suggested_date ?? new Date().toISOString().slice(0, 10);
+      return acceptSuggestion({
+        id: s.id,
+        userId: userId!,
+        task: {
+          title: s.title,
+          description: s.description,
+          scheduled_date: date,
+          duration_minutes: s.suggested_duration_minutes,
+          category: s.suggested_category,
+          project_id: null,
+          role_id: null,
+          non_negotiable: false,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Tarefa adicionada");
+      qc.invalidateQueries({ queryKey: ["inbox-suggestions"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao adicionar tarefa"),
+  });
+
   const counts = useMemo(() => {
     const c: Record<SourceKey, number> = { email: 0, meeting: 0, pipedrive: 0 };
     for (const s of suggestions) c[s.source] = (c[s.source] ?? 0) + 1;
@@ -117,8 +143,11 @@ function InboxPage() {
           <Button variant="ghost" size="sm" onClick={() => dismissMut.mutate(s.id)} disabled={dismissMut.isPending}>
             <X className="h-4 w-4 mr-1" /> Descartar
           </Button>
-          <Button size="sm" onClick={() => setEditing(s)}>
-            <Plus className="h-4 w-4 mr-1" /> Adicionar tarefa
+          <Button variant="outline" size="sm" onClick={() => setEditing(s)}>
+            <Pencil className="h-4 w-4 mr-1" /> Editar
+          </Button>
+          <Button size="sm" onClick={() => acceptMut.mutate(s)} disabled={acceptMut.isPending}>
+            <Plus className="h-4 w-4 mr-1" /> Adicionar
           </Button>
         </div>
       </Card>
