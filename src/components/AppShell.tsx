@@ -6,6 +6,7 @@ import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 import { GlobalSearch, useGlobalSearchHotkey } from "@/components/GlobalSearch";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MayaChat } from "@/components/MayaChat";
+import { QuickAddTaskButton } from "@/components/QuickAddTaskButton";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
