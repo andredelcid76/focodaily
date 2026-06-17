@@ -1,4 +1,4 @@
-import { useRouter, useLocation, Link } from "@tanstack/react-router";
+import { useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -12,21 +12,40 @@ import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
 
-const PAGE_META: { match: (path: string) => boolean; eyebrow: string; eyebrowHref: string; title: string }[] = [
-  { match: (p) => p === "/", eyebrow: "Planejar", eyebrowHref: "/", title: "Hoje" },
-  { match: (p) => p.startsWith("/semana"), eyebrow: "Planejar", eyebrowHref: "/", title: "Semana" },
-  { match: (p) => p.startsWith("/agenda"), eyebrow: "Planejar", eyebrowHref: "/", title: "Agenda" },
-  { match: (p) => p.startsWith("/minhas-tarefas"), eyebrow: "Planejar", eyebrowHref: "/", title: "Tarefas" },
-  { match: (p) => p.startsWith("/projetos"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Projetos" },
-  { match: (p) => p.startsWith("/equipes"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Equipes" },
-  { match: (p) => p.startsWith("/papeis"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Papéis" },
-  { match: (p) => p.startsWith("/inbox"), eyebrow: "Trabalho", eyebrowHref: "/projetos", title: "Caixa de entrada" },
-  { match: (p) => p.startsWith("/analise"), eyebrow: "Insights", eyebrowHref: "/analise", title: "Análise estratégica" },
-  { match: (p) => p.startsWith("/configuracoes"), eyebrow: "Sistema", eyebrowHref: "/configuracoes", title: "Configurações" },
+// Single source of truth for breadcrumb groups. The eyebrow link goes to the
+// first item of the group, so e.g. clicking "Trabalho" from /inbox returns to
+// /projetos (the section landing) — not back to "Hoje".
+type BreadcrumbEntry = {
+  match: (p: string) => boolean;
+  group: string;
+  groupHref: string;
+  title: string;
+};
+
+const BREADCRUMBS: BreadcrumbEntry[] = [
+  { match: (p) => p === "/", group: "Planejar", groupHref: "/", title: "Hoje" },
+  { match: (p) => p.startsWith("/semana"), group: "Planejar", groupHref: "/", title: "Minha semana" },
+  { match: (p) => p.startsWith("/agenda"), group: "Planejar", groupHref: "/", title: "Agenda" },
+  { match: (p) => p.startsWith("/minhas-tarefas"), group: "Planejar", groupHref: "/", title: "Tarefas" },
+  { match: (p) => p.startsWith("/projetos"), group: "Trabalho", groupHref: "/projetos", title: "Projetos" },
+  { match: (p) => p.startsWith("/equipes"), group: "Trabalho", groupHref: "/projetos", title: "Equipes" },
+  { match: (p) => p.startsWith("/papeis"), group: "Trabalho", groupHref: "/projetos", title: "Papéis" },
+  { match: (p) => p.startsWith("/inbox"), group: "Trabalho", groupHref: "/projetos", title: "Caixa de entrada" },
+  { match: (p) => p.startsWith("/analise"), group: "Insights", groupHref: "/analise", title: "Análise estratégica" },
+  { match: (p) => p.startsWith("/configuracoes"), group: "Sistema", groupHref: "/configuracoes", title: "Configurações" },
+  { match: (p) => p.startsWith("/onboarding"), group: "Sistema", groupHref: "/configuracoes", title: "Boas-vindas" },
+  { match: (p) => p.startsWith("/bem-vindo"), group: "Sistema", groupHref: "/configuracoes", title: "Bem-vindo" },
 ];
 
-function pageMetaFor(pathname: string) {
-  return PAGE_META.find((m) => m.match(pathname)) ?? { eyebrow: "Foco", eyebrowHref: "/", title: "" };
+function pageMetaFor(pathname: string): BreadcrumbEntry {
+  return (
+    BREADCRUMBS.find((m) => m.match(pathname)) ?? {
+      match: () => false,
+      group: "Foco",
+      groupHref: "/",
+      title: "",
+    }
+  );
 }
 
 function Shell({ children }: { children: ReactNode }) {
@@ -89,12 +108,13 @@ function Shell({ children }: { children: ReactNode }) {
             <SidebarTrigger className="shrink-0" />
 
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
-              <Link
-                to={meta.eyebrowHref}
+              <button
+                type="button"
+                onClick={() => router.navigate({ to: meta.groupHref })}
                 className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
               >
-                {meta.eyebrow}
-              </Link>
+                {meta.group}
+              </button>
               {meta.title && (
                 <>
                   <span className="text-muted-foreground/40">/</span>
