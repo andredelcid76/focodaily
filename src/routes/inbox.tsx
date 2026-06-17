@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus, Pencil, RotateCcw, History, CheckCircle2 } from "lucide-react";
+import { Inbox, Mail, Users, Briefcase, X, ExternalLink, RefreshCw, Loader2, Plus, Pencil, RotateCcw, History, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
