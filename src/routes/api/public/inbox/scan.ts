@@ -206,36 +206,75 @@ async function fetchFireflies(userId: string, userEmail: string | null, userName
     const localTokens = emailLocal.split(/[._-]+/).filter((t) => t.length > 2);
     const allTokens = Array.from(new Set([emailLower, emailLocal, ...nameTokens, ...localTokens])).filter(Boolean);
 
-    function actionItemsForUser(actionItems: string, hostEmail?: string): string {
-      if (!actionItems) return "";
+    function blocksForUser(actionItems: string, hostEmail?: string): string[] {
+      if (!actionItems) return [];
       const blocks = actionItems.split(/\n(?=\*\*[^*]+\*\*)/g);
-      const matches = blocks.filter((b) => {
+      return blocks.filter((b) => {
         const headerMatch = b.match(/^\*\*([^*]+)\*\*/);
         if (!headerMatch) return false;
         const header = headerMatch[1].toLowerCase();
-        // Match by user's own identity
         if (allTokens.some((tok) => tok && header.includes(tok))) return true;
-        // Fallback: if we have no user identity, match host (legacy behavior)
         if (allTokens.length === 0 && hostEmail && header.includes(hostEmail.toLowerCase())) return true;
         return false;
       });
-      return matches.join("\n").trim();
     }
 
-    return ts
-      .map((t) => {
-        const myItems = actionItemsForUser(t.summary?.action_items ?? "", t.host_email);
-        return { t, myItems };
-      })
-      .filter(({ myItems }) => myItems.length > 0)
-      .map(({ t, myItems }) => ({
-        source: "meeting" as const,
-        source_id: t.id,
-        source_label: `Reunião: ${t.title ?? "(sem título)"}`,
-        source_url: null,
-        source_date: t.date ? new Date(t.date).toISOString() : null,
-        text: `Reunião: ${t.title ?? ""}\nHost: ${t.host_email ?? ""}\n\nAction items atribuídos AO USUÁRIO (${userEmail ?? "?"}):\n${myItems}`,
-      }));
+    // Stable, short hash so the same bullet keeps the same source_id across
+    // scans — enables dedupe per individual action item.
+    function djb2(s: string): string {
+      let h = 5381;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(16);
+    }
+
+    function extractBullets(block: string): string[] {
+      const body = block.replace(/^\*\*[^*]+\*\*\s*\n?/, "");
+      const bullets: string[] = [];
+      let current = "";
+      for (const rawLine of body.split(/\r?\n/)) {
+        const line = rawLine.trimEnd();
+        const isBullet = /^\s*([-*•]|\d+[\.\)])\s+/.test(line);
+        if (isBullet) {
+          if (current.trim()) bullets.push(current.trim());
+          current = line.replace(/^\s*([-*•]|\d+[\.\)])\s+/, "");
+        } else if (line.trim() && current) {
+          current += " " + line.trim();
+        }
+      }
+      if (current.trim()) bullets.push(current.trim());
+      return bullets;
+    }
+
+    const out: SourceItem[] = [];
+    for (const t of ts) {
+      const blocks = blocksForUser(t.summary?.action_items ?? "", t.host_email);
+      if (blocks.length === 0) continue;
+      const meetingUrl = `https://app.fireflies.ai/view/${t.id}`;
+      const meetingTitle = t.title ?? "(sem título)";
+      const meetingDate = t.date ? new Date(t.date).toISOString() : null;
+      for (const block of blocks) {
+        const bullets = extractBullets(block);
+        const items =
+          bullets.length > 0
+            ? bullets
+            : [block.replace(/^\*\*[^*]+\*\*\s*\n?/, "").trim()].filter(Boolean);
+        for (const bullet of items) {
+          const clean = bullet.replace(/\s+/g, " ").trim();
+          if (!clean) continue;
+          const title = clean.length > 120 ? clean.slice(0, 117) + "…" : clean;
+          out.push({
+            source: "meeting" as const,
+            source_id: `${t.id}:${djb2(clean.toLowerCase())}`,
+            source_label: `Reunião: ${meetingTitle}`,
+            source_url: meetingUrl,
+            source_date: meetingDate,
+            text: `Reunião: ${meetingTitle}\nHost: ${t.host_email ?? ""}\n\nAction item atribuído ao usuário (${userEmail ?? "?"}):\n- ${clean}`,
+            title_override: title,
+          });
+        }
+      }
+    }
+    return out;
   } catch (e) {
     console.error("fireflies", e);
     return [];
