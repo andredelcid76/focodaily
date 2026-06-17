@@ -279,7 +279,7 @@ export function useTasks(userId: string | undefined) {
     })();
 
     const channel = supabase
-      .channel(`tasks-rt-${userId}`)
+      .channel(`tasks-rt-${userId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${userId}` },
