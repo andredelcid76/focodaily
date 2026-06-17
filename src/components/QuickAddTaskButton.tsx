@@ -35,7 +35,7 @@ export function QuickAddTaskButton() {
         size="icon"
         aria-label="Adicionar tarefa"
         title="Adicionar tarefa"
-        className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105"
+        className="fixed bottom-24 right-6 z-40 h-12 w-12 rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105"
       >
         <Plus className="h-6 w-6" />
       </Button>
