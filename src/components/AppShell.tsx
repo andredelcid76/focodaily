@@ -108,12 +108,13 @@ function Shell({ children }: { children: ReactNode }) {
             <SidebarTrigger className="shrink-0" />
 
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
-              <Link
-                to={meta.eyebrowHref}
+              <button
+                type="button"
+                onClick={() => router.navigate({ to: meta.groupHref })}
                 className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors"
               >
-                {meta.eyebrow}
-              </Link>
+                {meta.group}
+              </button>
               {meta.title && (
                 <>
                   <span className="text-muted-foreground/40">/</span>
