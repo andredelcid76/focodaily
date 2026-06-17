@@ -79,7 +79,7 @@ export function ProjectTaskBoard({
   onBulkDelete?: (ids: string[]) => Promise<void> | void;
 }) {
   const [view, setView] = useState<View>("table");
-  const [grouping, setGrouping] = useState<Grouping>("none");
+  const [grouping, setGrouping] = useState<Grouping>("status");
   const [search, setSearch] = useState("");
 
   const fetchMembers = useServerFn(listProjectMembers);

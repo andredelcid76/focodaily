@@ -117,6 +117,30 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
     refreshOutlookStatus();
   }, []);
 
+  // Auto-sync periódico do Outlook quando conectado (a cada 5 min) + ao montar
+  useEffect(() => {
+    if (!outlook.connected) return;
+    let cancelled = false;
+    const runSilent = async () => {
+      try {
+        await outlookRequest("POST", { action: "sync" });
+        if (cancelled) return;
+        await meetingsApi.refresh();
+        await refreshOutlookStatus();
+      } catch (e) {
+        console.error("[outlook auto-sync]", e);
+      }
+    };
+    // Disparo inicial assim que detectamos conexão
+    runSilent();
+    const id = setInterval(runSilent, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outlook.connected]);
+
   const dayMeetings = useMemo(
     () =>
       meetingsApi

@@ -1,6 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BarChart3,
+  CalendarDays,
+  CalendarRange,
   FolderKanban,
   Inbox,
   ListTodo,
@@ -42,6 +44,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Planejar",
     items: [
       { title: "Hoje", url: "/", icon: ListTodo, shortcut: "G H" },
+      { title: "Minha semana", url: "/semana", icon: CalendarRange, shortcut: "G S" },
+      { title: "Agenda", url: "/agenda", icon: CalendarDays, shortcut: "G D" },
       { title: "Tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
     ],
   },
@@ -104,6 +108,8 @@ function useNavHotkeys() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const map: Record<string, string> = {
       h: "/",
+      s: "/semana",
+      d: "/agenda",
       m: "/minhas-tarefas",
       p: "/projetos",
       e: "/equipes",
