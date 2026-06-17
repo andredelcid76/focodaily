@@ -143,8 +143,11 @@ function InboxPage() {
           <Button variant="ghost" size="sm" onClick={() => dismissMut.mutate(s.id)} disabled={dismissMut.isPending}>
             <X className="h-4 w-4 mr-1" /> Descartar
           </Button>
-          <Button size="sm" onClick={() => setEditing(s)}>
-            <Plus className="h-4 w-4 mr-1" /> Adicionar tarefa
+          <Button variant="outline" size="sm" onClick={() => setEditing(s)}>
+            <Pencil className="h-4 w-4 mr-1" /> Editar
+          </Button>
+          <Button size="sm" onClick={() => acceptMut.mutate(s)} disabled={acceptMut.isPending}>
+            <Plus className="h-4 w-4 mr-1" /> Adicionar
           </Button>
         </div>
       </Card>
