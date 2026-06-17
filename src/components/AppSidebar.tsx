@@ -44,6 +44,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Planejar",
     items: [
       { title: "Hoje", url: "/", icon: ListTodo, shortcut: "G H" },
+      { title: "Minha semana", url: "/semana", icon: CalendarRange, shortcut: "G S" },
+      { title: "Agenda", url: "/agenda", icon: CalendarDays, shortcut: "G D" },
       { title: "Tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
     ],
   },
