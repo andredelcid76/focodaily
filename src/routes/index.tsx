@@ -1109,6 +1109,16 @@ function TaskCardStatic(props: React.ComponentProps<typeof TaskCard>) {
   );
 }
 
+function TaskListRowStatic(props: React.ComponentProps<typeof TaskListRow>) {
+  return (
+    <DndContext>
+      <SortableContext items={[props.task.id]}>
+        <TaskListRow {...props} />
+      </SortableContext>
+    </DndContext>
+  );
+}
+
 // ===================== Visões de tarefas =====================
 
 function ViewBtn({
