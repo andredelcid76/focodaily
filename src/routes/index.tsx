@@ -714,9 +714,9 @@ function TodayInner({ userId }: { userId: string }) {
                       onPause={handlePauseTimer}
                       onResume={handleResumeTimer}
                       onStop={handleStopTimer}
-                      onPostpone={(date) => handlePostpone(t, date)}
-                      onDuplicate={(date) => handleDuplicate(t, date)}
-                      onFollowUp={(date) => handleFollowUp(t, date)}
+                      onPostpone={(date: string) => handlePostpone(t, date)}
+                      onDuplicate={(date: string) => handleDuplicate(t, date)}
+                      onFollowUp={(date: string) => handleFollowUp(t, date)}
                       selected={selectedIds.has(t.id)}
                       onSelectToggle={() => toggleSelect(t.id)}
                       subtaskCount={subtaskCounts[t.id]}
