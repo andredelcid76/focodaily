@@ -199,7 +199,15 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                        <Link to={item.url} className="group/nav relative flex items-center gap-2.5">
+                        <Link
+                          to={item.url}
+                          className="group/nav relative flex items-center gap-2.5"
+                          onClick={() => {
+                            if (item.url === "/") {
+                              window.dispatchEvent(new CustomEvent("focodaily:goto-today"));
+                            }
+                          }}
+                        >
                           {active && (
                             <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-primary to-circumstantial" />
                           )}
