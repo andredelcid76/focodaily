@@ -423,6 +423,14 @@ function TodayInner({ userId }: { userId: string }) {
     return () => window.removeEventListener("focodaily:open-task", handler);
   }, [tasksApi.tasks]);
 
+  // Clicking "Hoje" in the sidebar always snaps the view back to today's date,
+  // even when we're already on "/" (no route change → no remount).
+  useEffect(() => {
+    const handler = () => setViewDate(todayISO());
+    window.addEventListener("focodaily:goto-today", handler);
+    return () => window.removeEventListener("focodaily:goto-today", handler);
+  }, []);
+
   const handleSave = async (data: any, scope?: RecurrenceScope) => {
     if (editing) {
       if (scope && (editing.recurrence_parent_id || editing.recurrence !== "none")) {
