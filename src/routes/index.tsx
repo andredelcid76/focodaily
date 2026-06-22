@@ -694,40 +694,48 @@ function TodayInner({ userId }: { userId: string }) {
               Atrasadas ({visibleOverdue.length})
             </h2>
           </div>
-          <div className="space-y-2">
-            {visibleOverdue.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 min-w-0">
-                <div className="flex-1 min-w-0">
-                  <TaskCardStatic
-                    task={t}
-                    role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
-                    project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
-                    onToggle={() => toggleCompleteWithTimer(t)}
-                    onEdit={() => openEdit(t)}
-                    isOverdue
-                    isActive={timer.activeTaskId === t.id}
-                    isPaused={timer.activeTaskId === t.id && timer.isPaused}
-                    liveSeconds={timer.elapsedSeconds}
-                    onStart={() => handleStartTimer(t)}
-                    onPause={handlePauseTimer}
-                    onResume={handleResumeTimer}
-                    onStop={handleStopTimer}
-                    onPostpone={(date) => handlePostpone(t, date)}
-                    onDuplicate={(date) => handleDuplicate(t, date)}
-                    onFollowUp={(date) => handleFollowUp(t, date)}
-                    selectionMode={selectionMode}
-                    selected={selectedIds.has(t.id)}
-                    onSelectToggle={() => toggleSelect(t.id)}
-                    subtaskCount={subtaskCounts[t.id]}
-                    hideAssignee
-                    blockedBy={blockedByMap.get(t.id)}
-                  />
+          <div className="overflow-hidden rounded-2xl border border-overdue/30 bg-card/40 backdrop-blur-sm">
+            <div className="divide-y divide-border/40">
+              {visibleOverdue.map((t, i) => (
+                <div key={t.id} className="flex items-center gap-2 pr-2">
+                  <div className="flex-1 min-w-0">
+                    <TaskListRowStatic
+                      task={t}
+                      role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
+                      project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
+                      onToggle={() => toggleCompleteWithTimer(t)}
+                      onEdit={() => openEdit(t)}
+                      isOverdue
+                      index={i + 1}
+                      isActive={timer.activeTaskId === t.id}
+                      isPaused={timer.activeTaskId === t.id && timer.isPaused}
+                      liveSeconds={timer.elapsedSeconds}
+                      onStart={() => handleStartTimer(t)}
+                      onPause={handlePauseTimer}
+                      onResume={handleResumeTimer}
+                      onStop={handleStopTimer}
+                      onPostpone={(date) => handlePostpone(t, date)}
+                      onDuplicate={(date) => handleDuplicate(t, date)}
+                      onFollowUp={(date) => handleFollowUp(t, date)}
+                      selected={selectedIds.has(t.id)}
+                      onSelectToggle={() => toggleSelect(t.id)}
+                      subtaskCount={subtaskCounts[t.id]}
+                      blockedBy={blockedByMap.get(t.id)}
+                      columns={taskColumns.columns}
+                      gridTemplate={taskColumns.gridTemplate}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); moveOverdueToToday(t); }}
+                    className="shrink-0"
+                  >
+                    Hoje →
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => moveOverdueToToday(t)}>
-                  Hoje →
-                </Button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       )}
