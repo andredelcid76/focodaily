@@ -749,6 +749,20 @@ export async function scanForUser(userId: string) {
   const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
   const openTitleSet = new Set(openTitles.map(normalizeTitle));
 
+  // Also block titles of PENDING inbox suggestions so we don't re-suggest the
+  // same action the user already has in the inbox (common for Fireflies
+  // bullets that recur across follow-up meetings with different transcript IDs).
+  const { data: pendingSugs } = await supabaseAdmin
+    .from("inbox_suggestions")
+    .select("title")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .limit(500);
+  for (const s of pendingSugs ?? []) {
+    const n = normalizeTitle((s.title as string) ?? "");
+    if (n) openTitleSet.add(n);
+  }
+
   // ── Auto-create tasks for Pipedrive items (bypass Inbox + AI) ──
   const pipedriveFresh = fresh.filter((it) => it.source === "pipedrive");
   const otherFresh = fresh.filter((it) => it.source !== "pipedrive");
