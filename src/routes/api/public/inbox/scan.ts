@@ -627,7 +627,8 @@ async function aiExtractTasks(
           content: `Você analisa e-mails, atas de reunião e deals do CRM e extrai tarefas concretas que o USUÁRIO precisa fazer. Hoje é ${today}.
 
 Regras estritas:
-- Para E-MAILS marcados como "pendente de resposta": se o e-mail contém uma pergunta direta, um pedido, uma solicitação de retorno, ou claramente espera uma resposta do usuário, gere UMA sugestão "Responder a <Nome>: <assunto curto>" mesmo que não haja prazo explícito. Use a data de recebimento para calibrar urgência (>7 dias atrasada = urgent).
+- Para E-MAILS: leia o CORPO DO EMAIL com atenção. Extraia TODAS as ações concretas que o usuário precisa fazer — não se limite a "responder". Exemplos: revisar um anexo, agendar reunião, enviar documento, preparar proposta, aprovar pedido, fazer pagamento, tomar decisão sobre algo, atualizar CRM, dar feedback, contratar serviço, validar com terceiro, etc. Pode gerar MÚLTIPLAS sugestões a partir do mesmo email se houver várias ações distintas. Só inclua "Responder a <Nome>: <assunto>" quando o email pede explicitamente uma resposta/decisão do usuário e não há ação maior por trás. Se a única coisa a fazer é responder com um "ok", use 5 min. Use a data de recebimento para calibrar urgência (>7 dias sem ação = urgent).
+
 - Para REUNIÕES: o texto já contém apenas action items atribuídos AO USUÁRIO (host). Mesmo assim, só gere sugestão quando houver verbo de ação claro e ação concreta. Se houver dúvida sobre quem é responsável, NÃO crie sugestão.
 - Para CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
 - IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
