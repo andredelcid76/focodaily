@@ -94,23 +94,28 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   const since = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
   const userEmail = (conn.email as string | null)?.toLowerCase() ?? null;
 
-  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft,categories`;
-  const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,body,from,toRecipients,ccRecipients,receivedDateTime,webLink,conversationId,isDraft,categories,hasAttachments`;
+  const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'outlook.body-content-type="text"' } });
   if (!inboxR.ok) {
     console.error("outlook inbox fetch failed", inboxR.status);
     return [];
   }
   const inboxJson = await inboxR.json();
+  type Recipient = { emailAddress?: { address?: string; name?: string } };
   type Msg = {
     id: string;
     subject?: string;
     bodyPreview?: string;
-    from?: { emailAddress?: { address?: string; name?: string } };
+    body?: { contentType?: string; content?: string };
+    from?: Recipient;
+    toRecipients?: Recipient[];
+    ccRecipients?: Recipient[];
     receivedDateTime?: string;
     webLink?: string;
     conversationId?: string;
     isDraft?: boolean;
     categories?: string[];
+    hasAttachments?: boolean;
   };
   const inboxMsgs = (inboxJson.value ?? []) as Msg[];
 
@@ -147,15 +152,59 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     return true;
   });
 
-  return pending.map((m) => ({
-    source: "email" as const,
-    source_id: m.id,
-    source_label: `${m.from?.emailAddress?.name ?? m.from?.emailAddress?.address ?? "Email"}: ${m.subject ?? "(sem assunto)"}`,
-    source_url: m.webLink ?? null,
-    source_date: m.receivedDateTime ?? null,
-    text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>\nAssunto: ${m.subject ?? ""}\nRecebido em: ${m.receivedDateTime ?? ""}\nStatus: pendente de resposta\n\n${m.bodyPreview ?? ""}`,
-  }));
+  function cleanBody(m: Msg): string {
+    const raw = m.body?.content ?? m.bodyPreview ?? "";
+    const stripped = raw
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\r\n?/g, "\n");
+    // Drop quoted reply chains to focus on the latest message content.
+    const cutMarkers = [
+      /\n[-_]{3,}\s*Original Message\s*[-_]{3,}/i,
+      /\nFrom:\s.+\nSent:\s/i,
+      /\nDe:\s.+\nEnviado em:\s/i,
+      /\nOn\s.+wrote:\s*\n/i,
+      /\nEm\s.+escreveu:\s*\n/i,
+    ];
+    let trimmed = stripped;
+    for (const re of cutMarkers) {
+      const m2 = trimmed.match(re);
+      if (m2 && typeof m2.index === "number") trimmed = trimmed.slice(0, m2.index);
+    }
+    return trimmed.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function recipientList(rs?: Recipient[]): string {
+    return (rs ?? []).map((r) => r.emailAddress?.address ?? "").filter(Boolean).join(", ");
+  }
+
+  return pending.map((m) => {
+    const bodyText = cleanBody(m).slice(0, 3500);
+    return {
+      source: "email" as const,
+      source_id: m.id,
+      source_label: `${m.from?.emailAddress?.name ?? m.from?.emailAddress?.address ?? "Email"}: ${m.subject ?? "(sem assunto)"}`,
+      source_url: m.webLink ?? null,
+      source_date: m.receivedDateTime ?? null,
+      text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>
+Para: ${recipientList(m.toRecipients)}${m.ccRecipients?.length ? `\nCc: ${recipientList(m.ccRecipients)}` : ""}
+Assunto: ${m.subject ?? ""}
+Recebido em: ${m.receivedDateTime ?? ""}${m.hasAttachments ? "\nAnexos: sim" : ""}
+Status: pendente (sem resposta minha nesta conversa)
+
+CORPO DO EMAIL:
+${bodyText}`,
+    };
+  });
 }
+
 
 async function fetchFireflies(userId: string, userEmail: string | null, userName: string | null): Promise<SourceItem[]> {
   const { data: conn } = await supabaseAdmin
