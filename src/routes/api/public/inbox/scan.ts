@@ -94,23 +94,28 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
   const since = new Date(Date.now() - 60 * 24 * 3600_000).toISOString();
   const userEmail = (conn.email as string | null)?.toLowerCase() ?? null;
 
-  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,from,receivedDateTime,webLink,conversationId,isDraft,categories`;
-  const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const inboxUrl = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=100&$orderby=receivedDateTime desc&$filter=receivedDateTime ge ${since}&$select=id,subject,bodyPreview,body,from,toRecipients,ccRecipients,receivedDateTime,webLink,conversationId,isDraft,categories,hasAttachments`;
+  const inboxR = await fetch(inboxUrl, { headers: { Authorization: `Bearer ${accessToken}`, Prefer: 'outlook.body-content-type="text"' } });
   if (!inboxR.ok) {
     console.error("outlook inbox fetch failed", inboxR.status);
     return [];
   }
   const inboxJson = await inboxR.json();
+  type Recipient = { emailAddress?: { address?: string; name?: string } };
   type Msg = {
     id: string;
     subject?: string;
     bodyPreview?: string;
-    from?: { emailAddress?: { address?: string; name?: string } };
+    body?: { contentType?: string; content?: string };
+    from?: Recipient;
+    toRecipients?: Recipient[];
+    ccRecipients?: Recipient[];
     receivedDateTime?: string;
     webLink?: string;
     conversationId?: string;
     isDraft?: boolean;
     categories?: string[];
+    hasAttachments?: boolean;
   };
   const inboxMsgs = (inboxJson.value ?? []) as Msg[];
 
@@ -147,15 +152,59 @@ async function fetchOutlookEmails(userId: string): Promise<SourceItem[]> {
     return true;
   });
 
-  return pending.map((m) => ({
-    source: "email" as const,
-    source_id: m.id,
-    source_label: `${m.from?.emailAddress?.name ?? m.from?.emailAddress?.address ?? "Email"}: ${m.subject ?? "(sem assunto)"}`,
-    source_url: m.webLink ?? null,
-    source_date: m.receivedDateTime ?? null,
-    text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>\nAssunto: ${m.subject ?? ""}\nRecebido em: ${m.receivedDateTime ?? ""}\nStatus: pendente de resposta\n\n${m.bodyPreview ?? ""}`,
-  }));
+  function cleanBody(m: Msg): string {
+    const raw = m.body?.content ?? m.bodyPreview ?? "";
+    const stripped = raw
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\r\n?/g, "\n");
+    // Drop quoted reply chains to focus on the latest message content.
+    const cutMarkers = [
+      /\n[-_]{3,}\s*Original Message\s*[-_]{3,}/i,
+      /\nFrom:\s.+\nSent:\s/i,
+      /\nDe:\s.+\nEnviado em:\s/i,
+      /\nOn\s.+wrote:\s*\n/i,
+      /\nEm\s.+escreveu:\s*\n/i,
+    ];
+    let trimmed = stripped;
+    for (const re of cutMarkers) {
+      const m2 = trimmed.match(re);
+      if (m2 && typeof m2.index === "number") trimmed = trimmed.slice(0, m2.index);
+    }
+    return trimmed.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function recipientList(rs?: Recipient[]): string {
+    return (rs ?? []).map((r) => r.emailAddress?.address ?? "").filter(Boolean).join(", ");
+  }
+
+  return pending.map((m) => {
+    const bodyText = cleanBody(m).slice(0, 3500);
+    return {
+      source: "email" as const,
+      source_id: m.id,
+      source_label: `${m.from?.emailAddress?.name ?? m.from?.emailAddress?.address ?? "Email"}: ${m.subject ?? "(sem assunto)"}`,
+      source_url: m.webLink ?? null,
+      source_date: m.receivedDateTime ?? null,
+      text: `De: ${m.from?.emailAddress?.name ?? ""} <${m.from?.emailAddress?.address ?? ""}>
+Para: ${recipientList(m.toRecipients)}${m.ccRecipients?.length ? `\nCc: ${recipientList(m.ccRecipients)}` : ""}
+Assunto: ${m.subject ?? ""}
+Recebido em: ${m.receivedDateTime ?? ""}${m.hasAttachments ? "\nAnexos: sim" : ""}
+Status: pendente (sem resposta minha nesta conversa)
+
+CORPO DO EMAIL:
+${bodyText}`,
+    };
+  });
 }
+
 
 async function fetchFireflies(userId: string, userEmail: string | null, userName: string | null): Promise<SourceItem[]> {
   const { data: conn } = await supabaseAdmin
@@ -578,7 +627,8 @@ async function aiExtractTasks(
           content: `Você analisa e-mails, atas de reunião e deals do CRM e extrai tarefas concretas que o USUÁRIO precisa fazer. Hoje é ${today}.
 
 Regras estritas:
-- Para E-MAILS marcados como "pendente de resposta": se o e-mail contém uma pergunta direta, um pedido, uma solicitação de retorno, ou claramente espera uma resposta do usuário, gere UMA sugestão "Responder a <Nome>: <assunto curto>" mesmo que não haja prazo explícito. Use a data de recebimento para calibrar urgência (>7 dias atrasada = urgent).
+- Para E-MAILS: leia o CORPO DO EMAIL com atenção. Extraia TODAS as ações concretas que o usuário precisa fazer — não se limite a "responder". Exemplos: revisar um anexo, agendar reunião, enviar documento, preparar proposta, aprovar pedido, fazer pagamento, tomar decisão sobre algo, atualizar CRM, dar feedback, contratar serviço, validar com terceiro, etc. Pode gerar MÚLTIPLAS sugestões a partir do mesmo email se houver várias ações distintas. Só inclua "Responder a <Nome>: <assunto>" quando o email pede explicitamente uma resposta/decisão do usuário e não há ação maior por trás. Se a única coisa a fazer é responder com um "ok", use 5 min. Use a data de recebimento para calibrar urgência (>7 dias sem ação = urgent).
+
 - Para REUNIÕES: o texto já contém apenas action items atribuídos AO USUÁRIO (host). Mesmo assim, só gere sugestão quando houver verbo de ação claro e ação concreta. Se houver dúvida sobre quem é responsável, NÃO crie sugestão.
 - Para CRM: SÓ extraia se há ação CLARA pedida ao usuário (verbo de ação, prazo ou compromisso explícito).
 - IGNORE newsletters, marketing, notificações automáticas (no-reply, noreply), confirmações, FYI puros, e ações de outras pessoas.
@@ -698,6 +748,20 @@ export async function scanForUser(userId: string) {
   const openTitles = (openTasks ?? []).map((t) => (t.title as string) ?? "").filter(Boolean);
   const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
   const openTitleSet = new Set(openTitles.map(normalizeTitle));
+
+  // Also block titles of PENDING inbox suggestions so we don't re-suggest the
+  // same action the user already has in the inbox (common for Fireflies
+  // bullets that recur across follow-up meetings with different transcript IDs).
+  const { data: pendingSugs } = await supabaseAdmin
+    .from("inbox_suggestions")
+    .select("title")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .limit(500);
+  for (const s of pendingSugs ?? []) {
+    const n = normalizeTitle((s.title as string) ?? "");
+    if (n) openTitleSet.add(n);
+  }
 
   // ── Auto-create tasks for Pipedrive items (bypass Inbox + AI) ──
   const pipedriveFresh = fresh.filter((it) => it.source === "pipedrive");
