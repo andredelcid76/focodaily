@@ -48,10 +48,16 @@ import {
   useSensor,
   useSensors,
   useDroppable,
-  useDraggable,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/projetos/")({
   component: () => (
@@ -82,7 +88,7 @@ function ProjectsInner({ userId }: { userId: string }) {
   const [scope, setScope] = useState<"all" | "personal" | "team">("all");
   const [ownership, setOwnership] = useState<"all" | "mine" | "invited">("all");
   const [hideFinished, setHideFinished] = useState(true);
-  const [view, setView] = useState<ViewMode>("cards");
+  const [view, setView] = useState<ViewMode>("kanban");
   const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
 
   const tasksByProject = useMemo(() => {
@@ -860,21 +866,55 @@ function KanbanView({
     return out;
   }, [projects, columns, group]);
 
+  const findCol = (id: string): string | null => {
+    if (id.startsWith("status:") || id.startsWith("role:")) return id;
+    for (const colId of Object.keys(grouped)) {
+      if (grouped[colId].some((p) => p.id === id)) return colId;
+    }
+    return null;
+  };
+
+  const persistOrder = async (orderedIds: string[]) => {
+    const { error } = await supabase.rpc("reorder_projects", { p_ordered_ids: orderedIds });
+    if (error) {
+      toast.error("Não foi possível salvar a prioridade");
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+  };
+
   const handleDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over) return;
     const projectId = String(active.id);
-    const targetCol = String(over.id);
+    const overId = String(over.id);
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
 
+    const fromCol = findCol(projectId);
+    const toCol = findCol(overId);
+    if (!fromCol || !toCol) return;
+
+    // Same column → reorder (priority change)
+    if (fromCol === toCol) {
+      if (projectId === overId) return;
+      const ids = grouped[fromCol].map((p) => p.id);
+      const oldIdx = ids.indexOf(projectId);
+      const newIdx = ids.indexOf(overId);
+      if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return;
+      const reordered = arrayMove(ids, oldIdx, newIdx);
+      await persistOrder(reordered);
+      return;
+    }
+
+    // Cross-column → status/role change
     if (group === "status") {
-      const newStatus = targetCol.replace("status:", "") as ProjectStatus;
+      const newStatus = toCol.replace("status:", "") as ProjectStatus;
       if (project.status === newStatus) return;
       await onMove(projectId, { status: newStatus });
       toast.success(`Movido para ${PROJECT_STATUS_LABEL[newStatus]}`);
     } else {
-      const raw = targetCol.replace("role:", "");
+      const raw = toCol.replace("role:", "");
       const newRoleId = raw === "none" ? null : raw;
       if (project.role_id === newRoleId) return;
       await onMove(projectId, { role_id: newRoleId });
@@ -935,37 +975,42 @@ function KanbanCol({
           {projects.length}
         </span>
       </div>
-      <div className="space-y-2">
-        {projects.length === 0 && (
-          <p className="text-center text-xs text-muted-foreground/60 py-6">Arraste projetos aqui</p>
-        )}
-        {projects.map((p) => (
-          <KanbanProjectCard
-            key={p.id}
-            project={p}
-            role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
-            tasks={tasksByProject.get(p.id) ?? []}
-            today={today}
-          />
-        ))}
-      </div>
+      <SortableContext items={projects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-2">
+          {projects.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground/60 py-6">Arraste projetos aqui</p>
+          )}
+          {projects.map((p, idx) => (
+            <KanbanProjectCard
+              key={p.id}
+              project={p}
+              role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
+              tasks={tasksByProject.get(p.id) ?? []}
+              today={today}
+              priority={idx + 1}
+            />
+          ))}
+        </div>
+      </SortableContext>
     </div>
   );
 }
 
 function KanbanProjectCard({
-  project, role, tasks, today,
+  project, role, tasks, today, priority,
 }: {
   project: Project;
   role: { name: string; color: string } | null;
   tasks: any[];
   today: string;
+  priority: number;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: project.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
   const stats = computeProjectStats(project, tasks, today);
   const pct = Math.round(stats.progress * 100);
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.4 : 1,
   };
   return (
@@ -977,14 +1022,22 @@ function KanbanProjectCard({
       className="cursor-grab active:cursor-grabbing rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm p-3 shadow-[var(--shadow-card)] hover:border-primary/40 transition-colors overflow-hidden touch-none"
     >
       <div className="flex items-start justify-between gap-2">
-        <Link
-          to="/projetos/$id"
-          params={{ id: project.id }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="font-display text-sm font-semibold leading-tight hover:text-primary transition-colors line-clamp-2"
-        >
-          {project.name}
-        </Link>
+        <div className="flex items-start gap-2 min-w-0">
+          <span
+            className="mt-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-md bg-primary/15 px-1 text-[10px] font-bold text-primary tabular-nums"
+            title={`Prioridade #${priority}`}
+          >
+            #{priority}
+          </span>
+          <Link
+            to="/projetos/$id"
+            params={{ id: project.id }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="font-display text-sm font-semibold leading-tight hover:text-primary transition-colors line-clamp-2"
+          >
+            {project.name}
+          </Link>
+        </div>
       </div>
 
       {role && <div className="mt-1.5"><RoleChip role={role} /></div>}

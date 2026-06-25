@@ -45,6 +45,7 @@ export function useProjects(userId: string | undefined) {
     const { data, error } = await supabase
       .from("projects")
       .select("*")
+      .order("position", { ascending: true })
       .order("name", { ascending: true });
     if (!error && data) setProjects(data);
     setLoading(false);
