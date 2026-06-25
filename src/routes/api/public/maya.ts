@@ -115,6 +115,19 @@ const tools = [
           category: { type: "string", enum: ["urgent", "important", "circumstantial"] },
           project_id: { type: "string", description: "Opcional" },
           role_id: { type: "string", description: "Opcional" },
+          recurrence: {
+            type: "string",
+            enum: ["none", "daily", "weekdays", "weekly", "monthly", "yearly", "custom"],
+            description: "Repetição da tarefa. Padrão: none.",
+          },
+          recurrence_interval: { type: "number", description: "Intervalo p/ custom (ex.: a cada N dias)" },
+          recurrence_weekdays: {
+            type: "array",
+            items: { type: "number" },
+            description: "Dias da semana p/ weekly (0=Dom .. 6=Sáb)",
+          },
+          recurrence_week_interval: { type: "number", description: "A cada N semanas (weekly). Padrão 1." },
+          recurrence_until: { type: "string", description: "YYYY-MM-DD. Data final da recorrência (opcional)." },
         },
         required: ["title", "scheduled_date"],
         additionalProperties: false,
@@ -125,7 +138,7 @@ const tools = [
     type: "function",
     function: {
       name: "update_task",
-      description: "Atualiza tarefa existente (mover data, mudar título, marcar concluída, etc.).",
+      description: "Atualiza tarefa existente (mover data, mudar título, marcar concluída, mudar recorrência, etc.).",
       parameters: {
         type: "object",
         properties: {
@@ -136,6 +149,14 @@ const tools = [
           category: { type: "string", enum: ["urgent", "important", "circumstantial"] },
           completed: { type: "boolean" },
           project_id: { type: "string" },
+          recurrence: {
+            type: "string",
+            enum: ["none", "daily", "weekdays", "weekly", "monthly", "yearly", "custom"],
+          },
+          recurrence_interval: { type: "number" },
+          recurrence_weekdays: { type: "array", items: { type: "number" } },
+          recurrence_week_interval: { type: "number" },
+          recurrence_until: { type: "string" },
         },
         required: ["id"],
         additionalProperties: false,
@@ -245,7 +266,10 @@ async function execTool(
   }
 
   if (name === "create_task") {
-    const insert = {
+    const recurrence = (args.recurrence as
+      | "none" | "daily" | "weekdays" | "weekly" | "monthly" | "yearly" | "custom"
+      | undefined) ?? "none";
+    const insert: Record<string, unknown> = {
       user_id: userId,
       title: String(args.title),
       description: args.description ? String(args.description) : null,
@@ -255,7 +279,12 @@ async function execTool(
       category: (args.category as "urgent" | "important" | "circumstantial") ?? "important",
       project_id: args.project_id ? String(args.project_id) : null,
       role_id: args.role_id ? String(args.role_id) : null,
+      recurrence,
     };
+    if (args.recurrence_interval !== undefined) insert.recurrence_interval = Number(args.recurrence_interval);
+    if (args.recurrence_weekdays !== undefined) insert.recurrence_weekdays = args.recurrence_weekdays;
+    if (args.recurrence_week_interval !== undefined) insert.recurrence_week_interval = Number(args.recurrence_week_interval);
+    if (args.recurrence_until !== undefined) insert.recurrence_until = String(args.recurrence_until);
     const { data, error } = await supabase.from("tasks").insert(insert as never).select().single();
     if (error) throw new Error(error.message);
     return { ok: true, task: data };
@@ -269,6 +298,11 @@ async function execTool(
     if (args.duration_minutes !== undefined) patch.duration_minutes = args.duration_minutes;
     if (args.category !== undefined) patch.category = args.category;
     if (args.project_id !== undefined) patch.project_id = args.project_id;
+    if (args.recurrence !== undefined) patch.recurrence = args.recurrence;
+    if (args.recurrence_interval !== undefined) patch.recurrence_interval = args.recurrence_interval;
+    if (args.recurrence_weekdays !== undefined) patch.recurrence_weekdays = args.recurrence_weekdays;
+    if (args.recurrence_week_interval !== undefined) patch.recurrence_week_interval = args.recurrence_week_interval;
+    if (args.recurrence_until !== undefined) patch.recurrence_until = args.recurrence_until;
     if (args.completed !== undefined) {
       patch.completed = args.completed;
       patch.status = args.completed ? "done" : "todo";

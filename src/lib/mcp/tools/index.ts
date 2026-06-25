@@ -236,9 +236,20 @@ export const listMeetings = defineTool({
   },
 });
 
+const recurrenceEnum = z.enum([
+  "none",
+  "daily",
+  "weekdays",
+  "weekly",
+  "monthly",
+  "yearly",
+  "custom",
+]);
+
 export const createTask = defineTool({
   name: "create_task",
-  description: "Cria uma nova tarefa para o usuário.",
+  description:
+    "Cria uma nova tarefa para o usuário. Suporta recorrência (daily, weekdays, weekly, monthly, yearly, custom).",
   parameters: z.object({
     title: z.string().min(1).max(500),
     description: z.string().optional(),
@@ -247,10 +258,15 @@ export const createTask = defineTool({
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
     project_id: z.string().optional(),
     role_id: z.string().optional(),
+    recurrence: recurrenceEnum.optional().describe("Padrão: none"),
+    recurrence_interval: z.number().int().positive().optional().describe("Para custom (a cada N dias)"),
+    recurrence_weekdays: z.array(z.number().int().min(0).max(6)).optional().describe("Para weekly: 0=Dom..6=Sáb"),
+    recurrence_week_interval: z.number().int().positive().optional().describe("A cada N semanas (weekly)"),
+    recurrence_until: z.string().optional().describe("YYYY-MM-DD final (opcional)"),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const insert = {
+    const insert: Record<string, unknown> = {
       user_id: userId,
       title: args.title,
       description: args.description ?? null,
@@ -260,7 +276,12 @@ export const createTask = defineTool({
       category: args.category ?? "important",
       project_id: args.project_id ?? null,
       role_id: args.role_id ?? null,
+      recurrence: args.recurrence ?? "none",
     };
+    if (args.recurrence_interval !== undefined) insert.recurrence_interval = args.recurrence_interval;
+    if (args.recurrence_weekdays !== undefined) insert.recurrence_weekdays = args.recurrence_weekdays;
+    if (args.recurrence_week_interval !== undefined) insert.recurrence_week_interval = args.recurrence_week_interval;
+    if (args.recurrence_until !== undefined) insert.recurrence_until = args.recurrence_until;
     const { data, error } = await db(ctx.auth).from("tasks").insert(insert as never).select().single();
     if (error) throw new Error(error.message);
     return JSON.stringify({ ok: true, task: data });
@@ -269,7 +290,7 @@ export const createTask = defineTool({
 
 export const updateTask = defineTool({
   name: "update_task",
-  description: "Atualiza uma tarefa existente: mover de data, mudar título, concluir, recategorizar etc.",
+  description: "Atualiza uma tarefa existente: mover de data, mudar título, concluir, recategorizar, alterar recorrência etc.",
   parameters: z.object({
     id: z.string(),
     title: z.string().optional(),
@@ -279,6 +300,11 @@ export const updateTask = defineTool({
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
     completed: z.boolean().optional(),
     project_id: z.string().nullable().optional(),
+    recurrence: recurrenceEnum.optional(),
+    recurrence_interval: z.number().int().positive().nullable().optional(),
+    recurrence_weekdays: z.array(z.number().int().min(0).max(6)).nullable().optional(),
+    recurrence_week_interval: z.number().int().positive().nullable().optional(),
+    recurrence_until: z.string().nullable().optional(),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
@@ -289,6 +315,11 @@ export const updateTask = defineTool({
     if (args.duration_minutes !== undefined) patch.duration_minutes = args.duration_minutes;
     if (args.category !== undefined) patch.category = args.category;
     if (args.project_id !== undefined) patch.project_id = args.project_id;
+    if (args.recurrence !== undefined) patch.recurrence = args.recurrence;
+    if (args.recurrence_interval !== undefined) patch.recurrence_interval = args.recurrence_interval;
+    if (args.recurrence_weekdays !== undefined) patch.recurrence_weekdays = args.recurrence_weekdays;
+    if (args.recurrence_week_interval !== undefined) patch.recurrence_week_interval = args.recurrence_week_interval;
+    if (args.recurrence_until !== undefined) patch.recurrence_until = args.recurrence_until;
     if (args.completed !== undefined) {
       patch.completed = args.completed;
       patch.status = args.completed ? "done" : "todo";
