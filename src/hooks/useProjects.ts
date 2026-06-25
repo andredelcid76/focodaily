@@ -9,19 +9,19 @@ export type ProjectStatus = Project["status"];
 export type ProjectHistory = Tables<"project_status_history">;
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
-  draft: "Rascunho",
+  in_progress: "Em andamento",
   active: "Ativo",
-  paused: "Em pausa",
-  done: "Concluído",
-  archived: "Arquivado",
+  paused: "Pausado",
+  not_started: "Não iniciado",
+  finished: "Finalizado",
 };
 
 export const PROJECT_STATUS_ORDER: ProjectStatus[] = [
+  "in_progress",
   "active",
-  "draft",
   "paused",
-  "done",
-  "archived",
+  "not_started",
+  "finished",
 ];
 
 export const PROJECT_COLORS = [
