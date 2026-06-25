@@ -115,6 +115,19 @@ const tools = [
           category: { type: "string", enum: ["urgent", "important", "circumstantial"] },
           project_id: { type: "string", description: "Opcional" },
           role_id: { type: "string", description: "Opcional" },
+          recurrence: {
+            type: "string",
+            enum: ["none", "daily", "weekdays", "weekly", "monthly", "yearly", "custom"],
+            description: "Repetição da tarefa. Padrão: none.",
+          },
+          recurrence_interval: { type: "number", description: "Intervalo p/ custom (ex.: a cada N dias)" },
+          recurrence_weekdays: {
+            type: "array",
+            items: { type: "number" },
+            description: "Dias da semana p/ weekly (0=Dom .. 6=Sáb)",
+          },
+          recurrence_week_interval: { type: "number", description: "A cada N semanas (weekly). Padrão 1." },
+          recurrence_until: { type: "string", description: "YYYY-MM-DD. Data final da recorrência (opcional)." },
         },
         required: ["title", "scheduled_date"],
         additionalProperties: false,
@@ -125,7 +138,7 @@ const tools = [
     type: "function",
     function: {
       name: "update_task",
-      description: "Atualiza tarefa existente (mover data, mudar título, marcar concluída, etc.).",
+      description: "Atualiza tarefa existente (mover data, mudar título, marcar concluída, mudar recorrência, etc.).",
       parameters: {
         type: "object",
         properties: {
@@ -136,6 +149,14 @@ const tools = [
           category: { type: "string", enum: ["urgent", "important", "circumstantial"] },
           completed: { type: "boolean" },
           project_id: { type: "string" },
+          recurrence: {
+            type: "string",
+            enum: ["none", "daily", "weekdays", "weekly", "monthly", "yearly", "custom"],
+          },
+          recurrence_interval: { type: "number" },
+          recurrence_weekdays: { type: "array", items: { type: "number" } },
+          recurrence_week_interval: { type: "number" },
+          recurrence_until: { type: "string" },
         },
         required: ["id"],
         additionalProperties: false,
