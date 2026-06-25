@@ -997,18 +997,20 @@ function KanbanCol({
 }
 
 function KanbanProjectCard({
-  project, role, tasks, today,
+  project, role, tasks, today, priority,
 }: {
   project: Project;
   role: { name: string; color: string } | null;
   tasks: any[];
   today: string;
+  priority: number;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: project.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
   const stats = computeProjectStats(project, tasks, today);
   const pct = Math.round(stats.progress * 100);
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.4 : 1,
   };
   return (
