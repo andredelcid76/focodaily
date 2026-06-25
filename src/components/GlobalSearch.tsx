@@ -23,6 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { PROJECT_STATUS_LABEL } from "@/hooks/useProjects";
 import { formatHuman } from "@/lib/date";
 
 type Task = Tables<"tasks">;
