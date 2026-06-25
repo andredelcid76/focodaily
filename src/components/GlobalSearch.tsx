@@ -176,9 +176,9 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                     style={{ backgroundColor: p.color }}
                   />
                   <span>{p.name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground capitalize">
-                    {p.status}
-                  </span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {PROJECT_STATUS_LABEL[p.status]}
+                    </span>
                 </CommandItem>
               ))}
             </CommandGroup>
