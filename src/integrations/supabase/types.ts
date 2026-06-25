@@ -1591,6 +1591,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reorder_projects: {
+        Args: { p_ordered_ids: string[] }
+        Returns: undefined
+      }
       reorder_tasks: { Args: { p_ordered_ids: string[] }; Returns: undefined }
     }
     Enums: {
