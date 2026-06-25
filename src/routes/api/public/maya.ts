@@ -91,7 +91,7 @@ const tools = [
           description: { type: "string" },
           color: { type: "string", description: "Hex tipo #8b5cf6" },
           role_id: { type: "string", description: "ID do papel associado (opcional)" },
-          status: { type: "string", enum: ["draft", "active", "paused", "done", "archived"] },
+          status: { type: "string", enum: ["in_progress", "active", "paused", "not_started", "finished"] },
           starts_on: { type: "string", description: "YYYY-MM-DD" },
           deadline: { type: "string", description: "YYYY-MM-DD" },
         },
