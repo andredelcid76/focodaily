@@ -175,7 +175,7 @@ export const updateProject = defineTool({
     description: z.string().nullable().optional(),
     color: z.string().optional(),
     role_id: z.string().nullable().optional(),
-    status: z.enum(["draft", "active", "paused", "done", "archived"]).optional(),
+    status: z.enum(["in_progress", "active", "paused", "not_started", "finished"]).optional(),
     starts_on: z.string().nullable().optional().describe("YYYY-MM-DD ou null"),
     deadline: z.string().nullable().optional().describe("YYYY-MM-DD ou null"),
   }),
