@@ -1022,14 +1022,22 @@ function KanbanProjectCard({
       className="cursor-grab active:cursor-grabbing rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm p-3 shadow-[var(--shadow-card)] hover:border-primary/40 transition-colors overflow-hidden touch-none"
     >
       <div className="flex items-start justify-between gap-2">
-        <Link
-          to="/projetos/$id"
-          params={{ id: project.id }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="font-display text-sm font-semibold leading-tight hover:text-primary transition-colors line-clamp-2"
-        >
-          {project.name}
-        </Link>
+        <div className="flex items-start gap-2 min-w-0">
+          <span
+            className="mt-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-md bg-primary/15 px-1 text-[10px] font-bold text-primary tabular-nums"
+            title={`Prioridade #${priority}`}
+          >
+            #{priority}
+          </span>
+          <Link
+            to="/projetos/$id"
+            params={{ id: project.id }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="font-display text-sm font-semibold leading-tight hover:text-primary transition-colors line-clamp-2"
+          >
+            {project.name}
+          </Link>
+        </div>
       </div>
 
       {role && <div className="mt-1.5"><RoleChip role={role} /></div>}
