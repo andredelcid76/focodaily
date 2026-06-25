@@ -128,7 +128,7 @@ export const createProject = defineTool({
     description: z.string().optional(),
     color: z.string().optional().describe("Hex tipo #8b5cf6. Padrão violet."),
     role_id: z.string().optional().describe("ID do papel associado (use list_roles)."),
-    status: z.enum(["draft", "active", "paused", "done", "archived"]).optional(),
+    status: z.enum(["in_progress", "active", "paused", "not_started", "finished"]).optional(),
     starts_on: z.string().optional().describe("YYYY-MM-DD"),
     deadline: z.string().optional().describe("YYYY-MM-DD"),
   }),
