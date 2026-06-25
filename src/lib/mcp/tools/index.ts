@@ -363,6 +363,19 @@ export const addTaskDependency = defineTool({
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+    // Verify ownership of BOTH tasks before creating the dependency.
+    // Since MCP uses a service-role client (RLS bypassed), this check is the
+    // sole defense against cross-tenant dependency creation.
+    const { data: ownedTasks, error: ownErr } = await db(ctx.auth)
+      .from("tasks")
+      .select("id")
+      .in("id", [args.predecessor_id, args.successor_id])
+      .or(`user_id.eq.${userId},assignee_id.eq.${userId}`);
+    if (ownErr) throw new Error(ownErr.message);
+    const ownedIds = new Set((ownedTasks ?? []).map((t) => t.id as string));
+    if (!ownedIds.has(args.predecessor_id) || !ownedIds.has(args.successor_id)) {
+      throw new Error("Você só pode criar dependências entre tarefas das quais é dono ou responsável.");
+    }
     const { data, error } = await db(ctx.auth)
       .from("task_dependencies")
       .insert({
