@@ -924,7 +924,7 @@ function KanbanView({
   };
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
       <div className="overflow-x-auto pb-2">
         <div
           className="grid gap-3"
