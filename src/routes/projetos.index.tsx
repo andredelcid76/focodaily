@@ -975,20 +975,23 @@ function KanbanCol({
           {projects.length}
         </span>
       </div>
-      <div className="space-y-2">
-        {projects.length === 0 && (
-          <p className="text-center text-xs text-muted-foreground/60 py-6">Arraste projetos aqui</p>
-        )}
-        {projects.map((p) => (
-          <KanbanProjectCard
-            key={p.id}
-            project={p}
-            role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
-            tasks={tasksByProject.get(p.id) ?? []}
-            today={today}
-          />
-        ))}
-      </div>
+      <SortableContext items={projects.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-2">
+          {projects.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground/60 py-6">Arraste projetos aqui</p>
+          )}
+          {projects.map((p, idx) => (
+            <KanbanProjectCard
+              key={p.id}
+              project={p}
+              role={p.role_id ? rolesById.get(p.role_id) ?? null : null}
+              tasks={tasksByProject.get(p.id) ?? []}
+              today={today}
+              priority={idx + 1}
+            />
+          ))}
+        </div>
+      </SortableContext>
     </div>
   );
 }
