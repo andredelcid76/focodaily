@@ -225,7 +225,7 @@ export function BulkTaskDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem projeto</SelectItem>
-                  {projects.filter((p) => p.status !== "archived").map((p) => (
+                  {projects.filter((p) => p.status !== "finished").map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
