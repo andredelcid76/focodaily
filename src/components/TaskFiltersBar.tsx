@@ -137,7 +137,7 @@ export function TaskFiltersBar({
   };
 
   const visibleProjects = useMemo(
-    () => projects.filter((p) => p.status !== "archived"),
+    () => projects.filter((p) => p.status !== "finished"),
     [projects]
   );
 

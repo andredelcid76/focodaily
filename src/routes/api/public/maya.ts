@@ -91,7 +91,7 @@ const tools = [
           description: { type: "string" },
           color: { type: "string", description: "Hex tipo #8b5cf6" },
           role_id: { type: "string", description: "ID do papel associado (opcional)" },
-          status: { type: "string", enum: ["draft", "active", "paused", "done", "archived"] },
+          status: { type: "string", enum: ["in_progress", "active", "paused", "not_started", "finished"] },
           starts_on: { type: "string", description: "YYYY-MM-DD" },
           deadline: { type: "string", description: "YYYY-MM-DD" },
         },
@@ -235,7 +235,7 @@ async function execTool(
       description: args.description ? String(args.description) : null,
       color: args.color ? String(args.color) : "#8b5cf6",
       role_id: args.role_id ? String(args.role_id) : null,
-      status: (args.status as "draft" | "active" | "paused" | "done" | "archived") ?? "active",
+      status: (args.status as "in_progress" | "active" | "paused" | "not_started" | "finished") ?? "active",
       starts_on: args.starts_on ? String(args.starts_on) : null,
       deadline: args.deadline ? String(args.deadline) : null,
     };

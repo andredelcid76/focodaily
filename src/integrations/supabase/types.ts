@@ -1595,7 +1595,12 @@ export type Database = {
     }
     Enums: {
       milestone_status: "pending" | "in_progress" | "done"
-      project_status: "draft" | "active" | "paused" | "done" | "archived"
+      project_status:
+        | "in_progress"
+        | "active"
+        | "paused"
+        | "not_started"
+        | "finished"
       task_category: "urgent" | "important" | "circumstantial"
       task_recurrence:
         | "none"
@@ -1734,7 +1739,13 @@ export const Constants = {
   public: {
     Enums: {
       milestone_status: ["pending", "in_progress", "done"],
-      project_status: ["draft", "active", "paused", "done", "archived"],
+      project_status: [
+        "in_progress",
+        "active",
+        "paused",
+        "not_started",
+        "finished",
+      ],
       task_category: ["urgent", "important", "circumstantial"],
       task_recurrence: [
         "none",

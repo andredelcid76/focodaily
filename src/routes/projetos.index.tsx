@@ -81,7 +81,7 @@ function ProjectsInner({ userId }: { userId: string }) {
   const [filterRole, setFilterRole] = useState<string | "all">("all");
   const [scope, setScope] = useState<"all" | "personal" | "team">("all");
   const [ownership, setOwnership] = useState<"all" | "mine" | "invited">("all");
-  const [hideArchived, setHideArchived] = useState(true);
+  const [hideFinished, setHideFinished] = useState(true);
   const [view, setView] = useState<ViewMode>("cards");
   const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
 
@@ -100,14 +100,14 @@ function ProjectsInner({ userId }: { userId: string }) {
   const filtered = useMemo(() => {
     return projectsApi.projects.filter((p) => {
       if (filterRole !== "all" && p.role_id !== filterRole) return false;
-      if (hideArchived && p.status === "archived") return false;
+      if (hideFinished && p.status === "finished") return false;
       if (scope === "personal" && p.team_id) return false;
       if (scope === "team" && !p.team_id) return false;
       if (ownership === "mine" && p.user_id !== userId) return false;
       if (ownership === "invited" && p.user_id === userId) return false;
       return true;
     });
-  }, [projectsApi.projects, filterRole, hideArchived, scope, ownership, userId]);
+  }, [projectsApi.projects, filterRole, hideFinished, scope, ownership, userId]);
 
   const canEdit = useCallback((p: Project) => p.user_id === userId, [userId]);
 
@@ -182,10 +182,10 @@ function ProjectsInner({ userId }: { userId: string }) {
 
         <Label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
           <Checkbox
-            checked={hideArchived}
-            onCheckedChange={(c) => setHideArchived(c === true)}
+            checked={hideFinished}
+            onCheckedChange={(c) => setHideFinished(c === true)}
           />
-          Ocultar arquivados
+          Ocultar finalizados
         </Label>
 
         {view === "kanban" && (
@@ -330,7 +330,7 @@ function CardsView({
 
   const grouped = useMemo(() => {
     const out: Record<ProjectStatus, Project[]> = {
-      active: [], draft: [], paused: [], done: [], archived: [],
+      active: [], in_progress: [], paused: [], not_started: [], finished: [],
     };
     for (const p of projects) out[p.status].push(p);
     return out;

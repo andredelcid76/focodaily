@@ -86,7 +86,7 @@ function parseLine(
   const projMatch = title.match(/(?:^|\s)\+(?:"([^"]+)"|(\S+))/);
   if (projMatch) {
     const raw = (projMatch[1] ?? projMatch[2] ?? "").replace(/_/g, " ").trim().toLowerCase();
-    const active = projects.filter((p) => p.status !== "archived");
+    const active = projects.filter((p) => p.status !== "finished");
     const found =
       active.find((p) => p.name.toLowerCase() === raw) ||
       active.find((p) => p.name.toLowerCase().startsWith(raw)) ||
@@ -225,7 +225,7 @@ export function BulkTaskDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem projeto</SelectItem>
-                  {projects.filter((p) => p.status !== "archived").map((p) => (
+                  {projects.filter((p) => p.status !== "finished").map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>

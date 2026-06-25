@@ -56,11 +56,11 @@ export function ProjectStatusBadge({
   size?: "xs" | "sm";
 }) {
   const map: Record<typeof status, { label: string; color: string }> = {
-    draft: { label: "Rascunho", color: "#94a3b8" },
+    in_progress: { label: "Em andamento", color: "#3b82f6" },
     active: { label: "Ativo", color: "#10b981" },
-    paused: { label: "Em pausa", color: "#f59e0b" },
-    done: { label: "Concluído", color: "#3b82f6" },
-    archived: { label: "Arquivado", color: "#64748b" },
+    paused: { label: "Pausado", color: "#f59e0b" },
+    not_started: { label: "Não iniciado", color: "#94a3b8" },
+    finished: { label: "Finalizado", color: "#64748b" },
   } as const;
   const cfg = map[status];
   return (
