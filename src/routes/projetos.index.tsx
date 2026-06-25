@@ -48,6 +48,7 @@ import {
   useSensor,
   useSensors,
   useDroppable,
+  closestCorners,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
