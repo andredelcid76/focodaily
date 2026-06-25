@@ -842,6 +842,7 @@ function KanbanView({
   onMove: (id: string, patch: Partial<Project>) => Promise<void>;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const [localOrder, setLocalOrder] = useState<Record<string, string[]>>({});
 
   const columns = useMemo(() => {
     if (group === "status") {
@@ -864,8 +865,22 @@ function KanbanView({
       if (!out[key]) out[key] = [];
       out[key].push(p);
     }
+    // Apply optimistic local order overrides
+    for (const colId of Object.keys(out)) {
+      const order = localOrder[colId];
+      if (!order) continue;
+      const byId = new Map(out[colId].map((p) => [p.id, p]));
+      const ordered: Project[] = [];
+      for (const id of order) {
+        const p = byId.get(id);
+        if (p) { ordered.push(p); byId.delete(id); }
+      }
+      // Any new items not in saved order go to the end
+      for (const p of byId.values()) ordered.push(p);
+      out[colId] = ordered;
+    }
     return out;
-  }, [projects, columns, group]);
+  }, [projects, columns, group, localOrder]);
 
   const findCol = (id: string): string | null => {
     if (id.startsWith("status:") || id.startsWith("role:")) return id;
@@ -904,9 +919,12 @@ function KanbanView({
       const newIdx = ids.indexOf(overId);
       if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return;
       const reordered = arrayMove(ids, oldIdx, newIdx);
-      await persistOrder(reordered);
+      // Optimistic UI: update numbering immediately
+      setLocalOrder((prev) => ({ ...prev, [fromCol]: reordered }));
+      void persistOrder(reordered);
       return;
     }
+
 
     // Cross-column → status/role change
     if (group === "status") {
