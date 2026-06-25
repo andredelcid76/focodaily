@@ -224,7 +224,7 @@ export function computeProjectStats(
     const today = new Date(ty, tm - 1, td);
     const dl = new Date(dy, dm - 1, dd);
     daysRemaining = Math.round((dl.getTime() - today.getTime()) / 86400000);
-    isOverdue = daysRemaining < 0 && project.status !== "done" && project.status !== "archived";
+    isOverdue = daysRemaining < 0 && project.status !== "finished";
   }
 
   const openDates = tasks
@@ -235,8 +235,7 @@ export function computeProjectStats(
   const nextTaskOverdue =
     nextTaskDate !== null &&
     nextTaskDate < todayISO &&
-    project.status !== "done" &&
-    project.status !== "archived";
+    project.status !== "finished";
 
   return {
     total,
