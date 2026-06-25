@@ -866,21 +866,55 @@ function KanbanView({
     return out;
   }, [projects, columns, group]);
 
+  const findCol = (id: string): string | null => {
+    if (id.startsWith("status:") || id.startsWith("role:")) return id;
+    for (const colId of Object.keys(grouped)) {
+      if (grouped[colId].some((p) => p.id === id)) return colId;
+    }
+    return null;
+  };
+
+  const persistOrder = async (orderedIds: string[]) => {
+    const { error } = await supabase.rpc("reorder_projects", { p_ordered_ids: orderedIds });
+    if (error) {
+      toast.error("Não foi possível salvar a prioridade");
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+  };
+
   const handleDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over) return;
     const projectId = String(active.id);
-    const targetCol = String(over.id);
+    const overId = String(over.id);
     const project = projects.find((p) => p.id === projectId);
     if (!project) return;
 
+    const fromCol = findCol(projectId);
+    const toCol = findCol(overId);
+    if (!fromCol || !toCol) return;
+
+    // Same column → reorder (priority change)
+    if (fromCol === toCol) {
+      if (projectId === overId) return;
+      const ids = grouped[fromCol].map((p) => p.id);
+      const oldIdx = ids.indexOf(projectId);
+      const newIdx = ids.indexOf(overId);
+      if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return;
+      const reordered = arrayMove(ids, oldIdx, newIdx);
+      await persistOrder(reordered);
+      return;
+    }
+
+    // Cross-column → status/role change
     if (group === "status") {
-      const newStatus = targetCol.replace("status:", "") as ProjectStatus;
+      const newStatus = toCol.replace("status:", "") as ProjectStatus;
       if (project.status === newStatus) return;
       await onMove(projectId, { status: newStatus });
       toast.success(`Movido para ${PROJECT_STATUS_LABEL[newStatus]}`);
     } else {
-      const raw = targetCol.replace("role:", "");
+      const raw = toCol.replace("role:", "");
       const newRoleId = raw === "none" ? null : raw;
       if (project.role_id === newRoleId) return;
       await onMove(projectId, { role_id: newRoleId });
