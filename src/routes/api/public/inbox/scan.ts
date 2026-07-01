@@ -794,6 +794,7 @@ export async function scanForUser(userId: string) {
   const openTitles = (openTasks ?? []).map((t) => (t.title as string) ?? "").filter(Boolean);
   const projectNames = (activeProjects ?? []).map((p) => (p.name as string) ?? "").filter(Boolean);
   const openTitleSet = new Set(openTitles.map(normalizeTitle));
+  const openTokenSets: Array<Set<string>> = openTitles.map(titleTokens).filter((s) => s.size > 0);
 
   // Also block titles of PENDING inbox suggestions so we don't re-suggest the
   // same action the user already has in the inbox (common for Fireflies
@@ -805,9 +806,21 @@ export async function scanForUser(userId: string) {
     .eq("status", "pending")
     .limit(500);
   for (const s of pendingSugs ?? []) {
-    const n = normalizeTitle((s.title as string) ?? "");
-    if (n) openTitleSet.add(n);
+    const raw = (s.title as string) ?? "";
+    const n = normalizeTitle(raw);
+    if (!n) continue;
+    openTitleSet.add(n);
+    const toks = titleTokens(raw);
+    if (toks.size > 0) openTokenSets.push(toks);
   }
+
+  const registerKnown = (title: string) => {
+    const n = normalizeTitle(title);
+    if (!n) return;
+    openTitleSet.add(n);
+    const toks = titleTokens(title);
+    if (toks.size > 0) openTokenSets.push(toks);
+  };
 
   // ── Auto-create tasks for Pipedrive items (bypass Inbox + AI) ──
   const pipedriveFresh = fresh.filter((it) => it.source === "pipedrive");
@@ -816,8 +829,7 @@ export async function scanForUser(userId: string) {
   let autoCreated = 0;
   for (const it of pipedriveFresh) {
     const title = (it.title_override ?? "").trim() || it.source_label || "Atividade Pipedrive";
-    const norm = normalizeTitle(title);
-    if (norm && openTitleSet.has(norm)) continue;
+    if (isDuplicateTitle(title, openTitleSet, openTokenSets)) continue;
     const scheduledDate = it.source_date
       ? String(it.source_date).slice(0, 10)
       : new Date().toISOString().slice(0, 10);
@@ -834,7 +846,7 @@ export async function scanForUser(userId: string) {
     } as never);
     if (!error) {
       autoCreated++;
-      if (norm) openTitleSet.add(norm);
+      registerKnown(title);
     } else {
       console.error("auto-create pipedrive task", error.message);
     }
@@ -849,21 +861,10 @@ export async function scanForUser(userId: string) {
     const item = otherFresh[r.source_index];
     if (!item) continue;
     for (const s of r.suggestions ?? []) {
-      // Post-filter: drop suggestions whose title matches an existing open task.
-      const norm = normalizeTitle(s.title ?? "");
-      if (!norm) continue;
-      if (openTitleSet.has(norm)) continue;
-      // Also drop near-duplicates (one contains the other, both reasonably long).
-      let duplicate = false;
-      for (const existing of openTitleSet) {
-        if (norm.length >= 8 && existing.length >= 8 && (existing.includes(norm) || norm.includes(existing))) {
-          duplicate = true;
-          break;
-        }
-      }
-      if (duplicate) continue;
+      const finalTitle = (item.title_override?.trim() || s.title || "").trim();
+      if (!finalTitle) continue;
+      if (isDuplicateTitle(finalTitle, openTitleSet, openTokenSets)) continue;
 
-      const finalTitle = item.title_override?.trim() || s.title;
       const { error } = await supabaseAdmin.from("inbox_suggestions").insert({
         user_id: userId,
         title: finalTitle,
@@ -880,10 +881,11 @@ export async function scanForUser(userId: string) {
       } as never);
       if (!error) {
         created++;
-        openTitleSet.add(norm); // prevent dup within the same batch
+        registerKnown(finalTitle); // prevent dup within the same batch
       }
     }
   }
+
 
   await supabaseAdmin.from("inbox_scan_state").upsert({
     user_id: userId,
