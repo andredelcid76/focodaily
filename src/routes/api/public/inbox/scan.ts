@@ -597,6 +597,52 @@ function normalizeTitle(s: string): string {
     .trim();
 }
 
+// Stopwords curtas em pt/en que não ajudam a diferenciar tarefas.
+const STOPWORDS = new Set([
+  "a","o","as","os","de","da","do","das","dos","e","em","no","na","nos","nas",
+  "para","por","com","sem","um","uma","uns","umas","que","se","ao","aos",
+  "the","an","of","to","for","in","on","at","and","or","with","by","is","be",
+  "responder","enviar","fazer","dar","ver","ler","email","reuniao","reunião",
+]);
+
+function titleTokens(s: string): Set<string> {
+  const n = normalizeTitle(s);
+  if (!n) return new Set();
+  return new Set(n.split(" ").filter((w) => w.length >= 3 && !STOPWORDS.has(w)));
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = a.size + b.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+/** True when `title` looks like a duplicate of any known entry: exact
+ * normalized match, substring containment, or token-Jaccard ≥ 0.65. */
+function isDuplicateTitle(
+  title: string,
+  knownNorms: Set<string>,
+  knownTokenSets: Array<Set<string>>,
+): boolean {
+  const norm = normalizeTitle(title);
+  if (!norm) return true;
+  if (knownNorms.has(norm)) return true;
+  for (const existing of knownNorms) {
+    if (norm.length >= 8 && existing.length >= 8 && (existing.includes(norm) || norm.includes(existing))) {
+      return true;
+    }
+  }
+  const tokens = titleTokens(title);
+  if (tokens.size >= 2) {
+    for (const other of knownTokenSets) {
+      if (other.size >= 2 && jaccard(tokens, other) >= 0.65) return true;
+    }
+  }
+  return false;
+}
+
 async function aiExtractTasks(
   items: SourceItem[],
   existingContext: { openTasks: string[]; projects: string[] },
