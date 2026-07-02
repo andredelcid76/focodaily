@@ -143,6 +143,7 @@ function IntegracoesInner() {
             >
               <TabsContent value="perfil" className="mt-0 space-y-5">
                 <ProfileCard />
+                <AccentColorCard />
               </TabsContent>
 
               <TabsContent value="papeis" className="mt-0 space-y-5">
