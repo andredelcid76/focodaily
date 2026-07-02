@@ -20,6 +20,9 @@ const updateSchema = z.object({
   avatar_url: z.string().url().max(500).nullable().optional(),
   timezone: z.string().min(1).max(60).optional(),
   locale: z.string().min(2).max(10).optional(),
+  accent_color: z.enum([
+    "emerald","sapphire","violet","amber","rose","crimson","teal","copper","plum","slate",
+  ]).optional(),
 });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
@@ -32,6 +35,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
     if (data.timezone !== undefined) patch.timezone = data.timezone;
     if (data.locale !== undefined) patch.locale = data.locale;
+    if (data.accent_color !== undefined) patch.accent_color = data.accent_color;
 
     const { error } = await supabase
       .from("profiles")
