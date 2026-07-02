@@ -57,6 +57,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
   useAppBadge();
+  useAccentColor();
 
   const meta = useMemo(() => pageMetaFor(location.pathname), [location.pathname]);
 
