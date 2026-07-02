@@ -72,6 +72,7 @@ import {
 import { getOutlookAuthUrl, disconnectOutlook, testOutlookConnection } from "@/lib/outlook.functions";
 
 import { ProfileCard } from "@/components/ProfileCard";
+import { AccentColorCard } from "@/components/AccentColorCard";
 
 const PUBLISHED_MCP_URL = "https://focodaily.lovable.app/api/public/mcp";
 
@@ -142,6 +143,7 @@ function IntegracoesInner() {
             >
               <TabsContent value="perfil" className="mt-0 space-y-5">
                 <ProfileCard />
+                <AccentColorCard />
               </TabsContent>
 
               <TabsContent value="papeis" className="mt-0 space-y-5">
