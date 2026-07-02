@@ -137,20 +137,21 @@
     letter-spacing: -0.022em;
   }
   ::selection {
-    background: oklch(0.62 0.13 165 / 0.35);
+    background: var(--selection-bg, oklch(0.62 0.13 165 / 0.35));
     color: var(--color-foreground);
   }
   /* Refined scrollbars (WebKit) */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: oklch(0.30 0.02 165 / 0.6);
+    background: var(--scrollbar-thumb, oklch(0.30 0.02 165 / 0.6));
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: oklch(0.40 0.04 165 / 0.8); background-clip: padding-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover, oklch(0.40 0.04 165 / 0.8)); background-clip: padding-box; border: 2px solid transparent; }
 }
+
 
 @layer utilities {
   .bg-gradient-prestige { background-image: var(--gradient-prestige); }
@@ -168,15 +169,16 @@
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
   .ring-prestige { box-shadow: 0 0 0 1px oklch(0.78 0.13 88 / 0.3), 0 0 0 4px oklch(0.62 0.13 165 / 0.18); }
   .glass {
-    background: oklch(0.21 0.025 165 / 0.6);
+    background: var(--glass-bg, oklch(0.21 0.025 165 / 0.6));
     backdrop-filter: blur(12px) saturate(140%);
     -webkit-backdrop-filter: blur(12px) saturate(140%);
   }
   .glass-strong {
-    background: oklch(0.18 0.022 165 / 0.78);
+    background: var(--glass-strong-bg, oklch(0.18 0.022 165 / 0.78));
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
   }
+
   .hover-lift {
     transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
   }
