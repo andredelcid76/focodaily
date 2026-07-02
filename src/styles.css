@@ -137,20 +137,21 @@
     letter-spacing: -0.022em;
   }
   ::selection {
-    background: oklch(0.62 0.13 165 / 0.35);
+    background: var(--selection-bg, oklch(0.62 0.13 165 / 0.35));
     color: var(--color-foreground);
   }
   /* Refined scrollbars (WebKit) */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: oklch(0.30 0.02 165 / 0.6);
+    background: var(--scrollbar-thumb, oklch(0.30 0.02 165 / 0.6));
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: oklch(0.40 0.04 165 / 0.8); background-clip: padding-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover, oklch(0.40 0.04 165 / 0.8)); background-clip: padding-box; border: 2px solid transparent; }
 }
+
 
 @layer utilities {
   .bg-gradient-prestige { background-image: var(--gradient-prestige); }
