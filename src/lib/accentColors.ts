@@ -69,9 +69,15 @@ export function applyAccentColor(id: string | null | undefined) {
   const gradStart     = `oklch(0.55 ${c} ${h})`;
   const gradEnd       = `oklch(0.72 ${Math.max(c - 0.01, 0.02)} ${h})`;
   const bgTopGlow     = `oklch(0.32 ${Math.min(c - 0.03, 0.10)} ${h} / 0.55)`;
+  const bgMidGlow     = `oklch(0.30 ${Math.min(c - 0.04, 0.09)} ${h} / 0.20)`;
   const bgBottomGlow  = `oklch(0.20 ${Math.min(c - 0.09, 0.04)} ${h} / 0.7)`;
   const shadowGlow    = `0 0 50px -12px oklch(0.62 ${Math.max(c + 0.03, 0.10)} ${h} / 0.45)`;
   const selectionBg   = `oklch(0.62 ${c} ${h} / 0.35)`;
+  const glassC        = Math.min(c, 0.03);
+  const glassBg       = `oklch(0.21 ${glassC} ${h} / 0.6)`;
+  const glassStrongBg = `oklch(0.18 ${glassC} ${h} / 0.78)`;
+  const scrollThumb   = `oklch(0.30 ${glassC} ${h} / 0.6)`;
+  const scrollThumbHi = `oklch(0.40 ${Math.min(c, 0.05)} ${h} / 0.8)`;
 
   const fg = p.lightForeground
     ? "oklch(0.98 0.005 90)"
@@ -99,25 +105,35 @@ export function applyAccentColor(id: string | null | undefined) {
   root.style.setProperty("--sidebar-accent",    `oklch(0.24 ${surfaceC} ${h})`);
   root.style.setProperty("--sidebar-border",    `oklch(0.28 ${surfaceC} ${h} / 0.55)`);
 
+  // Glass / scrollbar / selection — retinted to the accent.
+  root.style.setProperty("--glass-bg", glassBg);
+  root.style.setProperty("--glass-strong-bg", glassStrongBg);
+  root.style.setProperty("--scrollbar-thumb", scrollThumb);
+  root.style.setProperty("--scrollbar-thumb-hover", scrollThumbHi);
+  root.style.setProperty("--selection-bg", selectionBg);
+
   root.style.setProperty(
     "--gradient-primary",
     `linear-gradient(135deg, ${gradStart} 0%, ${gradEnd} 100%)`,
   );
-  // Prestige keeps the fixed gold accent, but starts from the user's color.
+  // Prestige uses close hues within the accent for a smooth nuance, no jump
+  // to a distant color.
   root.style.setProperty(
     "--gradient-prestige",
-    `linear-gradient(135deg, ${gradStart} 0%, oklch(0.78 0.13 88) 100%)`,
+    `linear-gradient(135deg, ${gradStart} 0%, oklch(0.78 ${Math.max(c - 0.02, 0.04)} ${h}) 100%)`,
   );
 
-  // Painterly page background — same shape as :root, retinted to the accent.
+  // Painterly page background — same shape as :root, fully retinted so no
+  // green residue leaks through when the accent isn't emerald.
   root.style.setProperty(
     "--gradient-bg",
     `radial-gradient(ellipse 80% 55% at 18% -10%, ${bgTopGlow}, transparent 60%),` +
-      ` radial-gradient(ellipse 60% 50% at 100% 100%, oklch(0.32 0.09 88 / 0.20), transparent 65%),` +
+      ` radial-gradient(ellipse 60% 50% at 100% 100%, ${bgMidGlow}, transparent 65%),` +
       ` radial-gradient(ellipse 90% 60% at 50% 130%, ${bgBottomGlow}, transparent 60%)`,
   );
 
   root.style.setProperty("--shadow-glow", shadowGlow);
+
 
   // Persist for pre-hydration flash-prevention.
   try {
