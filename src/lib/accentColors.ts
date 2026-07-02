@@ -84,6 +84,21 @@ export function applyAccentColor(id: string | null | undefined) {
   root.style.setProperty("--sidebar-primary-foreground", fg);
   root.style.setProperty("--sidebar-ring", ring);
 
+  // Retint base surfaces so the whole app (background, cards, popovers,
+  // sidebar, inputs, borders) inherits the accent hue — not just buttons.
+  const surfaceC = Math.min(c, 0.03);
+  root.style.setProperty("--background",        `oklch(0.16 ${surfaceC} ${h})`);
+  root.style.setProperty("--card",              `oklch(0.21 ${surfaceC} ${h})`);
+  root.style.setProperty("--popover",           `oklch(0.20 ${surfaceC} ${h})`);
+  root.style.setProperty("--muted",             `oklch(0.24 ${surfaceC} ${h})`);
+  root.style.setProperty("--secondary",         `oklch(0.24 ${surfaceC} ${h})`);
+  root.style.setProperty("--accent",            `oklch(0.28 ${Math.min(c, 0.05)} ${h})`);
+  root.style.setProperty("--border",            `oklch(0.30 ${surfaceC} ${h} / 0.55)`);
+  root.style.setProperty("--input",             `oklch(0.26 ${surfaceC} ${h} / 0.6)`);
+  root.style.setProperty("--sidebar",           `oklch(0.14 ${surfaceC} ${h})`);
+  root.style.setProperty("--sidebar-accent",    `oklch(0.24 ${surfaceC} ${h})`);
+  root.style.setProperty("--sidebar-border",    `oklch(0.28 ${surfaceC} ${h} / 0.55)`);
+
   root.style.setProperty(
     "--gradient-primary",
     `linear-gradient(135deg, ${gradStart} 0%, ${gradEnd} 100%)`,
