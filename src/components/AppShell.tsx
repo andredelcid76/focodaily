@@ -11,6 +11,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { useAppBadge } from "@/hooks/useAppBadge";
 
 // Single source of truth for breadcrumb groups. The eyebrow link goes to the
 // first item of the group, so e.g. clicking "Trabalho" from /inbox returns to
@@ -54,6 +55,7 @@ function Shell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
+  useAppBadge();
 
   const meta = useMemo(() => pageMetaFor(location.pathname), [location.pathname]);
 
