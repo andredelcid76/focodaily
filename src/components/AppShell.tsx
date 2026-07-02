@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Sparkles } from "lucide-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { useAppBadge } from "@/hooks/useAppBadge";
+import { useAccentColor } from "@/hooks/useAccentColor";
 
 // Single source of truth for breadcrumb groups. The eyebrow link goes to the
 // first item of the group, so e.g. clicking "Trabalho" from /inbox returns to
