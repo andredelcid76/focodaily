@@ -169,15 +169,16 @@
   .shadow-elevated { box-shadow: var(--shadow-elevated); }
   .ring-prestige { box-shadow: 0 0 0 1px oklch(0.78 0.13 88 / 0.3), 0 0 0 4px oklch(0.62 0.13 165 / 0.18); }
   .glass {
-    background: oklch(0.21 0.025 165 / 0.6);
+    background: var(--glass-bg, oklch(0.21 0.025 165 / 0.6));
     backdrop-filter: blur(12px) saturate(140%);
     -webkit-backdrop-filter: blur(12px) saturate(140%);
   }
   .glass-strong {
-    background: oklch(0.18 0.022 165 / 0.78);
+    background: var(--glass-strong-bg, oklch(0.18 0.022 165 / 0.78));
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
   }
+
   .hover-lift {
     transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
   }
