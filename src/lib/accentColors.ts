@@ -134,12 +134,26 @@ export function applyAccentColor(id: string | null | undefined) {
 
   root.style.setProperty("--shadow-glow", shadowGlow);
 
+  // Sync <meta name="theme-color"> so the OS window chrome (installed PWA
+  // title bar on Windows, address bar on mobile Chrome/Edge) follows the
+  // accent. Uses a very dark tint of the accent hue to match the app shell.
+  try {
+    const themeMetaColor = `oklch(0.18 ${surfaceC} ${h})`;
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = themeMetaColor;
+  } catch { /* ignore */ }
 
   // Persist for pre-hydration flash-prevention.
   try {
     localStorage.setItem("foco-accent", p.id);
   } catch { /* ignore */ }
 }
+
 
 /** Read the cached accent from localStorage (safe on SSR). */
 export function readCachedAccent(): AccentColorId {
