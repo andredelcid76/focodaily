@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
   useProjects,
+  useProjectHistory,
   computeProjectStats,
   PROJECT_STATUS_LABEL,
   type ProjectStatus,
