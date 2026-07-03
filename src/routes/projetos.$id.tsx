@@ -262,6 +262,9 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
           <TabBtn active={tab === "comments"} onClick={() => setTab("comments")} icon={<MessageSquare className="h-3.5 w-3.5" />}>
             Comentários ({comments.comments.length})
           </TabBtn>
+          <TabBtn active={tab === "activity"} onClick={() => setTab("activity")} icon={<CalendarClock className="h-3.5 w-3.5" />}>
+            Atividade ({statusHistory.length})
+          </TabBtn>
           <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
             Histórico
           </TabBtn>
