@@ -32,6 +32,7 @@ type Props = {
     starts_on: string | null;
     deadline: string | null;
     team_id: string | null;
+    members_can_reassign: boolean;
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
