@@ -246,6 +246,29 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
             </div>
           </div>
 
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={membersCanReassign}
+                onCheckedChange={(v) => setMembersCanReassign(v === true)}
+                disabled={!isOwner}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  Membros podem reatribuir tarefas
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {membersCanReassign
+                    ? "Qualquer membro deste projeto pode trocar o responsável das tarefas."
+                    : "Apenas o dono e administradores podem trocar o responsável das tarefas."}
+                  {!isOwner && " Somente o dono do projeto pode alterar essa configuração."}
+                </p>
+              </div>
+            </label>
+          </div>
+
           {project?.id && <ProjectMembersSection projectId={project.id} />}
         </div>
 
