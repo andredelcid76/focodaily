@@ -38,6 +38,7 @@ type Props = {
 };
 
 export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDelete }: Props) {
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(PROJECT_COLORS[0]);
@@ -46,7 +47,10 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
   const [startsOn, setStartsOn] = useState<string>("");
   const [deadline, setDeadline] = useState<string>("");
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [membersCanReassign, setMembersCanReassign] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
+
+  const isOwner = !project || project.user_id === user?.id;
 
   const fetchTeams = useServerFn(listTeams);
   const { data: teamsData } = useQuery({
