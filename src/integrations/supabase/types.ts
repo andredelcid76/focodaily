@@ -965,6 +965,7 @@ export type Database = {
           description: string | null
           icon: string
           id: string
+          members_can_reassign: boolean
           name: string
           planner_plan_id: string | null
           planner_synced_at: string | null
@@ -983,6 +984,7 @@ export type Database = {
           description?: string | null
           icon?: string
           id?: string
+          members_can_reassign?: boolean
           name: string
           planner_plan_id?: string | null
           planner_synced_at?: string | null
@@ -1001,6 +1003,7 @@ export type Database = {
           description?: string | null
           icon?: string
           id?: string
+          members_can_reassign?: boolean
           name?: string
           planner_plan_id?: string | null
           planner_synced_at?: string | null
