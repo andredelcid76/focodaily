@@ -433,7 +433,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                 </p>
               </div>
             )}
+
+            {task?.id && !isSeed && (
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 shrink-0">
+                <TaskActivityLog taskId={task.id} />
+              </div>
+            )}
           </div>
+
 
           {/* RIGHT — Metadata */}
           <div className="flex flex-col lg:min-h-0 lg:overflow-y-auto p-6 gap-4 bg-muted/10 min-w-0">
