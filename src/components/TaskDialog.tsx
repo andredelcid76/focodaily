@@ -183,6 +183,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const members = membersData?.members ?? [];
   const isShared = members.length > 1;
   const delegatedToOther = !!(isShared && effectiveProjectId && assigneeId && assigneeId !== user?.id);
+  const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) : null;
+  const projectAllowsMemberReassign = (currentProject as any)?.members_can_reassign !== false;
+  const isProjectAdminOrOwner = !!(membersData?.is_owner || membersData?.is_admin);
+  const canReassign = isProjectAdminOrOwner || projectAllowsMemberReassign;
 
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
