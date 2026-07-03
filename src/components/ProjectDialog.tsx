@@ -71,6 +71,7 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
       setStartsOn(project?.starts_on ?? "");
       setDeadline(project?.deadline ?? "");
       setTeamId(((project as any)?.team_id ?? null) as string | null);
+      setMembersCanReassign(((project as any)?.members_can_reassign ?? true) as boolean);
     }
   }, [open, project]);
 
@@ -90,6 +91,7 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
         starts_on: startsOn || null,
         deadline: deadline || null,
         team_id: teamId,
+        members_can_reassign: membersCanReassign,
       });
       onOpenChange(false);
     } catch (e: any) {
