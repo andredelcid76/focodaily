@@ -12,9 +12,11 @@ import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
 import { listTeams } from "@/lib/teams.functions";
-import { Users, User as UserIcon } from "lucide-react";
+import { Users, User as UserIcon, Lock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/lib/auth";
 
 type Props = {
   open: boolean;
@@ -30,11 +32,13 @@ type Props = {
     starts_on: string | null;
     deadline: string | null;
     team_id: string | null;
+    members_can_reassign: boolean;
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
 
 export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDelete }: Props) {
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(PROJECT_COLORS[0]);
@@ -43,7 +47,10 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
   const [startsOn, setStartsOn] = useState<string>("");
   const [deadline, setDeadline] = useState<string>("");
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [membersCanReassign, setMembersCanReassign] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
+
+  const isOwner = !project || project.user_id === user?.id;
 
   const fetchTeams = useServerFn(listTeams);
   const { data: teamsData } = useQuery({
@@ -64,6 +71,7 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
       setStartsOn(project?.starts_on ?? "");
       setDeadline(project?.deadline ?? "");
       setTeamId(((project as any)?.team_id ?? null) as string | null);
+      setMembersCanReassign(((project as any)?.members_can_reassign ?? true) as boolean);
     }
   }, [open, project]);
 
@@ -83,6 +91,7 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
         starts_on: startsOn || null,
         deadline: deadline || null,
         team_id: teamId,
+        members_can_reassign: membersCanReassign,
       });
       onOpenChange(false);
     } catch (e: any) {
@@ -235,6 +244,29 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
               <Label>Prazo final</Label>
               <DatePickerField value={deadline} onChange={setDeadline} />
             </div>
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={membersCanReassign}
+                onCheckedChange={(v) => setMembersCanReassign(v === true)}
+                disabled={!isOwner}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  Membros podem reatribuir tarefas
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {membersCanReassign
+                    ? "Qualquer membro deste projeto pode trocar o responsável das tarefas."
+                    : "Apenas o dono e administradores podem trocar o responsável das tarefas."}
+                  {!isOwner && " Somente o dono do projeto pode alterar essa configuração."}
+                </p>
+              </div>
+            </label>
           </div>
 
           {project?.id && <ProjectMembersSection projectId={project.id} />}

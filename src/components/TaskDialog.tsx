@@ -183,6 +183,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const members = membersData?.members ?? [];
   const isShared = members.length > 1;
   const delegatedToOther = !!(isShared && effectiveProjectId && assigneeId && assigneeId !== user?.id);
+  const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) : null;
+  const projectAllowsMemberReassign = (currentProject as any)?.members_can_reassign !== false;
+  const isProjectAdminOrOwner = !!(membersData?.is_owner || membersData?.is_admin);
+  const canReassign = isProjectAdminOrOwner || projectAllowsMemberReassign;
 
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
@@ -540,8 +544,16 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               <Select
                 value={assigneeId ?? user?.id ?? "__none"}
                 onValueChange={(v) => setAssigneeId(v === "__none" ? null : v)}
+                disabled={!canReassign}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  title={
+                    !canReassign
+                      ? "Apenas o dono ou administradores deste projeto podem reatribuir tarefas"
+                      : undefined
+                  }
+                  className={!canReassign ? "cursor-not-allowed opacity-70" : undefined}
+                >
                   <SelectValue placeholder="Sem responsável" />
                 </SelectTrigger>
                 <SelectContent>
@@ -562,6 +574,11 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   ))}
                 </SelectContent>
               </Select>
+              {!canReassign && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Apenas o dono ou administradores deste projeto podem reatribuir tarefas.
+                </p>
+              )}
             </div>
           )}
 
