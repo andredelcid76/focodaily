@@ -12,9 +12,11 @@ import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
 import { listTeams } from "@/lib/teams.functions";
-import { Users, User as UserIcon } from "lucide-react";
+import { Users, User as UserIcon, Lock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/lib/auth";
 
 type Props = {
   open: boolean;
