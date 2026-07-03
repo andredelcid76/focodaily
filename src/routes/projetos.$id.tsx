@@ -52,7 +52,7 @@ function ProjectDetailPage() {
   return <ProjectDetailInner userId={user.id} projectId={id} accessToken={session.access_token} />;
 }
 
-type Tab = "tasks" | "milestones" | "meetings" | "comments" | "history";
+type Tab = "tasks" | "milestones" | "meetings" | "comments" | "activity" | "history";
 
 function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string; projectId: string; accessToken: string }) {
   const navigate = useNavigate();
