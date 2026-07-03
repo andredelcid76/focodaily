@@ -544,8 +544,16 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               <Select
                 value={assigneeId ?? user?.id ?? "__none"}
                 onValueChange={(v) => setAssigneeId(v === "__none" ? null : v)}
+                disabled={!canReassign}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  title={
+                    !canReassign
+                      ? "Apenas o dono ou administradores deste projeto podem reatribuir tarefas"
+                      : undefined
+                  }
+                  className={!canReassign ? "cursor-not-allowed opacity-70" : undefined}
+                >
                   <SelectValue placeholder="Sem responsável" />
                 </SelectTrigger>
                 <SelectContent>
@@ -566,6 +574,11 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   ))}
                 </SelectContent>
               </Select>
+              {!canReassign && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Apenas o dono ou administradores deste projeto podem reatribuir tarefas.
+                </p>
+              )}
             </div>
           )}
 
