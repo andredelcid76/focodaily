@@ -263,7 +263,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
             Comentários ({comments.comments.length})
           </TabBtn>
           <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
-            Atividade
+            Histórico
           </TabBtn>
         </div>
 
