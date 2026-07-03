@@ -134,7 +134,33 @@ export const listTasks = defineTool({
     if (args.project_id) q = q.eq("project_id", args.project_id);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
-    return JSON.stringify(data ?? []);
+    const rows = data ?? [];
+    // Enrich assignee/creator/project-owner with display_name via a batched
+    // profiles lookup (FKs go to auth.users, so PostgREST embed isn't available).
+    const userIds = new Set<string>();
+    for (const r of rows as Array<{ user_id?: string | null; assignee_id?: string | null; project?: { user_id?: string | null } | null }>) {
+      if (r.user_id) userIds.add(r.user_id);
+      if (r.assignee_id) userIds.add(r.assignee_id);
+      if (r.project?.user_id) userIds.add(r.project.user_id);
+    }
+    let profileMap = new Map<string, { display_name: string | null; email: string | null }>();
+    if (userIds.size > 0) {
+      const { data: profs } = await db(ctx.auth)
+        .from("profiles")
+        .select("user_id,display_name,email")
+        .in("user_id", Array.from(userIds));
+      profileMap = new Map((profs ?? []).map((p) => [p.user_id as string, { display_name: p.display_name, email: p.email }]));
+    }
+    const enriched = (rows as Array<Record<string, unknown>>).map((r) => {
+      const rr = r as { user_id?: string | null; assignee_id?: string | null; project?: { user_id?: string | null } | null };
+      return {
+        ...r,
+        assignee: rr.assignee_id ? profileMap.get(rr.assignee_id) ?? null : null,
+        creator: rr.user_id ? profileMap.get(rr.user_id) ?? null : null,
+        project_owner: rr.project?.user_id ? profileMap.get(rr.project.user_id) ?? null : null,
+      };
+    });
+    return JSON.stringify(enriched);
   },
 });
 
