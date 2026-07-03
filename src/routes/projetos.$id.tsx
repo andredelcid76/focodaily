@@ -329,30 +329,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
 
         {tab === "comments" && <CommentsPanel api={comments} />}
 
-        {tab === "history" && (
-          <div className="space-y-2">
-            {history.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem atividade ainda.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {history.map((h) => (
-                  <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs">
-                    <History className="h-3 w-3 text-muted-foreground" />
-                    <span>
-                      {h.from_status
-                        ? <>De <strong>{PROJECT_STATUS_LABEL[h.from_status]}</strong> para <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>
-                        : <>Status inicial: <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>}
-                      {h.note && <span className="ml-1 text-muted-foreground">— {h.note}</span>}
-                    </span>
-                    <span className="ml-auto text-muted-foreground">
-                      {new Date(h.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {tab === "history" && <ProjectHistoryPanel projectId={project.id} />}
       </div>
 
 
