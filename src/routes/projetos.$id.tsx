@@ -60,7 +60,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
   const { roles } = useRoles(userId);
   const tasksApi = useTasks(userId);
   const meetingsApi = useMeetings(userId);
-  const { history: statusHistory } = useProjectHistory(projectId);
+  const statusHistory = useProjectHistory(projectId);
   const comments = useProjectComments(projectId, userId);
   const linksApi = useProjectLinks(projectId, userId);
   const milestonesApi = useProjectMilestones(projectId, userId);
