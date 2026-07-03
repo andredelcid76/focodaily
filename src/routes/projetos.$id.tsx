@@ -22,6 +22,7 @@ import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { ProjectDialog } from "@/components/ProjectDialog";
+import { ProjectHistoryPanel } from "@/components/ProjectHistoryPanel";
 import { ProjectStatusBadge } from "@/components/ProjectChip";
 import { ProjectTaskBoard } from "@/components/ProjectTaskBoard";
 import { Button } from "@/components/ui/button";
