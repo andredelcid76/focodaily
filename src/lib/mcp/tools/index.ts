@@ -91,31 +91,76 @@ export const deleteRole = defineTool({
 export const listTasks = defineTool({
   name: "list_tasks",
   description:
-    "Lista tarefas do usuário com filtros opcionais. Útil para perguntar 'o que tenho pra hoje', ver atrasos, próximos dias, ou tarefas de um projeto. Cada tarefa inclui role (papel) e project (projeto) com nome.",
+    "Lista tarefas visíveis para o usuário: criadas por ele, delegadas a ele (assignee_id) ou de projetos compartilhados dos quais participa. RLS do banco garante o filtro. Cada item inclui role, project (com dono), assignee e creator.",
   parameters: z.object({
     from_date: z.string().optional().describe("Data inicial YYYY-MM-DD"),
     to_date: z.string().optional().describe("Data final YYYY-MM-DD"),
     only_open: z.boolean().optional().describe("Se true, retorna só não-concluídas"),
     project_id: z.string().optional(),
+    assigned_to_me: z
+      .boolean()
+      .optional()
+      .describe("Se true, retorna só tarefas onde o usuário é o responsável (assignee_id)."),
+    created_by_me: z
+      .boolean()
+      .optional()
+      .describe("Se true, retorna só tarefas criadas pelo usuário (user_id)."),
     limit: z.number().optional().describe("Padrão 100, máximo 500"),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+    const selectCols =
+      "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,role:roles(id,name,color),project:projects(id,name,color,user_id)";
     let q = db(ctx.auth)
       .from("tasks")
-      .select(
-        "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,role:roles(id,name,color),project:projects(id,name,color)",
-      )
-      .eq("user_id", userId)
+      .select(selectCols)
       .order("scheduled_date", { ascending: true })
       .limit(Math.min(args.limit ?? 100, 500));
+    if (args.assigned_to_me) {
+      q = q.eq("assignee_id", userId);
+    } else if (args.created_by_me) {
+      q = q.eq("user_id", userId);
+    } else if (args.project_id) {
+      // RLS on tasks already restricts to what this user can read within the
+      // project (owner, member, or delegated); no extra filter needed.
+    } else {
+      // Widen beyond owner-only so delegated tasks come through. Shared-project
+      // browsing should pass project_id explicitly.
+      q = q.or(`user_id.eq.${userId},assignee_id.eq.${userId}`);
+    }
     if (args.from_date) q = q.gte("scheduled_date", args.from_date);
     if (args.to_date) q = q.lte("scheduled_date", args.to_date);
     if (args.only_open) q = q.eq("completed", false);
     if (args.project_id) q = q.eq("project_id", args.project_id);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
-    return JSON.stringify(data ?? []);
+    const rows = data ?? [];
+    // Enrich assignee/creator/project-owner with display_name via a batched
+    // profiles lookup (FKs go to auth.users, so PostgREST embed isn't available).
+    const userIds = new Set<string>();
+    for (const r of rows as Array<{ user_id?: string | null; assignee_id?: string | null; project?: { user_id?: string | null } | null }>) {
+      if (r.user_id) userIds.add(r.user_id);
+      if (r.assignee_id) userIds.add(r.assignee_id);
+      if (r.project?.user_id) userIds.add(r.project.user_id);
+    }
+    let profileMap = new Map<string, { display_name: string | null; email: string | null }>();
+    if (userIds.size > 0) {
+      const { data: profs } = await db(ctx.auth)
+        .from("profiles")
+        .select("user_id,display_name,email")
+        .in("user_id", Array.from(userIds));
+      profileMap = new Map((profs ?? []).map((p) => [p.user_id as string, { display_name: p.display_name, email: p.email }]));
+    }
+    const enriched = (rows as Array<Record<string, unknown>>).map((r) => {
+      const rr = r as { user_id?: string | null; assignee_id?: string | null; project?: { user_id?: string | null } | null };
+      return {
+        ...r,
+        assignee: rr.assignee_id ? profileMap.get(rr.assignee_id) ?? null : null,
+        creator: rr.user_id ? profileMap.get(rr.user_id) ?? null : null,
+        project_owner: rr.project?.user_id ? profileMap.get(rr.project.user_id) ?? null : null,
+      };
+    });
+    return JSON.stringify(enriched);
   },
 });
 
