@@ -131,7 +131,7 @@ export function TaskActivityLog({ taskId }: { taskId: string }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-        <History className="h-3.5 w-3.5" /> Atividade
+        <History className="h-3.5 w-3.5" /> Histórico
       </div>
       <ul className="space-y-1.5">
         {visible.map((r) => (
