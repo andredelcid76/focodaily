@@ -4,7 +4,6 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
   useProjects,
-  useProjectHistory,
   computeProjectStats,
   PROJECT_STATUS_LABEL,
   type ProjectStatus,
@@ -22,6 +21,7 @@ import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes } from "@/hooks/useMeetings";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { ProjectDialog } from "@/components/ProjectDialog";
+import { ProjectHistoryPanel } from "@/components/ProjectHistoryPanel";
 import { ProjectStatusBadge } from "@/components/ProjectChip";
 import { ProjectTaskBoard } from "@/components/ProjectTaskBoard";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
   const { roles } = useRoles(userId);
   const tasksApi = useTasks(userId);
   const meetingsApi = useMeetings(userId);
-  const history = useProjectHistory(projectId);
+  // project status history is now consumed inside ProjectHistoryPanel
   const comments = useProjectComments(projectId, userId);
   const linksApi = useProjectLinks(projectId, userId);
   const milestonesApi = useProjectMilestones(projectId, userId);
@@ -262,7 +262,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
             Comentários ({comments.comments.length})
           </TabBtn>
           <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
-            Atividade
+            Histórico
           </TabBtn>
         </div>
 
@@ -328,30 +328,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
 
         {tab === "comments" && <CommentsPanel api={comments} />}
 
-        {tab === "history" && (
-          <div className="space-y-2">
-            {history.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem atividade ainda.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {history.map((h) => (
-                  <li key={h.id} className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs">
-                    <History className="h-3 w-3 text-muted-foreground" />
-                    <span>
-                      {h.from_status
-                        ? <>De <strong>{PROJECT_STATUS_LABEL[h.from_status]}</strong> para <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>
-                        : <>Status inicial: <strong>{PROJECT_STATUS_LABEL[h.to_status]}</strong></>}
-                      {h.note && <span className="ml-1 text-muted-foreground">— {h.note}</span>}
-                    </span>
-                    <span className="ml-auto text-muted-foreground">
-                      {new Date(h.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {tab === "history" && <ProjectHistoryPanel projectId={project.id} />}
       </div>
 
 
