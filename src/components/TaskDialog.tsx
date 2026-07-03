@@ -19,6 +19,7 @@ import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { FolderKanban, Lock, CheckCircle2, RotateCcw, User, Link2, X } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
+import { TaskActivityLog } from "@/components/TaskActivityLog";
 import { useAuth } from "@/lib/auth";
 import { listProjectMembers } from "@/lib/team.functions";
 import { useTaskDependencies } from "@/hooks/useTaskDependencies";
