@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
   useProjects,
+  useProjectHistory,
   computeProjectStats,
   PROJECT_STATUS_LABEL,
   type ProjectStatus,
@@ -51,7 +52,7 @@ function ProjectDetailPage() {
   return <ProjectDetailInner userId={user.id} projectId={id} accessToken={session.access_token} />;
 }
 
-type Tab = "tasks" | "milestones" | "meetings" | "comments" | "history";
+type Tab = "tasks" | "milestones" | "meetings" | "comments" | "activity" | "history";
 
 function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string; projectId: string; accessToken: string }) {
   const navigate = useNavigate();
@@ -59,7 +60,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
   const { roles } = useRoles(userId);
   const tasksApi = useTasks(userId);
   const meetingsApi = useMeetings(userId);
-  // project status history is now consumed inside ProjectHistoryPanel
+  const statusHistory = useProjectHistory(projectId);
   const comments = useProjectComments(projectId, userId);
   const linksApi = useProjectLinks(projectId, userId);
   const milestonesApi = useProjectMilestones(projectId, userId);
@@ -261,6 +262,9 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
           <TabBtn active={tab === "comments"} onClick={() => setTab("comments")} icon={<MessageSquare className="h-3.5 w-3.5" />}>
             Comentários ({comments.comments.length})
           </TabBtn>
+          <TabBtn active={tab === "activity"} onClick={() => setTab("activity")} icon={<CalendarClock className="h-3.5 w-3.5" />}>
+            Atividade ({statusHistory.length})
+          </TabBtn>
           <TabBtn active={tab === "history"} onClick={() => setTab("history")} icon={<History className="h-3.5 w-3.5" />}>
             Histórico
           </TabBtn>
@@ -327,6 +331,32 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
         )}
 
         {tab === "comments" && <CommentsPanel api={comments} />}
+
+        {tab === "activity" && (
+          <div className="space-y-2">
+            {statusHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma mudança de status registrada ainda.</p>
+            ) : (
+              <ul className="space-y-2">
+                {statusHistory.map((h) => (
+                  <li key={h.id} className="rounded-xl border border-border/60 bg-card/60 p-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">
+                        {h.from_status ? PROJECT_STATUS_LABEL[h.from_status as ProjectStatus] : "—"}
+                      </span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="font-medium">{PROJECT_STATUS_LABEL[h.to_status as ProjectStatus]}</span>
+                    </div>
+                    {h.note && <div className="mt-1 text-xs text-muted-foreground">{h.note}</div>}
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {new Date(h.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {tab === "history" && <ProjectHistoryPanel projectId={project.id} />}
       </div>
