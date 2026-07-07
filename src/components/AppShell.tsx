@@ -9,7 +9,8 @@ import { MayaChat } from "@/components/MayaChat";
 import { QuickAddTaskButton } from "@/components/QuickAddTaskButton";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { useAppBadge } from "@/hooks/useAppBadge";
 import { useAccentColor } from "@/hooks/useAccentColor";
@@ -90,9 +91,9 @@ function Shell({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-dvh items-center justify-center text-muted-foreground">
         <div className="flex items-center gap-3">
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-prestige shadow-glow">
+          <span className="relative flex h-8 w-8 items-center justify-center">
             <span className="absolute inset-0 animate-ping rounded-xl bg-primary/30" />
-            <Sparkles className="relative h-4 w-4 text-primary-foreground" />
+            <Logo size={32} className="relative shadow-glow" />
           </span>
           <span className="text-sm">Carregando…</span>
         </div>

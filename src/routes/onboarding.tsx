@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowRight, FolderKanban, ListTodo, Plus, X, SkipForward } from "lucide-react";
+import { ArrowRight, FolderKanban, ListTodo, Plus, X, SkipForward } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,9 +89,7 @@ function OnboardingPage() {
     <div className="min-h-dvh bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-xl p-6 sm:p-8 space-y-6 shadow-elegant">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-prestige shadow-glow">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-          </span>
+          <Logo size={40} className="shadow-glow" />
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Bem-vindo</p>
             <h1 className="font-display text-xl font-semibold">Em menos de 1 minuto você está dentro</h1>

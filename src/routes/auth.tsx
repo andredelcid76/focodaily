@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -64,9 +64,7 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-prestige shadow-[var(--shadow-glow)]">
-            <Sparkles className="h-7 w-7 text-primary-foreground" />
-          </div>
+          <Logo size={56} className="mx-auto mb-4 shadow-[var(--shadow-glow)]" />
           <h1 className="font-display text-3xl font-bold">Foco</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sua jornada diária, organizada por urgência e importância.
