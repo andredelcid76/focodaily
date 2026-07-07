@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getValidOutlookAccessToken } from "@/lib/outlook-token";
 
 const TENANT = "common"; // multi-tenant + personal accounts
 const SCOPES = "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
@@ -89,31 +90,6 @@ export const disconnectOutlook = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-async function refreshAccessToken(refreshToken: string) {
-  const clientId = process.env.MS_CLIENT_ID!;
-  const clientSecret = process.env.MS_CLIENT_SECRET!;
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-    scope: SCOPES,
-  });
-  const res = await fetch(`${authBase()}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(`Refresh token failed [${res.status}]: ${JSON.stringify(json)}`);
-  return json as {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-    scope?: string;
-  };
-}
-
 /** Test the Outlook connection by hitting /me on Graph. Refreshes token if needed. */
 export const testOutlookConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -127,21 +103,7 @@ export const testOutlookConnection = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!conn) throw new Error("Outlook não está conectado");
 
-    let accessToken = conn.access_token as string;
-    const expiresAt = new Date(conn.expires_at as string).getTime();
-    if (expiresAt - Date.now() < 120_000) {
-      const refreshed = await refreshAccessToken(conn.refresh_token as string);
-      accessToken = refreshed.access_token;
-      await supabaseAdmin
-        .from("outlook_connections")
-        .update({
-          access_token: accessToken,
-          refresh_token: refreshed.refresh_token ?? conn.refresh_token,
-          expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
-          scope: refreshed.scope ?? conn.scope,
-        })
-        .eq("user_id", userId);
-    }
+    const accessToken = await getValidOutlookAccessToken(userId, conn);
 
     const res = await fetch("https://graph.microsoft.com/v1.0/me", {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -171,22 +133,7 @@ export const syncOutlookCalendar = createServerFn({ method: "POST" })
     if (!conn) throw new Error("Outlook não está conectado");
 
     // Refresh access token if expiring in <2min
-    let accessToken = conn.access_token as string;
-    const expiresAt = new Date(conn.expires_at as string).getTime();
-    if (expiresAt - Date.now() < 120_000) {
-      const refreshed = await refreshAccessToken(conn.refresh_token as string);
-      accessToken = refreshed.access_token;
-      const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
-      await supabaseAdmin
-        .from("outlook_connections")
-        .update({
-          access_token: accessToken,
-          refresh_token: refreshed.refresh_token ?? conn.refresh_token,
-          expires_at: newExpiresAt,
-          scope: refreshed.scope ?? conn.scope,
-        })
-        .eq("user_id", userId);
-    }
+    const accessToken = await getValidOutlookAccessToken(userId, conn);
 
     // Fetch upcoming events: from 7 days ago to 60 days ahead
     const start = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();

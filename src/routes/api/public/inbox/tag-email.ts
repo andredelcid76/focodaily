@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
+import { getValidOutlookAccessToken } from "@/lib/outlook-token";
 
 const FOCO_CATEGORY = "Foco App";
 
@@ -25,24 +26,6 @@ async function authenticateRequest(request: Request): Promise<string> {
     throw new Response("Unauthorized", { status: 401 });
   }
   return data.claims.sub as string;
-}
-
-async function refreshOutlookToken(refreshToken: string) {
-  const body = new URLSearchParams({
-    client_id: process.env.MS_CLIENT_ID!,
-    client_secret: process.env.MS_CLIENT_SECRET!,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-    scope:
-      "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All",
-  });
-  const r = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!r.ok) throw new Error("Outlook refresh failed");
-  return (await r.json()) as { access_token: string; refresh_token?: string; expires_in: number };
 }
 
 export const Route = createFileRoute("/api/public/inbox/tag-email")({
@@ -73,23 +56,12 @@ export const Route = createFileRoute("/api/public/inbox/tag-email")({
             .maybeSingle();
           if (!conn) return Response.json({ ok: false, reason: "no-connection" });
 
-          let accessToken = conn.access_token as string;
-          if (new Date(conn.expires_at as string).getTime() - Date.now() < 120_000) {
-            try {
-              const refreshed = await refreshOutlookToken(conn.refresh_token as string);
-              accessToken = refreshed.access_token;
-              await supabaseAdmin
-                .from("outlook_connections")
-                .update({
-                  access_token: accessToken,
-                  refresh_token: refreshed.refresh_token ?? conn.refresh_token,
-                  expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
-                })
-                .eq("user_id", userId);
-            } catch (e) {
-              console.error("[tag-email] refresh failed", e);
-              return Response.json({ ok: false, reason: "refresh-failed" });
-            }
+          let accessToken: string;
+          try {
+            accessToken = await getValidOutlookAccessToken(userId, conn);
+          } catch (e) {
+            console.error("[tag-email] refresh failed", e);
+            return Response.json({ ok: false, reason: "refresh-failed" });
           }
 
           const getR = await fetch(
