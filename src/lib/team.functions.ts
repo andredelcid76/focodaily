@@ -6,7 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CollaborationNoticeEmail } from "@/lib/email-templates/collaboration-notice";
 
-const SITE_NAME = "Focou";
+const SITE_NAME = "Foco";
 const FROM_DOMAIN = "anpla.com.br";
 const SENDER_DOMAIN = "notify.anpla.com.br";
 
@@ -264,7 +264,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
       label: "project_invite",
       subject: `Convite para o projeto ${project.name}`,
       title: `Você foi convidado para ${project.name}`,
-      body: `Abra o convite para entrar no projeto ${project.name} no Focou.`,
+      body: `Abra o convite para entrar no projeto ${project.name} no Foco.`,
       ctaLabel: "Abrir convite",
       ctaUrl: inviteUrl,
     });

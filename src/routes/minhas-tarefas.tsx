@@ -54,7 +54,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
       <MyTasksPage />
     </AppShell>
   ),
-  head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
+  head: () => ({ meta: [{ title: "Tarefas · Foco" }] }),
 });
 
 type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category";

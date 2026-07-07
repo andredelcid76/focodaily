@@ -31,7 +31,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "focodaily"
+const SITE_NAME = "Foco"
 const SENDER_DOMAIN = "notify.anpla.com.br"
 const ROOT_DOMAIN = "anpla.com.br"
 const FROM_DOMAIN = "anpla.com.br"
