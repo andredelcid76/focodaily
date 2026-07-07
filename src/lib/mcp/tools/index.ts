@@ -4,6 +4,42 @@ import { adminDb, db, getUserId } from "../supabase";
 
 const FIREFLIES_URL = "https://api.fireflies.ai/graphql";
 
+// ---------------------------------------------------------------------------
+// Autorização do servidor MCP
+//
+// IMPORTANTE: db() usa a service_role key, que IGNORA (bypassa) toda a RLS.
+// Logo, a RLS NÃO protege este cliente — qualquer acesso a dados escopados por
+// projeto/papel precisa validar posse EXPLICITAMENTE aqui. Este é o mesmo
+// motivo documentado em add_task_dependency, agora aplicado de forma
+// consistente em list_tasks, create_task e update_task.
+// ---------------------------------------------------------------------------
+
+/** Garante que o usuário é dono OU membro do projeto. Lança se não for. */
+async function assertProjectAccess(auth: unknown, projectId: string, userId: string): Promise<void> {
+  const client = db(auth);
+  const [memberRes, ownerRes] = await Promise.all([
+    client.rpc("is_project_member", { _project_id: projectId, _user_id: userId }),
+    client.rpc("is_project_owner", { _project_id: projectId, _user_id: userId }),
+  ]);
+  if (memberRes.error) throw new Error(memberRes.error.message);
+  if (ownerRes.error) throw new Error(ownerRes.error.message);
+  if (!memberRes.data && !ownerRes.data) {
+    throw new Error("Sem acesso a este projeto.");
+  }
+}
+
+/** Garante que o papel (role) pertence ao usuário. Lança se não pertencer. */
+async function assertRoleOwnership(auth: unknown, roleId: string, userId: string): Promise<void> {
+  const { data, error } = await db(auth)
+    .from("roles")
+    .select("id")
+    .eq("id", roleId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Papel inexistente ou sem acesso.");
+}
+
 export const listRoles = defineTool({
   name: "list_roles",
   description: "Lista os papéis do usuário (CEO, Pessoal, etc) com id, nome e cor.",
@@ -121,8 +157,9 @@ export const listTasks = defineTool({
     } else if (args.created_by_me) {
       q = q.eq("user_id", userId);
     } else if (args.project_id) {
-      // RLS on tasks already restricts to what this user can read within the
-      // project (owner, member, or delegated); no extra filter needed.
+      // service_role bypassa a RLS, então a posse do projeto precisa ser
+      // verificada aqui — sem isso, qualquer project_id vaza as tarefas alheias.
+      await assertProjectAccess(ctx.auth, args.project_id, userId);
     } else {
       // Widen beyond owner-only so delegated tasks come through. Shared-project
       // browsing should pass project_id explicitly.
@@ -179,6 +216,7 @@ export const createProject = defineTool({
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+    if (args.role_id) await assertRoleOwnership(ctx.auth, args.role_id, userId);
     const insert = {
       user_id: userId,
       name: args.name,
@@ -226,6 +264,7 @@ export const updateProject = defineTool({
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+    if (args.role_id) await assertRoleOwnership(ctx.auth, args.role_id, userId);
     const patch: Record<string, unknown> = {};
     if (args.name !== undefined) patch.name = args.name;
     if (args.description !== undefined) patch.description = args.description;
@@ -311,6 +350,10 @@ export const createTask = defineTool({
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+    // service_role bypassa a RLS: validar posse de projeto/papel antes de gravar,
+    // senão é possível injetar tarefas em projetos de outros tenants.
+    if (args.project_id) await assertProjectAccess(ctx.auth, args.project_id, userId);
+    if (args.role_id) await assertRoleOwnership(ctx.auth, args.role_id, userId);
     const insert: Record<string, unknown> = {
       user_id: userId,
       title: args.title,
@@ -370,6 +413,9 @@ export const updateTask = defineTool({
       patch.status = args.completed ? "done" : "todo";
       patch.completed_at = args.completed ? new Date().toISOString() : null;
     }
+    // Mover uma tarefa para dentro de um projeto exige acesso a esse projeto
+    // (service_role bypassa a RLS). Definir project_id = null é permitido.
+    if (args.project_id) await assertProjectAccess(ctx.auth, args.project_id, userId);
     const { data, error } = await db(ctx.auth)
       .from("tasks")
       .update(patch as never)
@@ -403,7 +449,7 @@ export const listTaskDependencies = defineTool({
   description:
     "Lista as dependências entre tarefas do usuário (predecessoras → sucessoras). Use task_id para filtrar uma tarefa específica e ver suas antecessoras e sucessoras. Dependências são em cadeia: mudar a data da predecessora propaga para todas sucessoras.",
   parameters: z.object({
-    task_id: z.string().optional().describe("Se informado, retorna só dependências em que essa tarefa participa."),
+    task_id: z.string().uuid().optional().describe("Se informado, retorna só dependências em que essa tarefa participa."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
