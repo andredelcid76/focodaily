@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { todayISO, addDays } from "@/lib/date";
@@ -278,29 +279,43 @@ export function useTasks(userId: string | undefined) {
       await refresh();
     })();
 
+    // Apply a realtime change to local state. Idempotent (keyed by id), so it's
+    // safe to receive the same event from more than one subscription filter.
+    const applyChange = (payload: RealtimePostgresChangesPayload<Task>) => {
+      setTasks((prev) => {
+        if (payload.eventType === "INSERT") {
+          const row = payload.new as Task;
+          if (prev.some((t) => t.id === row.id)) return prev;
+          return [...prev, row];
+        }
+        if (payload.eventType === "UPDATE") {
+          const row = payload.new as Task;
+          return prev.map((t) => (t.id === row.id ? row : t));
+        }
+        if (payload.eventType === "DELETE") {
+          const row = payload.old as Task;
+          return prev.filter((t) => t.id !== row.id);
+        }
+        return prev;
+      });
+    };
+
+    // Subscribe to changes both as owner (user_id) AND as assignee. The fetch is
+    // RLS-scoped and includes tasks delegated to this user in shared projects, but
+    // a single Postgres filter can't express OR — so we register both filters.
+    // Without the assignee filter, tasks assigned to the user (but owned by a
+    // colleague) loaded on mount but never updated live.
     const channel = supabase
       .channel(`tasks-rt-${userId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${userId}` },
-        (payload) => {
-          setTasks((prev) => {
-            if (payload.eventType === "INSERT") {
-              const row = payload.new as Task;
-              if (prev.some((t) => t.id === row.id)) return prev;
-              return [...prev, row];
-            }
-            if (payload.eventType === "UPDATE") {
-              const row = payload.new as Task;
-              return prev.map((t) => (t.id === row.id ? row : t));
-            }
-            if (payload.eventType === "DELETE") {
-              const row = payload.old as Task;
-              return prev.filter((t) => t.id !== row.id);
-            }
-            return prev;
-          });
-        }
+        applyChange,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks", filter: `assignee_id=eq.${userId}` },
+        applyChange,
       )
       .subscribe();
     return () => {

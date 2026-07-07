@@ -83,7 +83,7 @@ function MyTasksPage() {
   const { projects } = useProjects(userId);
   const fetchTasks = useServerFn(listMyAssignedTasks);
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["my-assigned-tasks"],
+    queryKey: ["my-assigned-tasks", userId],
     queryFn: () => fetchTasks(),
     staleTime: 30_000,
   });
