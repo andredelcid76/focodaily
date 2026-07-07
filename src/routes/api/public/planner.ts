@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
+import { getValidOutlookAccessToken } from "@/lib/outlook-token";
 
 const actionSchema = z.object({
   action: z.enum(["listPlans", "linkPlan", "importTasks"]),
@@ -77,25 +78,6 @@ async function authenticateRequest(request: Request) {
   return { userId: data.claims.sub };
 }
 
-async function refreshAccessToken(refreshToken: string) {
-  const clientId = process.env.MS_CLIENT_ID!;
-  const clientSecret = process.env.MS_CLIENT_SECRET!;
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-  });
-  const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  const jsonResponse = await res.json();
-  if (!res.ok) throw new Error(`Refresh failed: ${JSON.stringify(jsonResponse)}`);
-  return jsonResponse as { access_token: string; refresh_token?: string; expires_in: number; scope?: string };
-}
-
 async function getAccessToken(userId: string) {
   const { data: conn, error } = await supabaseAdmin
     .from("outlook_connections")
@@ -109,21 +91,7 @@ async function getAccessToken(userId: string) {
     throw new Error("PLANNER_REAUTH_REQUIRED");
   }
 
-  let accessToken = conn.access_token as string;
-  const expiresAt = new Date(conn.expires_at as string).getTime();
-  if (expiresAt - Date.now() < 120_000) {
-    const refreshed = await refreshAccessToken(conn.refresh_token as string);
-    accessToken = refreshed.access_token;
-    await supabaseAdmin
-      .from("outlook_connections")
-      .update({
-        access_token: accessToken,
-        refresh_token: refreshed.refresh_token ?? conn.refresh_token,
-        expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
-        scope: refreshed.scope ?? conn.scope,
-      })
-      .eq("user_id", userId);
-  }
+  const accessToken = await getValidOutlookAccessToken(userId, conn);
 
   return accessToken;
 }

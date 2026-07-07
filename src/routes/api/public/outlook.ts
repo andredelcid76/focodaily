@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
+import { getValidOutlookAccessToken, OutlookReauthError } from "@/lib/outlook-token";
 
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
@@ -159,69 +160,6 @@ async function authenticateRequest(request: Request) {
   return { supabase, userId: data.claims.sub };
 }
 
-class OutlookReauthError extends Error {
-  code = "REAUTH_REQUIRED" as const;
-  constructor(message: string) {
-    super(message);
-    this.name = "OutlookReauthError";
-  }
-}
-
-function isInvalidGrant(payload: unknown): boolean {
-  const s = JSON.stringify(payload ?? "");
-  return (
-    s.includes('"invalid_grant"') ||
-    s.includes("AADSTS65001") ||
-    s.includes("AADSTS70008") ||
-    s.includes("AADSTS50173") ||
-    s.includes("AADSTS700082") ||
-    s.includes("AADSTS700084")
-  );
-}
-
-async function refreshAccessToken(refreshToken: string, userId?: string) {
-  const clientId = process.env.MS_CLIENT_ID;
-  const clientSecret = process.env.MS_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Microsoft credentials are not configured");
-  }
-
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-    scope: SCOPES,
-  });
-
-  const response = await fetch(`https://login.microsoftonline.com/${TENANT}/oauth2/v2.0/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  const json = await response.json();
-  if (!response.ok) {
-    if (isInvalidGrant(json)) {
-      if (userId) {
-        await supabaseAdmin.from("outlook_connections").delete().eq("user_id", userId);
-      }
-      throw new OutlookReauthError(
-        "Sua conexão com o Outlook expirou. Reconecte para continuar sincronizando.",
-      );
-    }
-    throw new Error(`Refresh token failed [${response.status}]: ${JSON.stringify(json)}`);
-  }
-
-  return json as {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-    scope?: string;
-  };
-}
-
 export async function syncOutlookCalendar(userId: string) {
   const { data: conn, error: connErr } = await supabaseAdmin
     .from("outlook_connections")
@@ -237,27 +175,7 @@ export async function syncOutlookCalendar(userId: string) {
     throw new Error("Outlook não está conectado");
   }
 
-  let accessToken = conn.access_token as string;
-  const expiresAt = new Date(conn.expires_at as string).getTime();
-
-  if (expiresAt - Date.now() < 120_000) {
-    const refreshed = await refreshAccessToken(conn.refresh_token as string, userId);
-    accessToken = refreshed.access_token;
-
-    const { error } = await supabaseAdmin
-      .from("outlook_connections")
-      .update({
-        access_token: accessToken,
-        refresh_token: refreshed.refresh_token ?? conn.refresh_token,
-        expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
-        scope: refreshed.scope ?? conn.scope,
-      })
-      .eq("user_id", userId);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-  }
+  const accessToken = await getValidOutlookAccessToken(userId, conn);
 
   const start = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
   const end = new Date(Date.now() + 60 * 24 * 3600_000).toISOString();
