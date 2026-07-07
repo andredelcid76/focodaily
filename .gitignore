@@ -16,6 +16,14 @@ dist-ssr
 .nitro
 *.local
 
+# Env / secrets
+# Chaves publishable/anon são públicas, mas NUNCA commite secrets reais
+# (service_role, client secrets, API keys). Secrets locais vão em .dev.vars;
+# em produção, no painel do Cloudflare/Lovable. Use .env.example como modelo.
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
