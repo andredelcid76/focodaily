@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
-  Sparkles,
   ListTodo,
   FolderKanban,
   Inbox,
@@ -9,6 +8,7 @@ import {
   Plug,
   ArrowRight,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,9 +77,7 @@ function Welcome() {
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="space-y-3 text-center"
         >
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-prestige shadow-glow">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
-          </span>
+          <Logo size={48} className="shadow-glow" />
           <h1 className="font-display text-3xl font-semibold tracking-tight">Boas-vindas ao Focou</h1>
           <p className="text-muted-foreground">Por onde você quer começar?</p>
         </motion.div>

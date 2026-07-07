@@ -9,9 +9,9 @@ import {
   LogOut,
   Search,
   Settings,
-  Sparkles,
   Users,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import {
   Sidebar,
@@ -168,8 +168,8 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border/60">
         <Link to="/" className="flex items-center gap-2.5 px-2 py-2">
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-prestige shadow-glow">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
+          <div className="relative shrink-0">
+            <Logo size={36} className="shadow-glow" />
             <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-circumstantial ring-2 ring-sidebar" />
           </div>
           {!collapsed && (
