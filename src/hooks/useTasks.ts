@@ -344,16 +344,30 @@ export function useTasks(userId: string | undefined) {
   };
 
   const updateTask = async (id: string, patch: Partial<Task>) => {
-    // Optimistic update
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    // Optimistic update, reverting to the pre-update snapshot if the write fails.
+    let snapshot: Task[] = [];
+    setTasks((prev) => {
+      snapshot = prev;
+      return prev.map((t) => (t.id === id ? { ...t, ...patch } : t));
+    });
     const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-    if (error) throw error;
+    if (error) {
+      setTasks(snapshot);
+      throw error;
+    }
   };
 
   const deleteTask = async (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    let snapshot: Task[] = [];
+    setTasks((prev) => {
+      snapshot = prev;
+      return prev.filter((t) => t.id !== id);
+    });
     const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      setTasks(snapshot);
+      throw error;
+    }
   };
 
   const createRecurrenceException = async (parentId: string, date: string) => {
@@ -671,18 +685,30 @@ export function useTasks(userId: string | undefined) {
 
   const bulkAssignProject = async (taskIds: string[], projectId: string | null) => {
     if (taskIds.length === 0) return;
-    setTasks((prev) =>
-      prev.map((t) => (taskIds.includes(t.id) ? { ...t, project_id: projectId } : t))
-    );
-    await supabase.from("tasks").update({ project_id: projectId }).in("id", taskIds);
+    let snapshot: Task[] = [];
+    setTasks((prev) => {
+      snapshot = prev;
+      return prev.map((t) => (taskIds.includes(t.id) ? { ...t, project_id: projectId } : t));
+    });
+    const { error } = await supabase.from("tasks").update({ project_id: projectId }).in("id", taskIds);
+    if (error) {
+      setTasks(snapshot);
+      throw error;
+    }
   };
 
   const bulkAssignRole = async (taskIds: string[], roleId: string | null) => {
     if (taskIds.length === 0) return;
-    setTasks((prev) =>
-      prev.map((t) => (taskIds.includes(t.id) ? { ...t, role_id: roleId } : t))
-    );
-    await supabase.from("tasks").update({ role_id: roleId }).in("id", taskIds);
+    let snapshot: Task[] = [];
+    setTasks((prev) => {
+      snapshot = prev;
+      return prev.map((t) => (taskIds.includes(t.id) ? { ...t, role_id: roleId } : t));
+    });
+    const { error } = await supabase.from("tasks").update({ role_id: roleId }).in("id", taskIds);
+    if (error) {
+      setTasks(snapshot);
+      throw error;
+    }
   };
 
   const addTimeSpent = async (id: string, secondsToAdd: number) => {
