@@ -811,6 +811,32 @@ function TimelineView({
   const syncing = useRef(false);
 
   const sorted = useMemo(() => sortByDate(tasks.filter((t) => !!t.scheduled_date)), [tasks]);
+
+  // Grouping — kept above the early return below so the hook count stays stable
+  // between renders (Rules of Hooks). Cheap to compute when `sorted` is empty.
+  const groups = useMemo(() => {
+    if (group === "none") return [{ key: "all", label: "", tasks: sorted }];
+    if (group === "status") {
+      const order: TaskStatus[] = ["doing", "todo", "done"];
+      return order.map((s) => ({
+        key: s,
+        label: STATUS_LABEL[s],
+        tasks: sorted.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s),
+      })).filter((g) => g.tasks.length > 0);
+    }
+    // assignee
+    const map = new Map<string, Task[]>();
+    for (const t of sorted) {
+      const aid = (t.assignee_id ?? "__unassigned") as string;
+      map.set(aid, [...(map.get(aid) ?? []), t]);
+    }
+    return Array.from(map.entries()).map(([uid, ts]) => ({
+      key: uid,
+      label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
+      tasks: ts,
+    }));
+  }, [sorted, group, memberById]);
+
   if (sorted.length === 0) {
     return <p className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-6 text-center text-sm text-muted-foreground">Sem datas para exibir.</p>;
   }
@@ -896,30 +922,6 @@ function TimelineView({
   const totalCount = sorted.length;
   const doneCount = sorted.filter((t) => t.completed).length;
   const overallPct = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
-
-  // Grouping
-  const groups = useMemo(() => {
-    if (group === "none") return [{ key: "all", label: "", tasks: sorted }];
-    if (group === "status") {
-      const order: TaskStatus[] = ["doing", "todo", "done"];
-      return order.map((s) => ({
-        key: s,
-        label: STATUS_LABEL[s],
-        tasks: sorted.filter((t) => (t.status ?? (t.completed ? "done" : "todo")) === s),
-      })).filter((g) => g.tasks.length > 0);
-    }
-    // assignee
-    const map = new Map<string, Task[]>();
-    for (const t of sorted) {
-      const aid = (t.assignee_id ?? "__unassigned") as string;
-      map.set(aid, [...(map.get(aid) ?? []), t]);
-    }
-    return Array.from(map.entries()).map(([uid, ts]) => ({
-      key: uid,
-      label: uid === "__unassigned" ? "Sem responsável" : nameOf(memberById.get(uid)),
-      tasks: ts,
-    }));
-  }, [sorted, group, memberById]);
 
   // Sync top/bottom horizontal scrollbars
   const onScrollTop = () => {
