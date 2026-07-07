@@ -86,7 +86,7 @@ function OnboardingPage() {
 
   return (
     <div className="min-h-dvh bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-xl p-6 sm:p-8 space-y-6 shadow-elegant">
+      <Card className="w-full max-w-xl p-6 sm:p-8 space-y-6 shadow-elevated">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-prestige shadow-glow">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
@@ -102,7 +102,7 @@ function OnboardingPage() {
             {STEPS.map((_, i) => (
               <motion.span
                 key={i}
-                animate={{ backgroundColor: i <= step ? "hsl(var(--primary))" : "hsl(var(--muted))" }}
+                animate={{ backgroundColor: i <= step ? "var(--primary)" : "var(--muted)" }}
                 transition={{ duration: 0.3 }}
                 className="h-1.5 flex-1 rounded-full"
               />

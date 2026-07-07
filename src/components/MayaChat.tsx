@@ -136,7 +136,7 @@ export function MayaChat() {
                     : "mr-auto max-w-[90%] bg-card/80 border border-border/60"
                 }`}
               >
-                <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <div className="prose prose-sm prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
                   <ReactMarkdown>{m.content}</ReactMarkdown>
                 </div>
               </div>

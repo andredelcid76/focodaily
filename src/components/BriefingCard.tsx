@@ -60,7 +60,7 @@ export function BriefingCard({ scope = "day" as "day" | "week" }) {
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
         </Button>
       </div>
-      <div className="prose prose-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+      <div className="prose prose-sm prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>
     </div>

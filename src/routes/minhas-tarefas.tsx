@@ -703,7 +703,7 @@ function MyTasksPage() {
                         <TooltipProvider delayDuration={150}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300">
                                 <Link2 className="h-2.5 w-2.5" /> Bloqueada
                               </span>
                             </TooltipTrigger>
@@ -723,7 +723,7 @@ function MyTasksPage() {
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
                           t.kind === "delegated"
-                            ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
                             : "border-border/60 bg-muted text-muted-foreground"
                         }`}
                       >

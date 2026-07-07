@@ -97,7 +97,7 @@ function Welcome() {
               >
                 <Link to={a.to} className="block">
                   <Card
-                    className={`group p-4 cursor-pointer transition-all hover:shadow-elegant hover:-translate-y-0.5 ${
+                    className={`group p-4 cursor-pointer transition-all hover:shadow-elevated hover:-translate-y-0.5 ${
                       a.primary ? "bg-gradient-prestige text-primary-foreground border-transparent" : ""
                     }`}
                   >
