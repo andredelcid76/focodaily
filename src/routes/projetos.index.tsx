@@ -110,16 +110,19 @@ function ProjectsInner({ userId }: { userId: string }) {
   }, [tasksApi.tasks]);
 
   const filtered = useMemo(() => {
+    const hasStatusFilter = statusFilter.size > 0;
     return projectsApi.projects.filter((p) => {
       if (filterRole !== "all" && p.role_id !== filterRole) return false;
-      if (hideFinished && p.status === "finished") return false;
+      if (hasStatusFilter) {
+        if (!statusFilter.has(p.status)) return false;
+      } else if (hideFinished && p.status === "finished") return false;
       if (scope === "personal" && p.team_id) return false;
       if (scope === "team" && !p.team_id) return false;
       if (ownership === "mine" && p.user_id !== userId) return false;
       if (ownership === "invited" && p.user_id === userId) return false;
       return true;
     });
-  }, [projectsApi.projects, filterRole, hideFinished, scope, ownership, userId]);
+  }, [projectsApi.projects, filterRole, hideFinished, statusFilter, scope, ownership, userId]);
 
   const canEdit = useCallback((p: Project) => p.user_id === userId, [userId]);
 
