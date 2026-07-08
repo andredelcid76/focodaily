@@ -1187,6 +1187,51 @@ function KanbanProjectCard({
 }
 
 // ============== TIMELINE / GANTT VIEW ==============
+type TimelineScale = "day" | "week" | "month" | "quarter";
+
+const SCALE_LABEL: Record<TimelineScale, string> = {
+  day: "Dia",
+  week: "Semana",
+  month: "Mês",
+  quarter: "Trimestre",
+};
+
+// Number of days visible in the window for each scale
+const SCALE_WINDOW_DAYS: Record<TimelineScale, number> = {
+  day: 14,
+  week: 56,   // ~8 weeks
+  month: 90,  // ~3 months
+  quarter: 365, // ~1 year
+};
+
+function parseISO(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function fmtISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function addDaysDate(d: Date, n: number): Date {
+  const c = new Date(d);
+  c.setDate(c.getDate() + n);
+  return c;
+}
+function startOfMonthDate(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function addMonthsDate(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
+}
+function startOfQuarterDate(d: Date): Date {
+  const q = Math.floor(d.getMonth() / 3);
+  return new Date(d.getFullYear(), q * 3, 1);
+}
+
+const MONTH_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
 function ProjectsTimelineView({
   projects, rolesById, tasksByProject, today,
 }: {
@@ -1195,91 +1240,314 @@ function ProjectsTimelineView({
   tasksByProject: Map<string, any[]>;
   today: string;
 }) {
+  const [scale, setScale] = useState<TimelineScale>("month");
+  const [anchor, setAnchor] = useState<string>(today); // start-of-window (ISO)
+
   const items = useMemo(() => {
     return projects
       .map((p) => {
-        const start = p.starts_on ?? (p as any).created_at?.slice(0, 10) ?? today;
+        const start = p.starts_on ?? (p as any).created_at?.slice(0, 10) ?? null;
         const end = p.deadline ?? start;
-        return { project: p, start, end };
+        return { project: p, start, end, hasStart: !!p.starts_on };
       })
-      .filter((it) => !!it.start)
-      .sort((a, b) => a.start.localeCompare(b.start));
-  }, [projects, today]);
+      .sort((a, b) => {
+        // Projects without start_on first, then by start
+        if (!a.start && b.start) return -1;
+        if (a.start && !b.start) return 1;
+        return String(a.start ?? "").localeCompare(String(b.start ?? ""));
+      });
+  }, [projects]);
+
+  // Compute window
+  const windowDays = SCALE_WINDOW_DAYS[scale];
+  const anchorDate = useMemo(() => {
+    const a = parseISO(anchor);
+    if (scale === "month") return startOfMonthDate(a);
+    if (scale === "quarter") return startOfQuarterDate(a);
+    return a;
+  }, [anchor, scale]);
+  const windowStart = anchorDate;
+  const windowEnd = addDaysDate(windowStart, windowDays);
+  const windowStartT = windowStart.getTime();
+  const windowSpanMs = windowEnd.getTime() - windowStartT;
+
+  const shift = (dir: 1 | -1) => {
+    let next: Date;
+    if (scale === "day") next = addDaysDate(anchorDate, 7 * dir);
+    else if (scale === "week") next = addDaysDate(anchorDate, 28 * dir);
+    else if (scale === "month") next = addMonthsDate(anchorDate, 1 * dir);
+    else next = addMonthsDate(anchorDate, 3 * dir);
+    setAnchor(fmtISO(next));
+  };
+  const goToday = () => setAnchor(today);
+
+  // Ruler ticks
+  const ticks = useMemo(() => {
+    const out: { pctLeft: number; label: string; strong: boolean }[] = [];
+    if (scale === "day") {
+      for (let i = 0; i <= windowDays; i++) {
+        const d = addDaysDate(windowStart, i);
+        const left = ((d.getTime() - windowStartT) / windowSpanMs) * 100;
+        out.push({
+          pctLeft: left,
+          label: `${String(d.getDate()).padStart(2, "0")}/${MONTH_ABBR[d.getMonth()]}`,
+          strong: d.getDate() === 1,
+        });
+      }
+    } else if (scale === "week") {
+      let cur = new Date(windowStart);
+      // align to Monday
+      const dow = cur.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      cur = addDaysDate(cur, diff);
+      while (cur.getTime() <= windowEnd.getTime()) {
+        const left = ((cur.getTime() - windowStartT) / windowSpanMs) * 100;
+        out.push({
+          pctLeft: left,
+          label: `${String(cur.getDate()).padStart(2, "0")}/${MONTH_ABBR[cur.getMonth()]}`,
+          strong: cur.getDate() <= 7,
+        });
+        cur = addDaysDate(cur, 7);
+      }
+    } else if (scale === "month") {
+      let cur = startOfMonthDate(windowStart);
+      while (cur.getTime() <= windowEnd.getTime()) {
+        const left = ((cur.getTime() - windowStartT) / windowSpanMs) * 100;
+        out.push({
+          pctLeft: left,
+          label: `${MONTH_ABBR[cur.getMonth()]} ${String(cur.getFullYear()).slice(2)}`,
+          strong: cur.getMonth() === 0,
+        });
+        cur = addMonthsDate(cur, 1);
+      }
+    } else {
+      let cur = startOfQuarterDate(windowStart);
+      while (cur.getTime() <= windowEnd.getTime()) {
+        const left = ((cur.getTime() - windowStartT) / windowSpanMs) * 100;
+        const q = Math.floor(cur.getMonth() / 3) + 1;
+        out.push({
+          pctLeft: left,
+          label: `T${q} ${cur.getFullYear()}`,
+          strong: q === 1,
+        });
+        cur = addMonthsDate(cur, 3);
+      }
+    }
+    return out;
+  }, [scale, windowStart, windowEnd, windowSpanMs, windowStartT, windowDays]);
+
+  const todayT = parseISO(today).getTime();
+  const todayPct = ((todayT - windowStartT) / windowSpanMs) * 100;
+
+  const windowLabel = useMemo(() => {
+    const s = windowStart;
+    const e = addDaysDate(windowEnd, -1);
+    const sameYear = s.getFullYear() === e.getFullYear();
+    const sLabel = `${MONTH_ABBR[s.getMonth()]} ${s.getFullYear()}`;
+    const eLabel = `${MONTH_ABBR[e.getMonth()]} ${e.getFullYear()}`;
+    if (sameYear && s.getMonth() === e.getMonth()) return sLabel;
+    return `${sLabel} – ${eLabel}`;
+  }, [windowStart, windowEnd]);
 
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
-        <p className="text-sm text-muted-foreground">Nenhum projeto com datas para exibir no cronograma.</p>
+        <p className="text-sm text-muted-foreground">Nenhum projeto para exibir no cronograma.</p>
       </div>
     );
   }
 
-  const allDates = items.flatMap((it) => [it.start, it.end]);
-  const min = allDates.reduce((a, b) => (a < b ? a : b));
-  const max = allDates.reduce((a, b) => (a > b ? a : b));
-  const minT = new Date(min + "T00:00:00").getTime();
-  const maxT = new Date(max + "T00:00:00").getTime();
-  const span = Math.max(1, (maxT - minT) / 86400000);
-  const todayT = new Date(today + "T00:00:00").getTime();
-  const todayPct = ((todayT - minT) / 86400000 / span) * 100;
-
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm">
-      <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
-        <span>{formatShort(min)}</span>
-        <span>{items.length} projetos</span>
-        <span>{formatShort(max)}</span>
-      </div>
-      <div className="relative space-y-2">
-        {todayPct >= 0 && todayPct <= 100 && (
-          <div className="pointer-events-none absolute inset-y-0 z-10 w-px bg-primary/60" style={{ left: `${todayPct}%` }}>
-            <span className="absolute -top-3 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[9px] font-semibold text-primary-foreground">hoje</span>
-          </div>
-        )}
-        {items.map(({ project, start, end }) => {
-          const sT = new Date(start + "T00:00:00").getTime();
-          const eT = new Date(end + "T00:00:00").getTime();
-          const left = ((sT - minT) / 86400000 / span) * 100;
-          const width = Math.max(1.5, ((eT - sT) / 86400000 / span) * 100);
-          const stats = computeProjectStats(project, tasksByProject.get(project.id) ?? [], today);
-          const role = project.role_id ? rolesById.get(project.role_id) ?? null : null;
-          const isOverdue = stats.isOverdue;
-          return (
-            <Link
-              key={project.id}
-              to="/projetos/$id"
-              params={{ id: project.id }}
-              className="group relative flex h-10 w-full items-center rounded-md border border-border/40 bg-background/40 hover:border-primary/50"
-              title={`${project.name} · ${formatShort(start)} → ${formatShort(end)}`}
+      {/* Controls */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
+          {(Object.keys(SCALE_LABEL) as TimelineScale[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => setScale(s)}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+                scale === s ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              <span
-                className={`absolute inset-y-2 rounded-md shadow-sm ${isOverdue ? "ring-1 ring-overdue/60" : ""}`}
-                style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  backgroundColor: `${project.color}33`,
-                  borderLeft: `3px solid ${project.color}`,
-                }}
-              />
-              <span
-                className="relative z-[1] flex items-center gap-1.5 truncate px-2 text-xs"
-                style={{ paddingLeft: `calc(${left}% + 10px)`, maxWidth: "70%" }}
+              {SCALE_LABEL[s]}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => shift(-1)} aria-label="Anterior">
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={goToday}>
+            Hoje
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => shift(1)} aria-label="Próximo">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground capitalize">{windowLabel}</span>
+        <span className="ml-auto text-[11px] text-muted-foreground">{items.length} projeto{items.length === 1 ? "" : "s"}</span>
+      </div>
+
+      {/* Chart */}
+      <div className="flex overflow-hidden rounded-lg border border-border/40">
+        {/* Fixed left name column */}
+        <div className="w-[200px] shrink-0 border-r border-border/40 bg-muted/20">
+          <div className="h-8 border-b border-border/40 px-3 flex items-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Projeto
+          </div>
+          {items.map(({ project }, idx) => (
+            <div
+              key={project.id}
+              className={`h-10 flex items-center px-3 border-b border-border/30 last:border-b-0 ${idx % 2 === 1 ? "bg-background/30" : ""}`}
+            >
+              <Link
+                to="/projetos/$id"
+                params={{ id: project.id }}
+                className="truncate text-xs font-medium hover:text-primary"
               >
-                <span className="truncate font-medium">{project.name}</span>
-                {role && <RoleChip role={role} />}
-              </span>
-              <span className="ml-auto flex items-center gap-2 pr-3 text-[10px] text-muted-foreground">
-                <span className="tabular-nums">{Math.round(stats.progress * 100)}%</span>
-                {project.deadline && (
-                  <span className={isOverdue ? "text-overdue font-medium" : ""}>
-                    {formatShort(project.deadline)}
-                  </span>
-                )}
-              </span>
-            </Link>
-          );
-        })}
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: project.color }} />
+                {project.name}
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        {/* Right chart area */}
+        <div className="relative flex-1 min-w-0">
+          {/* Ruler */}
+          <div className="relative h-8 border-b border-border/40 bg-muted/10">
+            {ticks.map((t, i) => (
+              <div
+                key={i}
+                className="absolute top-0 bottom-0 flex items-center"
+                style={{ left: `${t.pctLeft}%` }}
+              >
+                <div className={`h-full w-px ${t.strong ? "bg-border" : "bg-border/40"}`} />
+                <span className={`ml-1 text-[10px] ${t.strong ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                  {t.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Rows */}
+          <div className="relative">
+            {/* Grid lines */}
+            <div className="pointer-events-none absolute inset-0">
+              {ticks.map((t, i) => (
+                <div
+                  key={i}
+                  className={`absolute top-0 bottom-0 w-px ${t.strong ? "bg-border/60" : "bg-border/25"}`}
+                  style={{ left: `${t.pctLeft}%` }}
+                />
+              ))}
+            </div>
+            {/* Today marker */}
+            {todayPct >= 0 && todayPct <= 100 && (
+              <div
+                className="pointer-events-none absolute inset-y-0 z-10 w-px border-l border-dashed border-primary/70"
+                style={{ left: `${todayPct}%` }}
+              >
+                <span className="absolute -top-6 -translate-x-1/2 rounded bg-primary px-1 py-0.5 text-[9px] font-semibold text-primary-foreground">
+                  hoje
+                </span>
+              </div>
+            )}
+
+            {items.map(({ project, start, end, hasStart }, idx) => {
+              const stats = computeProjectStats(project, tasksByProject.get(project.id) ?? [], today);
+              const role = project.role_id ? rolesById.get(project.role_id) ?? null : null;
+              const isOverdue = stats.isOverdue;
+
+              // No start date -> render placeholder row
+              if (!start) {
+                return (
+                  <div
+                    key={project.id}
+                    className={`relative h-10 border-b border-border/30 last:border-b-0 ${idx % 2 === 1 ? "bg-background/30" : ""}`}
+                  >
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] italic text-muted-foreground">
+                      sem data de início
+                    </span>
+                  </div>
+                );
+              }
+
+              const sT = parseISO(start).getTime();
+              const eT = parseISO(end ?? start).getTime();
+              const clampedS = Math.max(sT, windowStartT);
+              const clampedE = Math.min(Math.max(eT, sT + 86400000), windowStartT + windowSpanMs);
+              const visible = clampedE > windowStartT && clampedS < windowStartT + windowSpanMs;
+              const left = ((clampedS - windowStartT) / windowSpanMs) * 100;
+              const width = Math.max(0.5, ((clampedE - clampedS) / windowSpanMs) * 100);
+              const overflowsLeft = sT < windowStartT;
+              const overflowsRight = eT > windowStartT + windowSpanMs;
+
+              return (
+                <div
+                  key={project.id}
+                  className={`relative h-10 border-b border-border/30 last:border-b-0 ${idx % 2 === 1 ? "bg-background/30" : ""}`}
+                >
+                  {visible ? (
+                    <Link
+                      to="/projetos/$id"
+                      params={{ id: project.id }}
+                      title={`${project.name}\nInício: ${start}${end ? `\nFim: ${end}` : ""}\n${Math.round(stats.progress * 100)}% concluído${stats.daysRemaining !== null ? ` · ${stats.daysRemaining >= 0 ? `${stats.daysRemaining}d restantes` : `${Math.abs(stats.daysRemaining)}d de atraso`}` : ""}`}
+                      className={`absolute inset-y-2 flex items-center rounded-md shadow-sm transition-all hover:brightness-110 ${isOverdue ? "ring-1 ring-overdue/60" : ""}`}
+                      style={{
+                        left: `${left}%`,
+                        width: `${width}%`,
+                        backgroundColor: `${project.color}33`,
+                        borderLeft: overflowsLeft ? undefined : `3px solid ${project.color}`,
+                        borderRight: overflowsRight ? `3px solid ${project.color}88` : undefined,
+                      }}
+                    >
+                      {/* Progress fill */}
+                      <span
+                        className="absolute inset-y-0 left-0 rounded-md opacity-40"
+                        style={{ width: `${Math.round(stats.progress * 100)}%`, backgroundColor: project.color }}
+                      />
+                      {overflowsLeft && (
+                        <ChevronLeft className="relative z-[1] h-3 w-3 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="relative z-[1] truncate px-1.5 text-[10px] font-medium">
+                        {Math.round(stats.progress * 100)}%
+                      </span>
+                      {role && width > 8 && (
+                        <span className="relative z-[1] hidden truncate text-[10px] text-muted-foreground sm:inline">
+                          · {role.name}
+                        </span>
+                      )}
+                      {overflowsRight && (
+                        <ChevronRight className="relative z-[1] ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+                      )}
+                    </Link>
+                  ) : (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] italic text-muted-foreground">
+                      fora do período · {formatShort(start)}{end && end !== start ? ` → ${formatShort(end)}` : ""}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-4 rounded bg-primary/40" /> barra do projeto
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-4 rounded ring-1 ring-overdue/60" /> atrasado
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-3 w-px border-l border-dashed border-primary/70" /> hoje
+        </span>
       </div>
     </div>
   );
 }
+
