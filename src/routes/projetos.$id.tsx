@@ -422,8 +422,8 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
 function Kpi({ icon, label, value, danger }: { icon: React.ReactNode; label: string; value: string; danger?: boolean }) {
   return (
     <div className={`rounded-xl border p-2.5 ${danger ? "border-overdue/40 bg-overdue/5" : "border-border/60 bg-background/40"}`}>
-      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-        {icon} {label}
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span className={danger ? "text-overdue" : "text-foreground/80"}>{icon}</span> {label}
       </div>
       <div className={`mt-0.5 font-display text-lg font-semibold tabular-nums ${danger ? "text-overdue" : ""}`}>{value}</div>
     </div>
