@@ -37,8 +37,12 @@ import {
   ArrowUpDown,
   X,
   Search,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useProfiles } from "@/hooks/useProfiles";
 import { todayISO, formatHuman, formatShort, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
