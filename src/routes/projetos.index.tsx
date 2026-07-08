@@ -195,13 +195,70 @@ function ProjectsInner({ userId }: { userId: string }) {
           </SelectContent>
         </Select>
 
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-9 gap-1.5 ${statusFilter.size > 0 ? "border-primary/50 text-primary" : ""}`}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Status
+              {statusFilter.size > 0 && (
+                <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-[10px] font-semibold tabular-nums">
+                  {statusFilter.size}
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</p>
+              {statusFilter.size > 0 && (
+                <button
+                  onClick={() => setStatusFilter(new Set())}
+                  className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" /> Limpar
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {PROJECT_STATUS_ORDER.map((s) => {
+                const active = statusFilter.has(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      const next = new Set(statusFilter);
+                      if (next.has(s)) next.delete(s);
+                      else next.add(s);
+                      setStatusFilter(next);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                      active
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border/60 bg-card/40 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {PROJECT_STATUS_LABEL[s]}
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <Label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
           <Checkbox
             checked={hideFinished}
             onCheckedChange={(c) => setHideFinished(c === true)}
+            disabled={statusFilter.size > 0}
           />
           Ocultar finalizados
         </Label>
+
 
         {view === "kanban" && (
           <div className="ml-2 flex items-center gap-1 rounded-lg border border-border/60 bg-card/50 p-1">
