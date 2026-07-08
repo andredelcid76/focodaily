@@ -1,29 +1,58 @@
 ## Objetivo
 
-Em `/projetos`:
-1. Abrir já no **Kanban** (em vez de Cards).
-2. Mostrar um **número de prioridade** (#1, #2, #3…) em cada card do Kanban, refletindo a ordem em que estão na coluna.
-3. Permitir **arrastar para reordenar** dentro da mesma coluna para definir a prioridade — a ordem fica salva e persiste entre sessões/dispositivos.
+Melhorar a página `/projetos` em dois pontos:
 
-## Como vai funcionar
+1. **Filtro por status** disponível em todas as visões (hoje só existe "Ocultar finalizados").
+2. **Cronograma** mais legível, com escala de tempo (dia / semana / mês / trimestre) e navegação por período.
 
-- Cada card do Kanban ganha um selo discreto com o número (ex.: `#1` no topo da coluna, `#2` logo abaixo, etc.).
-- A numeração é por coluna: cada coluna ("Em andamento", "Ativo", "Pausado", "Não iniciado", "Finalizado" — e idem quando agrupado por papel) começa em `#1`.
-- Arrastar um card para cima/baixo dentro da coluna muda o número imediatamente; arrastar para outra coluna muda o status (como já faz hoje) e o card entra no fim da nova coluna.
-- A ordem é por usuário/projeto e fica salva no banco — não é só ordenação visual local.
+Arquivo único afetado: `src/routes/projetos.index.tsx`.
 
-## Detalhes técnicos
+---
 
-1. **Banco**: migration adicionando coluna `position int` em `public.projects` (default 0), preenchida inicialmente com `row_number() OVER (PARTITION BY user_id, status ORDER BY created_at)`. Trocar `order("name")` por `order("position")` em `useProjects`.
-2. **RPC**: função `reorder_projects(p_ordered_ids uuid[])` análoga a `reorder_tasks`, com `SECURITY DEFINER` checando `auth.uid() = user_id` para cada projeto.
-3. **Kanban (`src/routes/projetos.index.tsx`)**:
-   - `useState<ViewMode>("kanban")` como padrão.
-   - Envolver cada `KanbanCol` em `SortableContext` (estratégia vertical) e cada `KanbanProjectCard` em `useSortable` para permitir reorder dentro da coluna.
-   - `handleDragEnd` distingue: drop em card da mesma coluna → reorder local + chamada `reorder_projects`; drop em coluna diferente → muda status/papel (comportamento atual) e acrescenta no final.
-   - Selo `#N` no canto superior do card, baseado no índice dentro de `grouped[col.id]`.
-4. **Ordenação por papel**: a coluna `position` é global por usuário; quando o agrupamento é "por papel", a numeração visual ainda funciona (usa o índice no array da coluna), mas o reorder persistido só ocorre quando agrupado por status (para não conflitar). Posso também salvar uma segunda coluna `position_role` se você quiser persistir ambas — me diga se prefere.
+### 1. Filtro por status (multi-seleção)
 
-## Fora do escopo
+Na barra de filtros, adicionar um `Popover` "Status" ao lado do Select de papel:
 
-- Não vou mexer em Tarefas (já têm sua própria ordenação).
-- Não vou mudar Cards/Tabela/Cronograma além de manter "Kanban" pré-selecionado.
+- Chips clicáveis para cada `ProjectStatus` (Em andamento, Ativo, Pausado, Não iniciado, Finalizado), usando as cores do `ProjectStatusBadge`.
+- Estado local `statusFilter: Set<ProjectStatus>` (vazio = todos).
+- Contador no botão quando há seleção; botão "Limpar".
+- Integra com `filtered` no `useMemo` existente: se `statusFilter.size > 0`, exige `statusFilter.has(p.status)`.
+- Mantém a checkbox "Ocultar finalizados" (atalho independente); quando `statusFilter` inclui `finished` explicitamente, ignora o "ocultar".
+
+### 2. Cronograma mais claro + escala de datas
+
+Refatorar `ProjectsTimelineView`:
+
+**Controles no topo da visão (dentro do card do cronograma):**
+- Toggle de escala: `Dia | Semana | Mês | Trimestre` (default: Mês).
+- Navegação: botões `‹ Hoje ›` para deslocar a janela visível pela escala atual.
+- Label central mostrando o intervalo visível (ex.: "Jul 2026 – Set 2026").
+
+**Régua de tempo (nova):**
+- Grid superior com marcadores da escala escolhida (ex.: colunas de mês com nome abreviado, linhas verticais suaves atrás das barras).
+- Linhas verticais de grid alinhadas com os marcadores, atrás das barras dos projetos.
+- Marcador "hoje" mantido, agora com linha pontilhada mais visível e label melhor posicionado.
+
+**Barras dos projetos:**
+- Janela visível calculada a partir da escala + offset, não do min/max dos projetos (evita barras espremidas quando há um projeto muito longo).
+- Projetos fora da janela: barra ainda desenhada com clip nas bordas e indicador `‹` / `›` mostrando que continua fora do viewport.
+- Nome do projeto sempre visível à esquerda (coluna fixa de ~200px), barra à direita em área com scroll horizontal quando a escala for menor que o intervalo total.
+- Tooltip por projeto mostrando início, fim, dias restantes e % progresso.
+- Ordenação: por data de início, com projetos sem `starts_on` agrupados no topo com aviso "sem data de início".
+
+**Legibilidade geral:**
+- Zebra striping suave nas linhas.
+- Separadores de mês/semana na régua com peso visual maior no primeiro dia de mês.
+- Cabeçalho fixo (sticky) da régua ao rolar verticalmente com muitos projetos.
+
+### Detalhes técnicos
+
+- Todas as datas continuam manipuladas como strings ISO via helpers de `src/lib/date.ts` (`addDays`, `toISODate`, `startOfWeek`); adicionar apenas helpers locais no arquivo se necessário (ex.: `startOfMonth`, `addMonths`) — sem novos módulos.
+- Sem alterações em hooks, migrations, RLS ou tipos.
+- Sem mudanças de comportamento nas visões Cards / Tabela / Kanban além de respeitarem o novo `statusFilter`.
+
+### Fora de escopo
+
+- Drag para reagendar projetos no cronograma.
+- Persistir escala/filtro entre sessões.
+- Filtro por período (data) além da janela visual do cronograma.
