@@ -582,7 +582,7 @@ function TaskRow({
           type="date"
           value={task.scheduled_date}
           onChange={(e) => onDate(e.target.value)}
-          className={`h-7 w-full rounded border border-border/50 bg-transparent px-1.5 text-xs tabular-nums ${isOverdue ? "text-overdue border-overdue/40" : ""}`}
+          className={`date-input h-7 w-full rounded border border-border/50 bg-transparent px-1.5 text-xs tabular-nums ${isOverdue ? "text-overdue border-overdue/40" : ""}`}
         />
       </div>
 
