@@ -93,6 +93,7 @@ function ProjectsInner({ userId }: { userId: string }) {
   const [scope, setScope] = useState<"all" | "personal" | "team">("all");
   const [ownership, setOwnership] = useState<"all" | "mine" | "invited">("all");
   const [hideFinished, setHideFinished] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<Set<ProjectStatus>>(new Set());
   const [view, setView] = useState<ViewMode>("kanban");
   const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
 
