@@ -36,12 +36,16 @@ export async function fetchInboxSuggestions(userId: string) {
 
   const cutoffISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Auto-cleanup: apaga sugestões já acionadas (descartadas ou aceitas) com mais de 24h
+  // Auto-cleanup: apaga só as ACEITAS com mais de 24h (ja viraram tarefa, que
+  // tem dedup proprio via origin_source_url). As DESCARTADAS sao mantidas de
+  // proposito — elas suprimem permanentemente que o mesmo item volte a ser
+  // sugerido (ex.: action items recorrentes do Fireflies). Ver a dedup por
+  // titulo no scan (inclui status "dismissed").
   await supabase
     .from("inbox_suggestions")
     .delete()
     .eq("user_id", userId)
-    .neq("status", "pending")
+    .eq("status", "accepted")
     .lt("acted_at", cutoffISO);
 
   const { data: history } = await supabase

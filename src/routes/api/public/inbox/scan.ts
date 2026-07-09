@@ -771,16 +771,18 @@ export async function scanForUser(userId: string) {
   const openTitleSet = new Set(openTitles.map(normalizeTitle));
   const openTokenSets: Array<Set<string>> = openTitles.map(titleTokens).filter((s) => s.size > 0);
 
-  // Also block titles of PENDING inbox suggestions so we don't re-suggest the
-  // same action the user already has in the inbox (common for Fireflies
-  // bullets that recur across follow-up meetings with different transcript IDs).
-  const { data: pendingSugs } = await supabaseAdmin
+  // Block titles of suggestions the user already has (pending) OR already
+  // dismissed, so we don't re-suggest the same action — common for Fireflies
+  // bullets that recur across follow-up meetings with different transcript IDs
+  // (which get a different source_id, so the exact-id dedup above misses them).
+  // Dismissed = "don't suggest this again": permanent suppression by title.
+  const { data: blockingSugs } = await supabaseAdmin
     .from("inbox_suggestions")
     .select("title")
     .eq("user_id", userId)
-    .eq("status", "pending")
-    .limit(500);
-  for (const s of pendingSugs ?? []) {
+    .in("status", ["pending", "dismissed"])
+    .limit(1000);
+  for (const s of blockingSugs ?? []) {
     const raw = (s.title as string) ?? "";
     const n = normalizeTitle(raw);
     if (!n) continue;
