@@ -343,14 +343,16 @@ function MyTasksPage() {
 
   const stats = useMemo(() => {
     const open = filtered.filter((t) => !t.completed);
+    const isSuspended = (t: MyTaskRow) => t.project?.status === "paused" && !t.completed;
     return {
       total: filtered.length,
       open: open.length,
-      overdue: open.filter((t) => t.scheduled_date < today).length,
-      due: open.filter((t) => t.scheduled_date === today).length,
+      overdue: open.filter((t) => t.scheduled_date < today && !isSuspended(t)).length,
+      due: open.filter((t) => t.scheduled_date === today && !isSuspended(t)).length,
       delegated: filtered.filter((t) => t.kind === "delegated").length,
     };
   }, [filtered, today]);
+
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
