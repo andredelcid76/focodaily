@@ -46,7 +46,7 @@ import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link2 } from "lucide-react";
+import { Link2, PauseCircle } from "lucide-react";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
