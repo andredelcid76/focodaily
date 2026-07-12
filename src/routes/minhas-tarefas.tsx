@@ -46,7 +46,7 @@ import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link2 } from "lucide-react";
+import { Link2, PauseCircle } from "lucide-react";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
@@ -283,8 +283,9 @@ function MyTasksPage() {
           const b = dateBounds;
           switch (dateRange) {
             case "overdue":
-              if (!(sd < b.today && !t.completed)) return false;
+              if (!(sd < b.today && !t.completed && t.project?.status !== "paused")) return false;
               break;
+
             case "today":
               if (sd !== b.today) return false;
               break;
@@ -343,14 +344,16 @@ function MyTasksPage() {
 
   const stats = useMemo(() => {
     const open = filtered.filter((t) => !t.completed);
+    const isSuspended = (t: MyTaskRow) => t.project?.status === "paused" && !t.completed;
     return {
       total: filtered.length,
       open: open.length,
-      overdue: open.filter((t) => t.scheduled_date < today).length,
-      due: open.filter((t) => t.scheduled_date === today).length,
+      overdue: open.filter((t) => t.scheduled_date < today && !isSuspended(t)).length,
+      due: open.filter((t) => t.scheduled_date === today && !isSuspended(t)).length,
       delegated: filtered.filter((t) => t.kind === "delegated").length,
     };
   }, [filtered, today]);
+
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -654,7 +657,9 @@ function MyTasksPage() {
               </TableRow>
             ) : (
               sorted.map((t) => {
-                const overdue = !t.completed && t.scheduled_date < today;
+                const suspended = !t.completed && t.project?.status === "paused";
+                const overdue = !t.completed && !suspended && t.scheduled_date < today;
+
                 const isSelected = selected.has(t.id);
                 return (
                   <TableRow key={t.id} data-state={isSelected ? "selected" : undefined}>
@@ -713,12 +718,21 @@ function MyTasksPage() {
                           </Tooltip>
                         </TooltipProvider>
                       )}
+                      {suspended && (
+                        <span
+                          className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-muted-foreground/30 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                          title="Projeto pausado — tarefa suspensa"
+                        >
+                          <PauseCircle className="h-2.5 w-2.5" /> Suspensa
+                        </span>
+                      )}
                       {t.delegated_by_name && (
                         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
                           delegada por {t.delegated_by_name}
                         </div>
                       )}
                     </TableCell>
+
                     <TableCell>
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${

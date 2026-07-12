@@ -27,7 +27,9 @@ export type MyTaskRow = {
     name: string;
     color: string | null;
     icon: string | null;
+    status: string | null;
   } | null;
+
   role: {
     id: string;
     name: string;
@@ -117,8 +119,8 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
 
     const [{ data: projects }, { data: roles }, { data: owners }] = await Promise.all([
       projectIds.length
-        ? supabaseAdmin.from("projects").select("id,name,color,icon").in("id", projectIds)
-        : Promise.resolve({ data: [] as Array<{ id: string; name: string; color: string | null; icon: string | null }> }),
+        ? supabaseAdmin.from("projects").select("id,name,color,icon,status").in("id", projectIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; name: string; color: string | null; icon: string | null; status: string | null }> }),
       roleIds.length
         ? supabaseAdmin.from("roles").select("id,name,color").in("id", roleIds)
         : Promise.resolve({ data: [] as Array<{ id: string; name: string; color: string }> }),
@@ -150,7 +152,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
         role_id: t.role_id,
         non_negotiable: (t as { non_negotiable?: boolean | null }).non_negotiable ?? null,
         kind,
-        project: p ? { id: p.id, name: p.name, color: p.color, icon: p.icon } : null,
+        project: p ? { id: p.id, name: p.name, color: p.color, icon: p.icon, status: (p as { status?: string | null }).status ?? null } : null,
         role: r ? { id: r.id, name: r.name, color: r.color } : null,
         delegated_by_name: owner?.display_name ?? owner?.email ?? null,
       };
