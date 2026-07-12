@@ -717,12 +717,21 @@ function MyTasksPage() {
                           </Tooltip>
                         </TooltipProvider>
                       )}
+                      {suspended && (
+                        <span
+                          className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-muted-foreground/30 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                          title="Projeto pausado — tarefa suspensa"
+                        >
+                          <PauseCircle className="h-2.5 w-2.5" /> Suspensa
+                        </span>
+                      )}
                       {t.delegated_by_name && (
                         <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
                           delegada por {t.delegated_by_name}
                         </div>
                       )}
                     </TableCell>
+
                     <TableCell>
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
