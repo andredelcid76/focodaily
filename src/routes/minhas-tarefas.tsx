@@ -656,7 +656,9 @@ function MyTasksPage() {
               </TableRow>
             ) : (
               sorted.map((t) => {
-                const overdue = !t.completed && t.scheduled_date < today;
+                const suspended = !t.completed && t.project?.status === "paused";
+                const overdue = !t.completed && !suspended && t.scheduled_date < today;
+
                 const isSelected = selected.has(t.id);
                 return (
                   <TableRow key={t.id} data-state={isSelected ? "selected" : undefined}>
