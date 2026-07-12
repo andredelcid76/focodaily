@@ -27,7 +27,9 @@ export type MyTaskRow = {
     name: string;
     color: string | null;
     icon: string | null;
+    status: string | null;
   } | null;
+
   role: {
     id: string;
     name: string;
