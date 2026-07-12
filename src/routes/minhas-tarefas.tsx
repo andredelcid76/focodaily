@@ -283,8 +283,9 @@ function MyTasksPage() {
           const b = dateBounds;
           switch (dateRange) {
             case "overdue":
-              if (!(sd < b.today && !t.completed)) return false;
+              if (!(sd < b.today && !t.completed && t.project?.status !== "paused")) return false;
               break;
+
             case "today":
               if (sd !== b.today) return false;
               break;
