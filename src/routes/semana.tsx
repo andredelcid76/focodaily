@@ -69,9 +69,18 @@ function WeekInner({ userId }: { userId: string }) {
   };
 
   const tasksByDay = useMemo(() => {
+    const pausedProjectIds = new Set(
+      projects.filter((p) => p.status === "paused").map((p) => p.id)
+    );
+    const isSuspended = (t: Task) =>
+      !t.completed && !!t.project_id && pausedProjectIds.has(t.project_id);
     const map = new Map<string, Task[]>();
     days.forEach((d) => map.set(d, []));
-    const filteredTasks = applyTaskFilters(tasksApi.tasks.filter(matchesQuery), filters, userId);
+    const filteredTasks = applyTaskFilters(
+      tasksApi.tasks.filter((t) => !isSuspended(t)).filter(matchesQuery),
+      filters,
+      userId
+    );
     for (const t of filteredTasks) {
       if (map.has(t.scheduled_date)) {
         map.get(t.scheduled_date)!.push(t);
@@ -79,7 +88,8 @@ function WeekInner({ userId }: { userId: string }) {
     }
     for (const arr of map.values()) arr.sort((a, b) => a.position - b.position);
     return map;
-  }, [tasksApi.tasks, days, filters, normalizedQuery]);
+  }, [tasksApi.tasks, days, filters, normalizedQuery, projects]);
+
 
   const handleDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
