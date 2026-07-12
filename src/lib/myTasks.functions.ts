@@ -119,7 +119,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
 
     const [{ data: projects }, { data: roles }, { data: owners }] = await Promise.all([
       projectIds.length
-        ? supabaseAdmin.from("projects").select("id,name,color,icon").in("id", projectIds)
+        ? supabaseAdmin.from("projects").select("id,name,color,icon,status").in("id", projectIds)
         : Promise.resolve({ data: [] as Array<{ id: string; name: string; color: string | null; icon: string | null }> }),
       roleIds.length
         ? supabaseAdmin.from("roles").select("id,name,color").in("id", roleIds)
