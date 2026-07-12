@@ -279,13 +279,15 @@ function TodayInner({ userId }: { userId: string }) {
     () =>
       applyTaskFilters(
         tasksApi.overdueTasks
+          .filter((t) => !isSuspended(t))
           .filter((t) => (showCompleted ? true : !t.completed))
           .filter(matchesQuery),
         filters,
         userId
       ),
-    [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters]
+    [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters, pausedProjectIds]
   );
+
   
 
   const handleDragEnd = async (e: DragEndEvent) => {
