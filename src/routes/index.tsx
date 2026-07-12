@@ -173,10 +173,16 @@ function TodayInner({ userId }: { userId: string }) {
 
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
+  const pausedProjectIds = useMemo(
+    () => new Set(projects.filter((p) => p.status === "paused").map((p) => p.id)),
+    [projects]
+  );
+  const isSuspended = (t: Task) =>
+    !t.completed && !!t.project_id && pausedProjectIds.has(t.project_id);
 
   const isViewingToday = viewDate === today;
   const dayTasks = useMemo(() => {
-    const base = tasksApi.tasksByDay(viewDate).slice();
+    const base = tasksApi.tasksByDay(viewDate).slice().filter((t) => !isSuspended(t));
     // When viewing today, also include tasks scheduled for the future that were COMPLETED today.
     if (isViewingToday) {
       const completedTodayFromFuture = tasksApi.tasks.filter((t) => {
@@ -191,7 +197,8 @@ function TodayInner({ userId }: { userId: string }) {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
       return a.position - b.position;
     });
-  }, [tasksApi, viewDate, isViewingToday, today]);
+  }, [tasksApi, viewDate, isViewingToday, today, pausedProjectIds]);
+
   const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
   const nowMs = Date.now();
