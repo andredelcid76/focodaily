@@ -38,7 +38,7 @@ const FIELD_LABEL: Record<string, string> = {
 function iconFor(item: FeedItem) {
   if (item.kind === "project") return <Flag className="h-3.5 w-3.5 text-amber-500" />;
   if (item.action === "created") return <Plus className="h-3.5 w-3.5" />;
-  if (item.action === "completed") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+  if (item.action === "completed") return <CheckCircle2 className="h-3.5 w-3.5 text-primary" />;
   if (item.action === "reopened") return <RotateCcw className="h-3.5 w-3.5" />;
   if (item.action === "reassigned" || item.field === "assignee_id") return <UserCog className="h-3.5 w-3.5" />;
   return <Pencil className="h-3.5 w-3.5" />;

@@ -227,7 +227,7 @@ function AnaliseInner({ userId }: { userId: string }) {
       map.set(t.category, (map.get(t.category) ?? 0) + 1);
     }
     const colors: Record<string, string> = {
-      important: "#3ddc9a",
+      important: "#6b8afd",
       circumstantial: "#e8c468",
       personal: "#60a5fa",
       delegated: "#a78bfa",
@@ -307,7 +307,7 @@ function AnaliseInner({ userId }: { userId: string }) {
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="concluidas" stroke="#3ddc9a" strokeWidth={2} dot={false} name="Concluídas" />
+                <Line type="monotone" dataKey="concluidas" stroke="#6b8afd" strokeWidth={2} dot={false} name="Concluídas" />
                 <Line type="monotone" dataKey="criadas" stroke="#e8c468" strokeWidth={2} dot={false} name="Criadas" />
                 <Line type="monotone" dataKey="adiadas" stroke="#f87171" strokeWidth={2} dot={false} name="Adiadas" />
               </LineChart>
@@ -345,7 +345,7 @@ function AnaliseInner({ userId }: { userId: string }) {
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="concluidas" fill="#3ddc9a" name="Concluídas" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="concluidas" fill="#6b8afd" name="Concluídas" radius={[4, 4, 0, 0]} />
               <Bar dataKey="adiadas" fill="#f87171" name="Adiadas" radius={[4, 4, 0, 0]} />
               <Bar dataKey="criadas" fill="#e8c468" name="Criadas" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -371,7 +371,7 @@ function AnaliseInner({ userId }: { userId: string }) {
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={100} />
                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="concluidas" fill="#3ddc9a" name="Concluídas" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="concluidas" fill="#6b8afd" name="Concluídas" radius={[0, 4, 4, 0]} />
                   <Bar dataKey="adiadas" fill="#e8c468" name="Adiadas" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -395,7 +395,7 @@ function AnaliseInner({ userId }: { userId: string }) {
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
                         <span>{p.concluidas}/{p.total}</span>
-                        <span className={pct >= 70 ? "text-emerald-500" : pct >= 40 ? "text-amber-500" : "text-rose-500"}>
+                        <span className={pct >= 70 ? "text-primary" : pct >= 40 ? "text-amber-500" : "text-rose-500"}>
                           {pct}%
                         </span>
                         {p.criticas > 0 && (
@@ -473,7 +473,7 @@ function KpiCard({
   tone?: "good" | "warn" | "bad" | "neutral";
 }) {
   const toneClass =
-    tone === "good" ? "text-emerald-500" :
+    tone === "good" ? "text-primary" :
     tone === "warn" ? "text-amber-500" :
     tone === "bad" ? "text-rose-500" : "text-foreground";
   return (

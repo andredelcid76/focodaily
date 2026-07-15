@@ -181,8 +181,8 @@ export function TaskCard({
           }}
           className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all ${
             task.completed
-              ? "border-green-500 bg-green-500/15 text-green-500 hover:bg-green-500/25"
-              : "border-muted-foreground/30 text-muted-foreground/50 hover:border-green-500 hover:bg-green-500/10 hover:text-green-500"
+              ? "border-primary bg-primary/15 text-primary hover:bg-primary/25"
+              : "border-muted-foreground/30 text-muted-foreground/50 hover:border-primary hover:bg-primary/15 hover:text-primary"
           }`}
           aria-label={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
           title={task.completed ? "Reabrir tarefa" : "Concluir tarefa"}
@@ -232,7 +232,7 @@ export function TaskCard({
                   ? { l: "Outlook", c: "border-blue-500/40 bg-blue-500/10 text-blue-600" }
                   : src === "meeting"
                   ? { l: "Fireflies", c: "border-purple-500/40 bg-purple-500/10 text-purple-600" }
-                  : { l: "Pipedrive", c: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600" };
+                  : { l: "Pipedrive", c: "border-primary/40 bg-primary/15 text-primary" };
               const chip = (
                 <span
                   className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${meta.c}`}
@@ -316,7 +316,7 @@ export function TaskCard({
           {subtaskCount && subtaskCount.total > 0 && (
             <span
               className={`inline-flex items-center gap-1 ${
-                subtaskCount.completed === subtaskCount.total ? "text-green-500" : ""
+                subtaskCount.completed === subtaskCount.total ? "text-primary" : ""
               }`}
               title={`${subtaskCount.completed} de ${subtaskCount.total} subtarefas concluídas`}
             >

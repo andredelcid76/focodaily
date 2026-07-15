@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
 import { useAuth } from "@/lib/auth";
 import {
   useProjects,
@@ -89,13 +90,17 @@ function ProjectsInner({ userId }: { userId: string }) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
-  const [filterRole, setFilterRole] = useState<string | "all">("all");
-  const [scope, setScope] = useState<"all" | "personal" | "team">("all");
-  const [ownership, setOwnership] = useState<"all" | "mine" | "invited">("all");
-  const [hideFinished, setHideFinished] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<Set<ProjectStatus>>(new Set());
-  const [view, setView] = useState<ViewMode>("kanban");
-  const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
+  const [filterRole, setFilterRole] = useStickyState<string | "all">("projetos:filterRole", "all");
+  const [scope, setScope] = useStickyState<"all" | "personal" | "team">("projetos:scope", "all");
+  const [ownership, setOwnership] = useStickyState<"all" | "mine" | "invited">("projetos:ownership", "all");
+  const [hideFinished, setHideFinished] = useStickyState<boolean>("projetos:hideFinished", true);
+  const [statusFilter, setStatusFilter] = useStickyState<Set<ProjectStatus>>(
+    "projetos:statusFilter",
+    new Set(),
+    { serialize: setSerialize, deserialize: setDeserialize<ProjectStatus> },
+  );
+  const [view, setView] = useStickyState<ViewMode>("projetos:view", "kanban");
+  const [kanbanGroup, setKanbanGroup] = useStickyState<KanbanGroup>("projetos:kanbanGroup", "status");
 
   const tasksByProject = useMemo(() => {
     const map = new Map<string, typeof tasksApi.tasks>();
@@ -558,7 +563,7 @@ function NextTaskRow({ stats }: { stats: { nextTaskDate: string | null; nextTask
         className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
           stats.nextTaskOverdue
             ? "bg-overdue/15 text-overdue border border-overdue/40"
-            : "bg-green-500/15 text-green-600 border border-green-500/40"
+            : "bg-primary/15 text-primary border border-primary/40"
         }`}
       >
         {stats.nextTaskOverdue ? "Atrasada" : "OK"}
@@ -612,12 +617,12 @@ function ListView({
   onEdit: (p: Project) => void;
   canEdit: (p: Project) => boolean;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
-  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>("all");
-  const [progressFilter, setProgressFilter] = useState<ProgressFilter>("all");
+  const [sortKey, setSortKey] = useStickyState<SortKey>("projetos:list:sortKey", "name");
+  const [sortDir, setSortDir] = useStickyState<SortDir>("projetos:list:sortDir", "asc");
+  const [search, setSearch] = useStickyState<string>("projetos:list:search", "");
+  const [statusFilter, setStatusFilter] = useStickyState<ProjectStatus | "all">("projetos:list:status", "all");
+  const [deadlineFilter, setDeadlineFilter] = useStickyState<DeadlineFilter>("projetos:list:deadline", "all");
+  const [progressFilter, setProgressFilter] = useStickyState<ProgressFilter>("projetos:list:progress", "all");
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -837,7 +842,7 @@ function ListView({
                             className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
                               stats.nextTaskOverdue
                                 ? "bg-overdue/15 text-overdue border border-overdue/40"
-                                : "bg-green-500/15 text-green-600 border border-green-500/40"
+                                : "bg-primary/15 text-primary border border-primary/40"
                             }`}
                           >
                             {stats.nextTaskOverdue ? "Atrasada" : "OK"}
@@ -1166,7 +1171,7 @@ function KanbanProjectCard({
               className={`inline-flex items-center rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
                 stats.nextTaskOverdue
                   ? "bg-overdue/15 text-overdue border border-overdue/40"
-                  : "bg-green-500/15 text-green-600 border border-green-500/40"
+                  : "bg-primary/15 text-primary border border-primary/40"
               }`}
             >
               {stats.nextTaskOverdue ? "Atrasada" : "OK"}

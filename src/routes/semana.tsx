@@ -374,8 +374,8 @@ function MiniTaskRow({
         }}
         className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-full border ${
           task.completed
-            ? "border-green-500 bg-green-500/30"
-            : "border-muted-foreground/40 hover:border-green-500"
+            ? "border-primary bg-primary/30"
+            : "border-muted-foreground/40 hover:border-primary"
         }`}
         aria-label="Concluir"
       />

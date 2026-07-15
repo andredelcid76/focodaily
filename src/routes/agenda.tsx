@@ -282,7 +282,7 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
       </div>
 
       {outlook.connected && outlook.email && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary dark:text-primary">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Conectado como <span className="font-medium">{outlook.email}</span>
           {outlook.last_sync_at && (

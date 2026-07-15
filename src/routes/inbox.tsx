@@ -27,7 +27,7 @@ export const Route = createFileRoute("/inbox")({
 const SOURCE_META = {
   email: { icon: Mail, label: "Outlook", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
   meeting: { icon: Users, label: "Fireflies", color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
-  pipedrive: { icon: Briefcase, label: "Pipedrive", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  pipedrive: { icon: Briefcase, label: "Pipedrive", color: "bg-primary/15 text-primary border-primary/20" },
 } as const;
 
 type SourceKey = keyof typeof SOURCE_META;
@@ -228,7 +228,7 @@ function InboxPage() {
                           <Icon className="h-3 w-3 mr-1" /> {meta.label}
                         </Badge>
                         {isAccepted ? (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]">
+                          <Badge variant="outline" className="bg-primary/15 text-primary border-primary/20 text-[10px]">
                             <CheckCircle2 className="h-3 w-3 mr-1" /> Aceita
                           </Badge>
                         ) : (

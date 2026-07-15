@@ -68,7 +68,7 @@ const STATUS_LABEL: Record<MyTaskRow["status"], string> = {
 const STATUS_CLS: Record<MyTaskRow["status"], string> = {
   todo: "bg-muted text-muted-foreground border-border",
   doing: "bg-primary/10 text-primary border-primary/30",
-  done: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  done: "bg-primary/15 text-primary border-primary/30",
 };
 const CAT_LABEL: Record<MyTaskRow["category"], string> = {
   urgent: "Urgente",
