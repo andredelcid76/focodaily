@@ -223,7 +223,7 @@ function OutlookCard({
             </div>
           </div>
           {status?.connected ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
               Conectado
             </span>
           ) : null}
@@ -310,7 +310,7 @@ function PipedriveCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600">
+            <div className="rounded-lg bg-primary/15 p-2 text-primary">
               <Briefcase className="h-4 w-4" />
             </div>
             <div>
@@ -321,7 +321,7 @@ function PipedriveCard({
             </div>
           </div>
           {status?.connected ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
               Conectado
             </span>
           ) : null}
@@ -468,7 +468,7 @@ function FirefliesCard({
             </div>
           </div>
           {status?.connected ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
               Conectado
             </span>
           ) : null}

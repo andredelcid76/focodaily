@@ -29,8 +29,8 @@ export function TaskCompleteButton({ completed, onToggle, size = "sm", className
       }}
       className={`flex shrink-0 items-center justify-center border transition-all ${dims} ${
         completed
-          ? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:border-emerald-600"
-          : "border-muted-foreground/25 bg-transparent text-transparent hover:border-emerald-500/60 hover:bg-emerald-500/10"
+          ? "border-primary bg-primary text-white hover:bg-primary hover:border-primary"
+          : "border-muted-foreground/25 bg-transparent text-transparent hover:border-primary/60 hover:bg-primary/15"
       } ${className}`}
       aria-label={completed ? "Reabrir tarefa" : "Concluir tarefa"}
       title={completed ? "Reabrir tarefa" : "Concluir tarefa"}

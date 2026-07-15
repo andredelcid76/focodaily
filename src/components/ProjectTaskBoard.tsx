@@ -37,7 +37,7 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 const STATUS_COLOR: Record<TaskStatus, string> = {
   todo: "bg-muted text-muted-foreground border-border",
   doing: "bg-primary/10 text-primary border-primary/30",
-  done: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  done: "bg-primary/15 text-primary border-primary/30",
 };
 
 function nameOf(m?: Member | null) {
@@ -1076,7 +1076,7 @@ function TimelineView({
                         {/* progress fill behind label */}
                         {w.total > 0 && (
                           <div
-                            className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-emerald-500/25"
+                            className="pointer-events-none absolute inset-y-1 left-0 rounded-sm bg-primary/25"
                             style={{ width: Math.max(0, fill) }}
                           />
                         )}
@@ -1183,7 +1183,7 @@ function TimelineRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const isOverdue = !task.completed && task.scheduled_date < today;
   const color = task.completed
-    ? "bg-emerald-500/70 border-emerald-500/50"
+    ? "bg-primary/70 border-primary/100"
     : isOverdue
     ? "bg-overdue/80 border-overdue"
     : status === "doing"

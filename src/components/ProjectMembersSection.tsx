@@ -312,7 +312,7 @@ export function ProjectMembersSection({ projectId }: Props) {
               <div className="flex gap-1.5">
                 <Input value={lastInviteUrl} readOnly className="text-xs font-mono" />
                 <Button variant="outline" size="icon" onClick={copyLink}>
-                  {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>

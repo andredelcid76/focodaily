@@ -395,7 +395,7 @@ function AnaliseInner({ userId }: { userId: string }) {
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
                         <span>{p.concluidas}/{p.total}</span>
-                        <span className={pct >= 70 ? "text-emerald-500" : pct >= 40 ? "text-amber-500" : "text-rose-500"}>
+                        <span className={pct >= 70 ? "text-primary" : pct >= 40 ? "text-amber-500" : "text-rose-500"}>
                           {pct}%
                         </span>
                         {p.criticas > 0 && (
@@ -473,7 +473,7 @@ function KpiCard({
   tone?: "good" | "warn" | "bad" | "neutral";
 }) {
   const toneClass =
-    tone === "good" ? "text-emerald-500" :
+    tone === "good" ? "text-primary" :
     tone === "warn" ? "text-amber-500" :
     tone === "bad" ? "text-rose-500" : "text-foreground";
   return (

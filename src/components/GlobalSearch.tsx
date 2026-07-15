@@ -141,7 +141,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                 }}
               >
                 {t.completed ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
                 ) : (
                   <Circle className="h-4 w-4 text-muted-foreground" />
                 )}

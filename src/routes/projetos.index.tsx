@@ -558,7 +558,7 @@ function NextTaskRow({ stats }: { stats: { nextTaskDate: string | null; nextTask
         className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
           stats.nextTaskOverdue
             ? "bg-overdue/15 text-overdue border border-overdue/40"
-            : "bg-green-500/15 text-green-600 border border-green-500/40"
+            : "bg-primary/15 text-primary border border-primary/40"
         }`}
       >
         {stats.nextTaskOverdue ? "Atrasada" : "OK"}
@@ -837,7 +837,7 @@ function ListView({
                             className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
                               stats.nextTaskOverdue
                                 ? "bg-overdue/15 text-overdue border border-overdue/40"
-                                : "bg-green-500/15 text-green-600 border border-green-500/40"
+                                : "bg-primary/15 text-primary border border-primary/40"
                             }`}
                           >
                             {stats.nextTaskOverdue ? "Atrasada" : "OK"}
@@ -1166,7 +1166,7 @@ function KanbanProjectCard({
               className={`inline-flex items-center rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${
                 stats.nextTaskOverdue
                   ? "bg-overdue/15 text-overdue border border-overdue/40"
-                  : "bg-green-500/15 text-green-600 border border-green-500/40"
+                  : "bg-primary/15 text-primary border border-primary/40"
               }`}
             >
               {stats.nextTaskOverdue ? "Atrasada" : "OK"}

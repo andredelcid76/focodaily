@@ -30,7 +30,7 @@ const FIELD_LABEL: Record<string, string> = {
 
 function iconFor(action: string, field: string | null) {
   if (action === "created") return <Plus className="h-3.5 w-3.5" />;
-  if (action === "completed") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+  if (action === "completed") return <CheckCircle2 className="h-3.5 w-3.5 text-primary" />;
   if (action === "reopened") return <RotateCcw className="h-3.5 w-3.5" />;
   if (action === "reassigned" || field === "assignee_id") return <UserCog className="h-3.5 w-3.5" />;
   return <Pencil className="h-3.5 w-3.5" />;

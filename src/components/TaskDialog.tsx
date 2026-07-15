@@ -803,7 +803,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   await onToggleComplete();
                   onOpenChange(false);
                 }}
-                className={task.completed ? "" : "text-green-600 hover:text-green-700"}
+                className={task.completed ? "" : "text-primary hover:text-primary"}
               >
                 {task.completed ? (
                   <><RotateCcw className="h-4 w-4" /> Reabrir</>

@@ -31,7 +31,7 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 const STATUS_COLOR: Record<TaskStatus, string> = {
   todo: "border-border/60 bg-muted/30 text-muted-foreground",
   doing: "border-primary/40 bg-primary/10 text-primary",
-  done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+  done: "border-primary/40 bg-primary/15 text-primary",
 };
 
 type Props = {
@@ -211,7 +211,7 @@ export function TaskListRow({
                     {subtaskCount && subtaskCount.total > 0 && (
                       <span
                         className={`inline-flex items-center gap-1 ${
-                          subtaskCount.completed === subtaskCount.total ? "text-green-500" : ""
+                          subtaskCount.completed === subtaskCount.total ? "text-primary" : ""
                         }`}
                         title={`${subtaskCount.completed} de ${subtaskCount.total} subtarefas concluídas`}
                       >
@@ -250,7 +250,7 @@ export function TaskListRow({
                           ? { l: "Outlook", c: "text-blue-600" }
                           : src === "meeting"
                           ? { l: "Fireflies", c: "text-purple-600" }
-                          : { l: "Pipedrive", c: "text-emerald-600" };
+                          : { l: "Pipedrive", c: "text-primary" };
                       const inner = <span className={meta.c}>{meta.l}</span>;
                       return url ? (
                         <a

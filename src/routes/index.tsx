@@ -1234,7 +1234,7 @@ function TasksCardsView({
 const KANBAN_COLS: { id: "todo" | "doing" | "done"; label: string; accent: string }[] = [
   { id: "todo", label: "A fazer", accent: "from-muted/40 to-muted/10" },
   { id: "doing", label: "Fazendo", accent: "from-primary/20 to-primary/5" },
-  { id: "done", label: "Feita", accent: "from-emerald-500/20 to-emerald-500/5" },
+  { id: "done", label: "Feita", accent: "from-primary/20 to-primary/10" },
 ];
 
 function TasksKanbanView({
