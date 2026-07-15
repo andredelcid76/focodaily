@@ -12,8 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { BackButton } from "@/components/BackButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppBadge } from "@/hooks/useAppBadge";
 import { useAccentColor } from "@/hooks/useAccentColor";
+import { useTheme } from "@/hooks/useTheme";
 
 // Single source of truth for breadcrumb groups. The eyebrow link goes to the
 // first item of the group, so e.g. clicking "Trabalho" from /inbox returns to
@@ -59,6 +62,7 @@ function Shell({ children }: { children: ReactNode }) {
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
   useAppBadge();
   useAccentColor();
+  useTheme(); // ensures the class stays synced when OS theme changes
 
   const meta = useMemo(() => pageMetaFor(location.pathname), [location.pathname]);
 
