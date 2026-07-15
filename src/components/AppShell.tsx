@@ -115,6 +115,7 @@ function Shell({ children }: { children: ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 glass-strong px-3 sm:px-4">
             <SidebarTrigger className="shrink-0" />
+            <BackButton />
 
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <button
