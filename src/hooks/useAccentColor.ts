@@ -27,6 +27,9 @@ export function useAccentColor() {
 
   useEffect(() => {
     const profile = data?.profile as { accent_color?: string | null } | null | undefined;
-    if (profile?.accent_color) applyAccentColor(profile.accent_color);
+    const raw = profile?.accent_color;
+    // Migrate legacy greens (emerald/teal) to sapphire.
+    const normalized = raw === "emerald" || raw === "teal" ? "sapphire" : raw;
+    if (normalized) applyAccentColor(normalized);
   }, [data]);
 }
