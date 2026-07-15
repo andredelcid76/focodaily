@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
 import { useAuth } from "@/lib/auth";
 import {
   useProjects,
@@ -89,13 +90,17 @@ function ProjectsInner({ userId }: { userId: string }) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
-  const [filterRole, setFilterRole] = useState<string | "all">("all");
-  const [scope, setScope] = useState<"all" | "personal" | "team">("all");
-  const [ownership, setOwnership] = useState<"all" | "mine" | "invited">("all");
-  const [hideFinished, setHideFinished] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<Set<ProjectStatus>>(new Set());
-  const [view, setView] = useState<ViewMode>("kanban");
-  const [kanbanGroup, setKanbanGroup] = useState<KanbanGroup>("status");
+  const [filterRole, setFilterRole] = useStickyState<string | "all">("projetos:filterRole", "all");
+  const [scope, setScope] = useStickyState<"all" | "personal" | "team">("projetos:scope", "all");
+  const [ownership, setOwnership] = useStickyState<"all" | "mine" | "invited">("projetos:ownership", "all");
+  const [hideFinished, setHideFinished] = useStickyState<boolean>("projetos:hideFinished", true);
+  const [statusFilter, setStatusFilter] = useStickyState<Set<ProjectStatus>>(
+    "projetos:statusFilter",
+    new Set(),
+    { serialize: setSerialize, deserialize: setDeserialize<ProjectStatus> },
+  );
+  const [view, setView] = useStickyState<ViewMode>("projetos:view", "kanban");
+  const [kanbanGroup, setKanbanGroup] = useStickyState<KanbanGroup>("projetos:kanbanGroup", "status");
 
   const tasksByProject = useMemo(() => {
     const map = new Map<string, typeof tasksApi.tasks>();
