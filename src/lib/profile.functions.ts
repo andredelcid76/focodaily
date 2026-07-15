@@ -21,7 +21,7 @@ const updateSchema = z.object({
   timezone: z.string().min(1).max(60).optional(),
   locale: z.string().min(2).max(10).optional(),
   accent_color: z.enum([
-    "emerald","sapphire","violet","amber","rose","crimson","teal","copper","plum","slate",
+    "sapphire","violet","amber","rose","crimson","copper","plum","slate",
   ]).optional(),
 });
 

@@ -6,11 +6,9 @@
 export type AccentColorId =
   | "sapphire"
   | "violet"
-  | "emerald"
   | "amber"
   | "rose"
   | "crimson"
-  | "teal"
   | "copper"
   | "plum"
   | "slate";
@@ -27,8 +25,6 @@ export type AccentPreset = {
 export const ACCENT_PRESETS: AccentPreset[] = [
   { id: "sapphire", label: "Safira",     swatch: "#5b8dd6", h: 255, c: 0.15, lightForeground: true },
   { id: "violet",   label: "Violeta",    swatch: "#8a7ad6", h: 285, c: 0.13, lightForeground: true },
-  { id: "teal",     label: "Teal",       swatch: "#3aa3b0", h: 200, c: 0.11 },
-  { id: "emerald",  label: "Esmeralda",  swatch: "#3ea88a", h: 165, c: 0.13 },
   { id: "plum",     label: "Ameixa",     swatch: "#a76a8a", h: 340, c: 0.11, lightForeground: true },
   { id: "rose",     label: "Rosé",       swatch: "#c97a7a", h: 20,  c: 0.11 },
   { id: "crimson",  label: "Carmim",     swatch: "#c85a4a", h: 25,  c: 0.16, lightForeground: true },
@@ -107,6 +103,10 @@ export function readCachedAccent(): AccentColorId {
   try {
     const v = localStorage.getItem("foco-accent");
     if (v && ACCENT_PRESETS.some((p) => p.id === v)) return v as AccentColorId;
+    // Migrate legacy greens (emerald/teal) to the new default.
+    if (v === "emerald" || v === "teal") {
+      localStorage.setItem("foco-accent", DEFAULT_ACCENT);
+    }
   } catch { /* ignore */ }
   return DEFAULT_ACCENT;
 }
