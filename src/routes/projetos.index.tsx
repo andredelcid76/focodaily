@@ -617,12 +617,12 @@ function ListView({
   onEdit: (p: Project) => void;
   canEdit: (p: Project) => boolean;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
-  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>("all");
-  const [progressFilter, setProgressFilter] = useState<ProgressFilter>("all");
+  const [sortKey, setSortKey] = useStickyState<SortKey>("projetos:list:sortKey", "name");
+  const [sortDir, setSortDir] = useStickyState<SortDir>("projetos:list:sortDir", "asc");
+  const [search, setSearch] = useStickyState<string>("projetos:list:search", "");
+  const [statusFilter, setStatusFilter] = useStickyState<ProjectStatus | "all">("projetos:list:status", "all");
+  const [deadlineFilter, setDeadlineFilter] = useStickyState<DeadlineFilter>("projetos:list:deadline", "all");
+  const [progressFilter, setProgressFilter] = useStickyState<ProgressFilter>("projetos:list:progress", "all");
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
