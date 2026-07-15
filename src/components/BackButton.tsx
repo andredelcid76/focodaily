@@ -1,24 +1,21 @@
-import { useRouter } from "@tanstack/react-router";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
- * Global "back" button. Uses browser history so filters/scroll on the previous
- * screen are preserved. Hidden when there's nowhere to go back to (e.g. first
- * page load, direct link entry).
+ * Global "back" button. Uses browser history so filters/scroll on the
+ * previous screen are preserved. Hidden on first load (nothing to go back to).
  */
 export function BackButton() {
   const router = useRouter();
+  const location = useLocation();
   const [canGoBack, setCanGoBack] = useState(false);
 
   useEffect(() => {
-    // Track whether we've navigated anywhere in this session.
-    const update = () => setCanGoBack(window.history.length > 1);
-    update();
-    const unsub = router.subscribe("onResolved", update);
-    return () => unsub();
-  }, [router]);
+    if (typeof window === "undefined") return;
+    setCanGoBack(window.history.length > 1);
+  }, [location.pathname]);
 
   if (!canGoBack) return null;
 
