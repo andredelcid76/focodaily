@@ -189,11 +189,17 @@ function EquipesPage() {
 
       {/* ---------------- Pessoas ---------------- */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Pessoas ({people.length})
-          </h2>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Pessoas ({people.length})
+            </h2>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="mr-1.5 h-4 w-4" />
+            Convidar pessoa
+          </Button>
         </div>
 
         {isLoading ? (
@@ -202,7 +208,7 @@ function EquipesPage() {
           <div className="space-y-5">
             <PeopleGroup
               title="Disponíveis para alocação (sem equipe)"
-              hint="Estas pessoas colaboram com você em projetos, mas não pertencem a nenhuma equipe."
+              hint="Pessoas convidadas livremente ou que colaboram com você em projetos, sem pertencer a nenhuma equipe."
               people={unassigned}
               teamName={teamName}
               canAllocate={ownedTeams.length > 0}
@@ -215,9 +221,80 @@ function EquipesPage() {
               canAllocate={ownedTeams.length > 0}
               onAllocate={setAllocPerson}
             />
+
+            {pendingInvites.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">
+                  Convites pendentes{" "}
+                  <span className="text-muted-foreground">({pendingInvites.length})</span>
+                </h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {pendingInvites.map((inv) => (
+                    <Card key={inv.id}>
+                      <CardContent className="flex items-center gap-3 p-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{inv.email}</p>
+                          <p className="text-xs text-muted-foreground">Aguardando aceite</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => revokeMut.mutate(inv.id)}
+                          disabled={revokeMut.isPending}
+                        >
+                          Cancelar
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
+
+      {/* Convidar pessoa */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convidar pessoa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              A pessoa recebe um convite por e-mail e passa a ficar disponível na sua lista — sem
+              precisar entrar em nenhuma equipe. Depois você pode adicioná-la a projetos
+              individuais ou a uma equipe.
+            </p>
+            <div>
+              <Label htmlFor="invite-email">E-mail</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="pessoa@empresa.com"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => inviteMut.mutate()}
+              disabled={!inviteEmail.trim() || inviteMut.isPending}
+            >
+              {inviteMut.isPending ? "Enviando…" : "Enviar convite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Nova equipe */}
       <Dialog open={open} onOpenChange={setOpen}>
