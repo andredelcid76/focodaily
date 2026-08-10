@@ -87,6 +87,33 @@ function EquipesPage() {
   const [color, setColor] = useState(PROJECT_COLORS[0]);
 
   const [allocPerson, setAllocPerson] = useState<Person | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+
+  const invite = useServerFn(inviteContact);
+  const revoke = useServerFn(revokeContactInvite);
+
+  const inviteMut = useMutation({
+    mutationFn: () =>
+      invite({ data: { email: inviteEmail.trim(), origin: window.location.origin } }),
+    onSuccess: () => {
+      toast.success("Convite enviado");
+      setInviteOpen(false);
+      setInviteEmail("");
+      qc.invalidateQueries({ queryKey: ["teams-overview"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: (invite_id: string) => revoke({ data: { invite_id } }),
+    onSuccess: () => {
+      toast.success("Convite cancelado");
+      qc.invalidateQueries({ queryKey: ["teams-overview"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const createMut = useMutation({
     mutationFn: () => create({ data: { name: name.trim(), color } }),
