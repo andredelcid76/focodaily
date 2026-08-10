@@ -475,3 +475,118 @@ export const listTeamMembers = createServerFn({ method: "POST" })
 
     return { members };
   });
+
+// ============================================================
+// Overview: teams (with member ids) + all known people
+// ============================================================
+export const getTeamsOverview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+
+    const [{ data: owned }, { data: myMemberships }] = await Promise.all([
+      supabase.from("teams").select("*").eq("owner_id", userId),
+      supabase.from("team_members").select("team_id").eq("user_id", userId),
+    ]);
+
+    const map = new Map<string, any>();
+    (owned ?? []).forEach((t) => map.set(t.id, { ...t, is_owner: true }));
+    const otherIds = (myMemberships ?? []).map((r) => r.team_id as string).filter((id) => !map.has(id));
+    if (otherIds.length > 0) {
+      const { data } = await supabase.from("teams").select("*").in("id", otherIds);
+      (data ?? []).forEach((t) => map.set(t.id, { ...t, is_owner: false }));
+    }
+    const teamIds = Array.from(map.keys());
+
+    const { data: allMembers } = teamIds.length
+      ? await supabase.from("team_members").select("team_id,user_id,role").in("team_id", teamIds)
+      : { data: [] as any[] };
+
+    // people the user already collaborates with (projects + teams)
+    const peopleIds = new Set<string>([userId]);
+    (allMembers ?? []).forEach((m) => peopleIds.add(m.user_id as string));
+    map.forEach((t) => peopleIds.add(t.owner_id as string));
+
+    const { data: projects } = await supabase.from("projects").select("id,user_id");
+    (projects ?? []).forEach((p) => p.user_id && peopleIds.add(p.user_id as string));
+    const projectIds = (projects ?? []).map((p) => p.id as string);
+    if (projectIds.length > 0) {
+      const { data: pm } = await supabase.from("project_members").select("user_id").in("project_id", projectIds);
+      (pm ?? []).forEach((m) => peopleIds.add(m.user_id as string));
+    }
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id,display_name,email,avatar_url")
+      .in("user_id", Array.from(peopleIds));
+
+    const people = (profiles ?? [])
+      .map((p) => ({
+        ...p,
+        is_me: p.user_id === userId,
+        team_ids: (allMembers ?? [])
+          .filter((m) => m.user_id === p.user_id)
+          .map((m) => m.team_id as string)
+          .concat(Array.from(map.values()).filter((t) => t.owner_id === p.user_id).map((t) => t.id as string)),
+      }))
+      .sort((a, b) =>
+        (a.display_name ?? a.email ?? "").localeCompare(b.display_name ?? b.email ?? "", "pt-BR"),
+      );
+
+    const teams = Array.from(map.values()).map((t) => ({
+      ...t,
+      member_count:
+        1 + (allMembers ?? []).filter((m) => m.team_id === t.id && m.user_id !== t.owner_id).length,
+    }));
+
+    return { teams, people, me: userId };
+  });
+
+// ============================================================
+// Add known people directly to a team (owner only)
+// ============================================================
+export const addTeamMembers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        team_id: z.string().uuid(),
+        user_ids: z.array(z.string().uuid()).min(1).max(50),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: team } = await supabase
+      .from("teams")
+      .select("id, owner_id, name")
+      .eq("id", data.team_id)
+      .maybeSingle();
+    if (!team) throw new Error("Equipe não encontrada");
+    if (team.owner_id !== userId) throw new Error("Apenas o dono pode adicionar membros");
+
+    const targets = Array.from(new Set(data.user_ids)).filter((id) => id !== team.owner_id);
+    if (targets.length === 0) return { added: 0 };
+
+    const { error } = await supabase
+      .from("team_members")
+      .upsert(
+        targets.map((uid) => ({ team_id: data.team_id, user_id: uid, role: "member" })),
+        { onConflict: "team_id,user_id" },
+      );
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("notifications").insert(
+      targets.map((uid) => ({
+        user_id: uid,
+        type: "team_access",
+        title: "Você foi incluído em uma equipe",
+        body: `Agora você participa da equipe ${team.name}.`,
+        actor_id: userId,
+        link: `/equipes/${data.team_id}`,
+      })),
+    );
+
+    return { added: targets.length };
+  });
