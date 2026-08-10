@@ -233,20 +233,113 @@ export const createProject = defineTool({
   },
 });
 
+/** Ids de projetos acessíveis ao usuário: dono, membro direto ou via equipe. */
+async function accessibleProjectIds(auth: unknown, userId: string): Promise<string[]> {
+  const client = db(auth);
+  const ids = new Set<string>();
+
+  const { data: owned } = await client.from("projects").select("id").eq("user_id", userId);
+  for (const p of owned ?? []) ids.add(p.id as string);
+
+  const { data: memberships } = await client
+    .from("project_members")
+    .select("project_id")
+    .eq("user_id", userId);
+  for (const m of memberships ?? []) ids.add(m.project_id as string);
+
+  const { data: teamRows } = await client.from("team_members").select("team_id").eq("user_id", userId);
+  const { data: ownedTeams } = await client.from("teams").select("id").eq("owner_id", userId);
+  const teamIds = [
+    ...(teamRows ?? []).map((t) => t.team_id as string),
+    ...(ownedTeams ?? []).map((t) => t.id as string),
+  ];
+  if (teamIds.length > 0) {
+    const { data: teamProjects } = await client.from("projects").select("id").in("team_id", teamIds);
+    for (const p of teamProjects ?? []) ids.add(p.id as string);
+  }
+
+  return Array.from(ids);
+}
+
+const PROJECT_SELECT =
+  "id,name,description,status,deadline,starts_on,color,role_id,user_id,team_id,members_can_reassign," +
+  "role:roles(id,name,color),team:teams(id,name,color,owner_id)";
+
+async function decorateProjects(auth: unknown, rows: any[]): Promise<any[]> {
+  if (rows.length === 0) return [];
+  const client = db(auth);
+  const projectIds = rows.map((r) => r.id as string);
+
+  const { data: members } = await client
+    .from("project_members")
+    .select("project_id,user_id,role")
+    .in("project_id", projectIds);
+
+  const userIds = new Set<string>();
+  for (const r of rows) {
+    userIds.add(r.user_id as string);
+    if (r.team?.owner_id) userIds.add(r.team.owner_id as string);
+  }
+  for (const m of members ?? []) userIds.add(m.user_id as string);
+
+  const { data: profiles } = await client
+    .from("profiles")
+    .select("user_id,display_name,email")
+    .in("user_id", Array.from(userIds));
+  const profileById = new Map((profiles ?? []).map((p) => [p.user_id as string, p]));
+  const person = (uid: string | null | undefined) => {
+    if (!uid) return null;
+    const p = profileById.get(uid);
+    return { user_id: uid, display_name: p?.display_name ?? null, email: p?.email ?? null };
+  };
+
+  return rows.map((r) => ({
+    ...r,
+    leader: person(r.user_id as string),
+    team: r.team
+      ? { id: r.team.id, name: r.team.name, color: r.team.color, owner: person(r.team.owner_id) }
+      : null,
+    members: (members ?? [])
+      .filter((m) => m.project_id === r.id)
+      .map((m) => ({ ...person(m.user_id as string), role: m.role })),
+  }));
+}
+
 export const listProjects = defineTool({
   name: "list_projects",
-  description: "Lista projetos do usuário (id, nome, status, prazo, papel associado).",
+  description:
+    "Lista os projetos acessíveis ao usuário (dono, membro ou via equipe), incluindo líder (dono), equipe, papel associado e a lista de participantes com seus papéis.",
   parameters: z.object({}),
   execute: async (_args, ctx) => {
     const userId = getUserId(ctx.auth);
-    const { data, error } = await db(ctx.auth)
-      .from("projects")
-      .select("id,name,description,status,deadline,starts_on,color,role_id,role:roles(id,name,color)")
-      .eq("user_id", userId);
+    const ids = await accessibleProjectIds(ctx.auth, userId);
+    if (ids.length === 0) return JSON.stringify([]);
+    const { data, error } = await db(ctx.auth).from("projects").select(PROJECT_SELECT).in("id", ids);
     if (error) throw new Error(error.message);
-    return JSON.stringify(data ?? []);
+    return JSON.stringify(await decorateProjects(ctx.auth, (data ?? []) as any[]));
   },
 });
+
+export const getProject = defineTool({
+  name: "get_project",
+  description:
+    "Detalhes de um projeto específico: líder (dono), equipe, papel, prazos, configuração de reatribuição e participantes com seus papéis.",
+  parameters: z.object({ id: z.string() }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    await assertProjectAccess(ctx.auth, args.id, userId);
+    const { data, error } = await db(ctx.auth)
+      .from("projects")
+      .select(PROJECT_SELECT)
+      .eq("id", args.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("Projeto não encontrado.");
+    const [decorated] = await decorateProjects(ctx.auth, [data as any]);
+    return JSON.stringify(decorated);
+  },
+});
+
 
 export const updateProject = defineTool({
   name: "update_project",
@@ -617,6 +710,7 @@ export const getFirefliesTranscript = defineTool({
 export const allTools = [
   listTasks,
   listProjects,
+  getProject,
   createProject,
   updateProject,
   deleteProject,

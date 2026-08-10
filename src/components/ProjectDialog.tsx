@@ -12,7 +12,8 @@ import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
 import { listTeams } from "@/lib/teams.functions";
-import { Users, User as UserIcon, Lock } from "lucide-react";
+import { listKnownCollaborators } from "@/lib/collaborators.functions";
+import { Users, User as UserIcon, Lock, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,9 +34,12 @@ type Props = {
     deadline: string | null;
     team_id: string | null;
     members_can_reassign: boolean;
+    leader_id: string | null;
+    member_ids: string[];
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
+
 
 export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDelete }: Props) {
   const { user } = useAuth();
@@ -48,6 +52,8 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
   const [deadline, setDeadline] = useState<string>("");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [membersCanReassign, setMembersCanReassign] = useState<boolean>(true);
+  const [leaderId, setLeaderId] = useState<string | null>(null);
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const isOwner = !project || project.user_id === user?.id;
@@ -61,6 +67,17 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
   });
   const teams = teamsData?.teams ?? [];
 
+  const fetchPeople = useServerFn(listKnownCollaborators);
+  const { data: peopleData } = useQuery({
+    queryKey: ["known-collaborators"],
+    queryFn: () => fetchPeople(),
+    enabled: open,
+    staleTime: 60_000,
+  });
+  const people = peopleData?.people ?? [];
+  const personLabel = (p: { display_name: string | null; email: string | null; user_id: string }) =>
+    p.display_name?.trim() || p.email?.split("@")[0] || p.user_id.slice(0, 8);
+
   useEffect(() => {
     if (open) {
       setName(project?.name ?? "");
@@ -72,8 +89,10 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
       setDeadline(project?.deadline ?? "");
       setTeamId(((project as any)?.team_id ?? null) as string | null);
       setMembersCanReassign(((project as any)?.members_can_reassign ?? true) as boolean);
+      setLeaderId(project?.user_id ?? user?.id ?? null);
+      setMemberIds([]);
     }
-  }, [open, project]);
+  }, [open, project, user?.id]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -92,7 +111,10 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
         deadline: deadline || null,
         team_id: teamId,
         members_can_reassign: membersCanReassign,
+        leader_id: leaderId,
+        member_ids: memberIds,
       });
+
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar projeto");
@@ -182,6 +204,74 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
                 : "Apenas você tem acesso (pode convidar pessoas individualmente abaixo)."}
             </p>
           </div>
+
+          <div>
+            <Label className="inline-flex items-center gap-1.5">
+              <Crown className="h-3.5 w-3.5 text-amber-500" /> Líder do projeto
+            </Label>
+            <Select
+              value={leaderId ?? user?.id ?? ""}
+              onValueChange={(v) => setLeaderId(v)}
+              disabled={!isOwner}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o líder" />
+              </SelectTrigger>
+              <SelectContent>
+                {people.map((p) => (
+                  <SelectItem key={p.user_id} value={p.user_id}>
+                    {personLabel(p)}
+                    {p.user_id === user?.id ? " (você)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {!isOwner
+                ? "Somente o líder atual pode transferir a liderança."
+                : leaderId && leaderId !== user?.id
+                ? "Você continuará no projeto como administrador."
+                : "O líder responde pelo projeto e controla as configurações."}
+            </p>
+          </div>
+
+          <div>
+            <Label>Participantes</Label>
+            {people.filter((p) => p.user_id !== user?.id).length === 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Você ainda não colabora com ninguém. Convide alguém por e-mail nas configurações do projeto.
+              </p>
+            ) : (
+              <div className="mt-1.5 max-h-36 space-y-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/20 p-2">
+                {people
+                  .filter((p) => p.user_id !== user?.id && p.user_id !== leaderId)
+                  .map((p) => {
+                    const checked = memberIds.includes(p.user_id);
+                    return (
+                      <label key={p.user_id} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) =>
+                            setMemberIds((prev) =>
+                              v === true ? [...prev, p.user_id] : prev.filter((x) => x !== p.user_id),
+                            )
+                          }
+                        />
+                        <span className="truncate">{personLabel(p)}</span>
+                        {p.email && (
+                          <span className="truncate text-xs text-muted-foreground">{p.email}</span>
+                        )}
+                      </label>
+                    );
+                  })}
+              </div>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pessoas que já colaboram com você em qualquer projeto ou equipe — marque para incluir aqui.
+            </p>
+          </div>
+
+
 
           <div>
             <Label>Cor</Label>

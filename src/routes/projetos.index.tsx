@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { addProjectMembers } from "@/lib/collaborators.functions";
+import { transferProjectLeadership } from "@/lib/team.functions";
 import { useCallback, useMemo, useState } from "react";
+
 import { AppShell } from "@/components/AppShell";
 import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
 import { useAuth } from "@/lib/auth";
@@ -142,6 +146,26 @@ function ProjectsInner({ userId }: { userId: string }) {
   };
 
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
+
+  const addMembers = useServerFn(addProjectMembers);
+  const transferLeader = useServerFn(transferProjectLeadership);
+
+  const applyPeople = useCallback(
+    async (projectId: string, currentOwner: string, leaderId: string | null, memberIds: string[]) => {
+      try {
+        if (memberIds.length > 0) {
+          await addMembers({ data: { project_id: projectId, user_ids: memberIds } });
+        }
+        if (leaderId && leaderId !== currentOwner) {
+          await transferLeader({ data: { project_id: projectId, new_leader_id: leaderId } });
+        }
+      } catch (e: any) {
+        toast.error(e?.message ?? "Erro ao atualizar participantes");
+      }
+    },
+    [addMembers, transferLeader],
+  );
+
 
   return (
     <div className="space-y-6">
@@ -350,15 +374,19 @@ function ProjectsInner({ userId }: { userId: string }) {
         onOpenChange={setDialogOpen}
         project={editing}
         roles={roles}
-        onSave={async (data) => {
+        onSave={async ({ leader_id, member_ids, ...data }) => {
           if (editing) {
             await projectsApi.updateProject(editing.id, data);
+            await applyPeople(editing.id, editing.user_id, leader_id, member_ids);
             toast.success("Projeto atualizado");
           } else {
-            await projectsApi.createProject(data);
+            const created = await projectsApi.createProject(data);
+            if (created) await applyPeople(created.id, created.user_id, leader_id, member_ids);
             toast.success("Projeto criado");
           }
+          await projectsApi.refresh();
         }}
+
         onDelete={
           editing
             ? async () => {
@@ -602,10 +630,90 @@ function RoleChip({ role }: { role: { name: string; color: string } }) {
 
 // ============== LIST VIEW ==============
 
-type SortKey = "name" | "status" | "role" | "progress" | "tasks" | "deadline" | "nextTask";
+type SortKey = "name" | "status" | "role" | "leader" | "progress" | "tasks" | "deadline" | "nextTask";
 type SortDir = "asc" | "desc";
-type DeadlineFilter = "all" | "overdue" | "today" | "week" | "later" | "none";
-type ProgressFilter = "all" | "not_started" | "in_progress" | "done";
+type DeadlineFilter = "overdue" | "today" | "week" | "later" | "none";
+type ProgressFilter = "not_started" | "in_progress" | "done";
+
+const DEADLINE_LABEL: Record<DeadlineFilter, string> = {
+  overdue: "Atrasados",
+  today: "Hoje",
+  week: "Próxima semana",
+  later: "Mais tarde",
+  none: "Sem prazo",
+};
+const PROGRESS_LABEL: Record<ProgressFilter, string> = {
+  not_started: "Não iniciado",
+  in_progress: "Em andamento",
+  done: "Concluído",
+};
+
+function MultiFilter<T extends string>({
+  label, options, labelOf, selected, onChange,
+}: {
+  label: string;
+  options: T[];
+  labelOf: (v: T) => string;
+  selected: Set<T>;
+  onChange: (next: Set<T>) => void;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`h-8 gap-1.5 text-xs ${selected.size > 0 ? "border-primary/50 text-primary" : ""}`}
+        >
+          <Filter className="h-3 w-3" />
+          {label}
+          {selected.size > 0 && (
+            <span className="ml-0.5 rounded-full bg-primary/20 px-1.5 text-[10px] font-semibold tabular-nums">
+              {selected.size}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+          {selected.size > 0 && (
+            <button
+              onClick={() => onChange(new Set())}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" /> Limpar
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {options.map((o) => {
+            const active = selected.has(o);
+            return (
+              <button
+                key={o}
+                type="button"
+                onClick={() => {
+                  const next = new Set(selected);
+                  if (next.has(o)) next.delete(o);
+                  else next.add(o);
+                  onChange(next);
+                }}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                  active
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-border/60 bg-card/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                }`}
+              >
+                {labelOf(o)}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function ListView({
   projects, rolesById, tasksByProject, today, onEdit, canEdit,
@@ -620,9 +728,36 @@ function ListView({
   const [sortKey, setSortKey] = useStickyState<SortKey>("projetos:list:sortKey", "name");
   const [sortDir, setSortDir] = useStickyState<SortDir>("projetos:list:sortDir", "asc");
   const [search, setSearch] = useStickyState<string>("projetos:list:search", "");
-  const [statusFilter, setStatusFilter] = useStickyState<ProjectStatus | "all">("projetos:list:status", "all");
-  const [deadlineFilter, setDeadlineFilter] = useStickyState<DeadlineFilter>("projetos:list:deadline", "all");
-  const [progressFilter, setProgressFilter] = useStickyState<ProgressFilter>("projetos:list:progress", "all");
+  const [statusFilter, setStatusFilter] = useStickyState<Set<ProjectStatus>>(
+    "projetos:list:statusMulti", new Set(),
+    { serialize: setSerialize, deserialize: setDeserialize<ProjectStatus> },
+  );
+  const [deadlineFilter, setDeadlineFilter] = useStickyState<Set<DeadlineFilter>>(
+    "projetos:list:deadlineMulti", new Set(),
+    { serialize: setSerialize, deserialize: setDeserialize<DeadlineFilter> },
+  );
+  const [progressFilter, setProgressFilter] = useStickyState<Set<ProgressFilter>>(
+    "projetos:list:progressMulti", new Set(),
+    { serialize: setSerialize, deserialize: setDeserialize<ProgressFilter> },
+  );
+  const [leaderFilter, setLeaderFilter] = useStickyState<Set<string>>(
+    "projetos:list:leaderMulti", new Set(),
+    { serialize: setSerialize, deserialize: setDeserialize<string> },
+  );
+
+  const ownerIds = useMemo(() => projects.map((p) => p.user_id), [projects]);
+  const profiles = useProfiles(ownerIds);
+  const leaderName = useCallback(
+    (uid: string) => {
+      const p = profiles.get(uid);
+      return p?.display_name?.trim() || p?.email?.split("@")[0] || "—";
+    },
+    [profiles],
+  );
+  const leaderOptions = useMemo(
+    () => Array.from(new Set(ownerIds)).sort((a, b) => leaderName(a).localeCompare(leaderName(b), "pt-BR")),
+    [ownerIds, leaderName],
+  );
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -647,20 +782,28 @@ function ListView({
       return diff >= 0 && diff <= 7;
     };
 
+    const matchDeadline = (p: Project, f: DeadlineFilter) => {
+      if (f === "none") return !p.deadline;
+      if (!p.deadline) return false;
+      if (f === "overdue") return p.deadline < today;
+      if (f === "today") return p.deadline === today;
+      if (f === "week") return inWeek(p.deadline);
+      return p.deadline > today && !inWeek(p.deadline);
+    };
+
+    const matchProgress = (progress: number, f: ProgressFilter) => {
+      if (f === "not_started") return progress === 0;
+      if (f === "done") return progress >= 1;
+      return progress > 0 && progress < 1;
+    };
+
     const filtered = enriched.filter(({ p, stats }) => {
       if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (statusFilter !== "all" && p.status !== statusFilter) return false;
-      if (progressFilter === "not_started" && stats.progress > 0) return false;
-      if (progressFilter === "in_progress" && (stats.progress === 0 || stats.progress >= 1)) return false;
-      if (progressFilter === "done" && stats.progress < 1) return false;
-      if (deadlineFilter !== "all") {
-        if (deadlineFilter === "none" && p.deadline) return false;
-        if (deadlineFilter !== "none" && !p.deadline) return false;
-        if (deadlineFilter === "overdue" && !(p.deadline && p.deadline < today)) return false;
-        if (deadlineFilter === "today" && !(p.deadline && p.deadline === today)) return false;
-        if (deadlineFilter === "week" && !(p.deadline && inWeek(p.deadline))) return false;
-        if (deadlineFilter === "later" && !(p.deadline && p.deadline > today && !inWeek(p.deadline))) return false;
-      }
+      if (statusFilter.size > 0 && !statusFilter.has(p.status)) return false;
+      if (leaderFilter.size > 0 && !leaderFilter.has(p.user_id)) return false;
+      if (progressFilter.size > 0 && !Array.from(progressFilter).some((f) => matchProgress(stats.progress, f)))
+        return false;
+      if (deadlineFilter.size > 0 && !Array.from(deadlineFilter).some((f) => matchDeadline(p, f))) return false;
       return true;
     });
 
@@ -672,6 +815,8 @@ function ListView({
           return dir * a.p.name.localeCompare(b.p.name);
         case "status":
           return dir * (PROJECT_STATUS_ORDER.indexOf(a.p.status) - PROJECT_STATUS_ORDER.indexOf(b.p.status));
+        case "leader":
+          return dir * leaderName(a.p.user_id).localeCompare(leaderName(b.p.user_id), "pt-BR");
         case "role": {
           const an = a.role?.name ?? "";
           const bn = b.role?.name ?? "";
@@ -697,15 +842,21 @@ function ListView({
     };
 
     return [...filtered].sort(cmp);
-  }, [projects, tasksByProject, rolesById, today, search, statusFilter, deadlineFilter, progressFilter, sortKey, sortDir]);
+  }, [projects, tasksByProject, rolesById, today, search, statusFilter, deadlineFilter, progressFilter, leaderFilter, sortKey, sortDir, leaderName]);
 
-  const hasFilters = search !== "" || statusFilter !== "all" || deadlineFilter !== "all" || progressFilter !== "all";
+  const hasFilters =
+    search !== "" ||
+    statusFilter.size > 0 ||
+    deadlineFilter.size > 0 ||
+    progressFilter.size > 0 ||
+    leaderFilter.size > 0;
 
   const clearFilters = () => {
     setSearch("");
-    setStatusFilter("all");
-    setDeadlineFilter("all");
-    setProgressFilter("all");
+    setStatusFilter(new Set());
+    setDeadlineFilter(new Set());
+    setProgressFilter(new Set());
+    setLeaderFilter(new Set());
   };
 
   return (
@@ -720,41 +871,34 @@ function ListView({
             className="h-8 pl-7 text-sm"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ProjectStatus | "all")}>
-          <SelectTrigger className="h-8 w-[150px] text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos status</SelectItem>
-            {PROJECT_STATUS_ORDER.map((s) => (
-              <SelectItem key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={deadlineFilter} onValueChange={(v) => setDeadlineFilter(v as DeadlineFilter)}>
-          <SelectTrigger className="h-8 w-[150px] text-xs">
-            <SelectValue placeholder="Prazo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos prazos</SelectItem>
-            <SelectItem value="overdue">Atrasados</SelectItem>
-            <SelectItem value="today">Hoje</SelectItem>
-            <SelectItem value="week">Próxima semana</SelectItem>
-            <SelectItem value="later">Mais tarde</SelectItem>
-            <SelectItem value="none">Sem prazo</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={progressFilter} onValueChange={(v) => setProgressFilter(v as ProgressFilter)}>
-          <SelectTrigger className="h-8 w-[160px] text-xs">
-            <SelectValue placeholder="Progresso" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo progresso</SelectItem>
-            <SelectItem value="not_started">Não iniciado</SelectItem>
-            <SelectItem value="in_progress">Em andamento</SelectItem>
-            <SelectItem value="done">Concluído</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiFilter
+          label="Status"
+          options={PROJECT_STATUS_ORDER}
+          labelOf={(s) => PROJECT_STATUS_LABEL[s]}
+          selected={statusFilter}
+          onChange={setStatusFilter}
+        />
+        <MultiFilter
+          label="Líder"
+          options={leaderOptions}
+          labelOf={leaderName}
+          selected={leaderFilter}
+          onChange={setLeaderFilter}
+        />
+        <MultiFilter
+          label="Prazo"
+          options={["overdue", "today", "week", "later", "none"] as DeadlineFilter[]}
+          labelOf={(f) => DEADLINE_LABEL[f]}
+          selected={deadlineFilter}
+          onChange={setDeadlineFilter}
+        />
+        <MultiFilter
+          label="Progresso"
+          options={["not_started", "in_progress", "done"] as ProgressFilter[]}
+          labelOf={(f) => PROGRESS_LABEL[f]}
+          selected={progressFilter}
+          onChange={setProgressFilter}
+        />
         {hasFilters && (
           <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={clearFilters}>
             <X className="mr-1 h-3 w-3" /> Limpar
@@ -772,6 +916,7 @@ function ListView({
               <tr className="text-left text-xs uppercase tracking-wider">
                 <SortTh label="Projeto" k="name" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <SortTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                <SortTh label="Líder" k="leader" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <SortTh label="Papel" k="role" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                 <SortTh label="Progresso" k="progress" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
                 <SortTh label="Tarefas" k="tasks" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
@@ -783,7 +928,7 @@ function ListView({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center text-xs text-muted-foreground">
+                  <td colSpan={9} className="px-3 py-6 text-center text-xs text-muted-foreground">
                     Nenhum projeto corresponde aos filtros.
                   </td>
                 </tr>
@@ -805,6 +950,14 @@ function ListView({
                     </td>
                     <td className="px-3 py-2">
                       <ProjectStatusBadge status={p.status} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-600"
+                        title="Líder do projeto"
+                      >
+                        <Crown className="h-2.5 w-2.5" /> {leaderName(p.user_id)}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
                       {role ? <RoleChip role={role} /> : <span className="text-xs text-muted-foreground">—</span>}
