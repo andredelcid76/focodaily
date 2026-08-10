@@ -28,6 +28,7 @@ import { Route as EquipesIdRouteImport } from './routes/equipes.$id'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as ConviteEquipeTokenRouteImport } from './routes/convite-equipe.$token'
+import { Route as ConviteContatoTokenRouteImport } from './routes/convite-contato.$token'
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -141,6 +142,11 @@ const ConviteTokenRoute = ConviteTokenRouteImport.update({
 const ConviteEquipeTokenRoute = ConviteEquipeTokenRouteImport.update({
   id: '/convite-equipe/$token',
   path: '/convite-equipe/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConviteContatoTokenRoute = ConviteContatoTokenRouteImport.update({
+  id: '/convite-contato/$token',
+  path: '/convite-contato/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotwellKnownOauthProtectedResourceRoute =
@@ -259,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/convite-contato/$token': typeof ConviteContatoTokenRoute
   '/convite-equipe/$token': typeof ConviteEquipeTokenRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -299,6 +306,7 @@ export interface FileRoutesByTo {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/convite-contato/$token': typeof ConviteContatoTokenRoute
   '/convite-equipe/$token': typeof ConviteEquipeTokenRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/semana': typeof SemanaRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/convite-contato/$token': typeof ConviteContatoTokenRoute
   '/convite-equipe/$token': typeof ConviteEquipeTokenRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -382,6 +391,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/convite-contato/$token'
     | '/convite-equipe/$token'
     | '/convite/$token'
     | '/email/unsubscribe'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/convite-contato/$token'
     | '/convite-equipe/$token'
     | '/convite/$token'
     | '/email/unsubscribe'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/semana'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/convite-contato/$token'
     | '/convite-equipe/$token'
     | '/convite/$token'
     | '/email/unsubscribe'
@@ -503,6 +515,7 @@ export interface RootRouteChildren {
   SemanaRoute: typeof SemanaRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  ConviteContatoTokenRoute: typeof ConviteContatoTokenRoute
   ConviteEquipeTokenRoute: typeof ConviteEquipeTokenRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
@@ -662,6 +675,13 @@ declare module '@tanstack/react-router' {
       path: '/convite-equipe/$token'
       fullPath: '/convite-equipe/$token'
       preLoaderRoute: typeof ConviteEquipeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convite-contato/$token': {
+      id: '/convite-contato/$token'
+      path: '/convite-contato/$token'
+      fullPath: '/convite-contato/$token'
+      preLoaderRoute: typeof ConviteContatoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -827,6 +847,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
+  ConviteContatoTokenRoute: ConviteContatoTokenRoute,
   ConviteEquipeTokenRoute: ConviteEquipeTokenRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
