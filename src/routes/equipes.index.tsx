@@ -105,11 +105,13 @@ function EquipesPage() {
 
   const teams = (data?.teams ?? []) as any[];
   const people = useMemo(() => (data?.people ?? []) as Person[], [data]);
+  const pendingInvites = (data?.pending_invites ?? []) as PendingInvite[];
   const ownedTeams = teams.filter((t) => t.is_owner);
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? "Equipe";
 
   const unassigned = people.filter((p) => p.team_ids.length === 0);
   const assigned = people.filter((p) => p.team_ids.length > 0);
+
 
   return (
     <div className="space-y-8">
