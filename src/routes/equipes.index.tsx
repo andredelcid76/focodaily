@@ -18,7 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AppShell } from "@/components/AppShell";
-import { getTeamsOverview, createTeam, addTeamMembers } from "@/lib/teams.functions";
+import {
+  getTeamsOverview,
+  createTeam,
+  addTeamMembers,
+  inviteContact,
+  revokeContactInvite,
+} from "@/lib/teams.functions";
+
 import { PROJECT_COLORS } from "@/hooks/useProjects";
 
 export const Route = createFileRoute("/equipes/")({
