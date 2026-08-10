@@ -515,6 +515,25 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
       (pm ?? []).forEach((m) => peopleIds.add(m.user_id as string));
     }
 
+    // free contacts (invited without team/project)
+    const { data: contactRows } = await supabase
+      .from("contacts")
+      .select("owner_id,contact_id")
+      .or(`owner_id.eq.${userId},contact_id.eq.${userId}`);
+    const contactIds = new Set<string>();
+    (contactRows ?? []).forEach((c) => {
+      const other = c.owner_id === userId ? (c.contact_id as string) : (c.owner_id as string);
+      contactIds.add(other);
+      peopleIds.add(other);
+    });
+
+    const { data: pendingInvites } = await supabase
+      .from("contact_invites")
+      .select("id,email,expires_at,created_at")
+      .eq("inviter_id", userId)
+      .is("accepted_at", null)
+      .order("created_at", { ascending: false });
+
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id,display_name,email,avatar_url")
@@ -524,6 +543,7 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
       .map((p) => ({
         ...p,
         is_me: p.user_id === userId,
+        is_contact: contactIds.has(p.user_id as string),
         team_ids: (allMembers ?? [])
           .filter((m) => m.user_id === p.user_id)
           .map((m) => m.team_id as string)
@@ -539,8 +559,9 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
         1 + (allMembers ?? []).filter((m) => m.team_id === t.id && m.user_id !== t.owner_id).length,
     }));
 
-    return { teams, people, me: userId };
+    return { teams, people, pending_invites: pendingInvites ?? [], me: userId };
   });
+
 
 // ============================================================
 // Add known people directly to a team (owner only)
@@ -589,4 +610,148 @@ export const addTeamMembers = createServerFn({ method: "POST" })
     );
 
     return { added: targets.length };
+  });
+
+// ============================================================
+// Free contacts: invite people without any team/project
+// ============================================================
+export const inviteContact = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        email: z.string().email().max(255),
+        origin: z.string().url(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const email = data.email.toLowerCase().trim();
+
+    const { data: myProfile } = await supabase
+      .from("profiles")
+      .select("email, display_name")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (myProfile?.email?.toLowerCase() === email) {
+      throw new Error("Este é o seu próprio e-mail");
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("profiles")
+      .select("user_id")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (existing) {
+      const { data: already } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("owner_id", userId)
+        .eq("contact_id", existing.user_id)
+        .maybeSingle();
+      if (already) throw new Error("Esta pessoa já está na sua lista");
+    }
+
+    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+
+    const { error } = await supabase.from("contact_invites").upsert(
+      {
+        inviter_id: userId,
+        email,
+        token,
+        expires_at: new Date(Date.now() + 7 * 24 * 3600_000).toISOString(),
+        accepted_at: null,
+        accepted_by: null,
+      },
+      { onConflict: "inviter_id,email" },
+    );
+    if (error) throw new Error(error.message);
+
+    const inviterName = myProfile?.display_name ?? myProfile?.email ?? "Alguém";
+
+    if (existing?.user_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: existing.user_id,
+        type: "contact_invite",
+        title: "Você recebeu um convite de colaboração",
+        body: `${inviterName} quer colaborar com você no Focou.`,
+        actor_id: userId,
+        link: `/convite-contato/${token}`,
+      });
+    }
+
+    await enqueueCollaborationEmail({
+      to: email,
+      label: "contact_invite",
+      subject: `${inviterName} quer colaborar com você no Focou`,
+      title: "Convite de colaboração",
+      body: `${inviterName} te convidou para colaborar no Focou. Depois de aceitar, você poderá ser adicionado a projetos e equipes.`,
+      ctaLabel: "Aceitar convite",
+      ctaUrl: `${data.origin}/convite-contato/${token}`,
+    });
+
+    return { invite_url: `${data.origin}/convite-contato/${token}`, email };
+  });
+
+export const revokeContactInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ invite_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("contact_invites")
+      .delete()
+      .eq("id", data.invite_id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const removeContact = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ user_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await supabase.from("contacts").delete().eq("owner_id", userId).eq("contact_id", data.user_id);
+    await supabase.from("contacts").delete().eq("owner_id", data.user_id).eq("contact_id", userId);
+    return { success: true };
+  });
+
+export const acceptContactInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ token: z.string().min(10).max(128) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: inviterId, error } = await context.supabase.rpc("accept_contact_invite", {
+      _token: data.token,
+    });
+    if (error) throw new Error(error.message);
+    return { inviter_id: inviterId as string };
+  });
+
+export const getContactInvitePreview = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ token: z.string().min(10).max(128) }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: invite } = await supabaseAdmin
+      .from("contact_invites")
+      .select("email, expires_at, accepted_at, inviter_id")
+      .eq("token", data.token)
+      .maybeSingle();
+
+    if (!invite) return { valid: false as const, reason: "not_found" as const };
+    if (invite.accepted_at) return { valid: false as const, reason: "accepted" as const };
+    if (new Date(invite.expires_at).getTime() < Date.now()) {
+      return { valid: false as const, reason: "expired" as const };
+    }
+
+    const { data: inviter } = await supabaseAdmin
+      .from("profiles")
+      .select("display_name, email")
+      .eq("user_id", invite.inviter_id)
+      .maybeSingle();
+
+    return {
+      valid: true as const,
+      email: invite.email,
+      inviter_name: inviter?.display_name ?? inviter?.email ?? "Alguém",
+    };
   });
