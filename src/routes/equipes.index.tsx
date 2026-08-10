@@ -55,6 +55,14 @@ type Person = {
   team_ids: string[];
 };
 
+type PendingInvite = {
+  id: string;
+  email: string;
+  expires_at: string;
+  created_at: string;
+};
+
+
 function initials(p: Person) {
   const name = p.display_name ?? p.email ?? "";
   const parts = name.split(/[\s@.]+/).filter(Boolean);
