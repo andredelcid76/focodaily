@@ -515,6 +515,25 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
       (pm ?? []).forEach((m) => peopleIds.add(m.user_id as string));
     }
 
+    // free contacts (invited without team/project)
+    const { data: contactRows } = await supabase
+      .from("contacts")
+      .select("owner_id,contact_id")
+      .or(`owner_id.eq.${userId},contact_id.eq.${userId}`);
+    const contactIds = new Set<string>();
+    (contactRows ?? []).forEach((c) => {
+      const other = c.owner_id === userId ? (c.contact_id as string) : (c.owner_id as string);
+      contactIds.add(other);
+      peopleIds.add(other);
+    });
+
+    const { data: pendingInvites } = await supabase
+      .from("contact_invites")
+      .select("id,email,expires_at,created_at")
+      .eq("inviter_id", userId)
+      .is("accepted_at", null)
+      .order("created_at", { ascending: false });
+
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id,display_name,email,avatar_url")
@@ -524,6 +543,7 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
       .map((p) => ({
         ...p,
         is_me: p.user_id === userId,
+        is_contact: contactIds.has(p.user_id as string),
         team_ids: (allMembers ?? [])
           .filter((m) => m.user_id === p.user_id)
           .map((m) => m.team_id as string)
@@ -539,8 +559,9 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
         1 + (allMembers ?? []).filter((m) => m.team_id === t.id && m.user_id !== t.owner_id).length,
     }));
 
-    return { teams, people, me: userId };
+    return { teams, people, pending_invites: pendingInvites ?? [], me: userId };
   });
+
 
 // ============================================================
 // Add known people directly to a team (owner only)
