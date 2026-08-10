@@ -1,5 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { addProjectMembers } from "@/lib/collaborators.functions";
+import { transferProjectLeadership } from "@/lib/team.functions";
+import { supabase } from "@/integrations/supabase/client";
+
 import { useMemo, useState, useEffect } from "react";
+
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
@@ -78,10 +85,32 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
     if (project && contextDraft === null) setContextDraft(project.description ?? "");
   }, [project, contextDraft]);
 
-  const projectTasks = useMemo(
-    () => tasksApi.tasks.filter((t) => (t as any).project_id === projectId),
-    [tasksApi.tasks, projectId]
-  );
+  const addMembers = useServerFn(addProjectMembers);
+  const transferLeader = useServerFn(transferProjectLeadership);
+
+  // Dentro do projeto aparecem as tarefas de TODOS os participantes (a RLS
+  // permite que membros leiam as tarefas do projeto), não só as minhas.
+
+  const { data: allProjectTasks } = useQuery({
+    queryKey: ["project-tasks", projectId],
+    enabled: !!projectId,
+    staleTime: 15_000,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tasks").select("*").eq("project_id", projectId);
+      if (error) return [] as Task[];
+      return (data ?? []) as Task[];
+    },
+  });
+
+  const projectTasks = useMemo(() => {
+    const byId = new Map<string, Task>();
+    for (const t of allProjectTasks ?? []) byId.set(t.id, t);
+    // Minhas tarefas vêm do hook em tempo real — sobrepõem a cópia da query.
+    for (const t of tasksApi.tasks) if ((t as any).project_id === projectId) byId.set(t.id, t);
+    return Array.from(byId.values());
+  }, [allProjectTasks, tasksApi.tasks, projectId]);
+
   const projectMeetings = useMemo(
     () => meetingsApi.meetings.filter((m) => (m as any).project_id === projectId),
     [meetingsApi.meetings, projectId]
@@ -405,10 +434,22 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
         onOpenChange={setEditOpen}
         project={project}
         roles={roles}
-        onSave={async (data) => {
+        onSave={async ({ leader_id, member_ids, ...data }) => {
           await projectsApi.updateProject(project.id, data);
+          try {
+            if (member_ids.length > 0) {
+              await addMembers({ data: { project_id: project.id, user_ids: member_ids } });
+            }
+            if (leader_id && leader_id !== project.user_id) {
+              await transferLeader({ data: { project_id: project.id, new_leader_id: leader_id } });
+            }
+          } catch (e: any) {
+            toast.error(e?.message ?? "Erro ao atualizar participantes");
+          }
+          await projectsApi.refresh();
           toast.success("Projeto atualizado");
         }}
+
         onDelete={async () => {
           await projectsApi.deleteProject(project.id);
           toast.success("Projeto excluído");
