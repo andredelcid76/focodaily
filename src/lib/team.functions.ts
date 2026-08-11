@@ -152,7 +152,7 @@ export const listProjectMembers = createServerFn({ method: "POST" })
 
     const isOwner = project.user_id === userId;
     const myMembership = (members ?? []).find((m) => m.user_id === userId);
-    const isAdmin = isOwner || myMembership?.role === "admin";
+    const isAdmin = isOwner || ["admin","manager"].includes(myMembership?.role ?? "");
 
     return {
       members: memberList,
@@ -194,7 +194,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
       .eq("project_id", data.project_id)
       .eq("user_id", userId)
       .maybeSingle();
-    const isAdmin = project.user_id === userId || myMembership?.role === "admin";
+    const isAdmin = project.user_id === userId || ["admin","manager"].includes(myMembership?.role ?? "");
     if (!isAdmin) throw new Error("Apenas o dono ou um admin pode convidar membros");
 
     const email = data.email.toLowerCase().trim();
@@ -341,7 +341,7 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
       .eq("project_id", data.project_id)
       .eq("user_id", userId)
       .maybeSingle();
-    const isAdmin = project.user_id === userId || myMembership?.role === "admin";
+    const isAdmin = project.user_id === userId || ["admin","manager"].includes(myMembership?.role ?? "");
     if (!isAdmin) throw new Error("Apenas o dono ou um admin pode mudar papéis");
     if (data.user_id === project.user_id) throw new Error("O dono não tem papel editável");
 

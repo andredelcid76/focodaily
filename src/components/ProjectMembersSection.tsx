@@ -30,7 +30,7 @@ type Role = "admin" | "manager" | "member";
 const ROLE_META: Record<"owner" | Role, { label: string; icon: typeof Crown; tone: string; hint: string }> = {
   owner: { label: "Líder", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Líder do projeto — controle total" },
   admin: { label: "Líder (legado)", icon: Crown, tone: "bg-amber-500/10 text-amber-600", hint: "Membro com permissões de líder legadas — recomendado migrar para Gestor" },
-  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Edita qualquer tarefa, mas não os dados do projeto" },
+  manager: { label: "Gestor", icon: Pencil, tone: "bg-primary/10 text-primary", hint: "Mesmos poderes do líder: edita tarefas, dados e configurações do projeto" },
   member: { label: "Membro", icon: User, tone: "bg-muted text-muted-foreground", hint: "Adiciona tarefas e mexe só nas próprias e nas delegadas" },
 };
 
@@ -130,7 +130,8 @@ export function ProjectMembersSection({ projectId }: Props) {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando membros…</p>;
 
-  const isOwner = data?.is_owner ?? false;
+  // Líder e gestores têm os mesmos poderes de administração do projeto.
+  const isOwner = data?.is_admin ?? false;
   const members = data?.members ?? [];
   const invites = data?.pending_invites ?? [];
 

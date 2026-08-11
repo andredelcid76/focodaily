@@ -12,6 +12,7 @@ import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
 import { listTeams } from "@/lib/teams.functions";
+import { listProjectMembers } from "@/lib/team.functions";
 import { listKnownCollaborators } from "@/lib/collaborators.functions";
 import { Users, User as UserIcon, Lock, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -56,7 +57,15 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const isOwner = !project || project.user_id === user?.id;
+  const fetchMembers = useServerFn(listProjectMembers);
+  const { data: membersData } = useQuery({
+    queryKey: ["project-members", project?.id],
+    queryFn: () => fetchMembers({ data: { project_id: project!.id } }),
+    enabled: open && !!project?.id,
+    staleTime: 30_000,
+  });
+  // Líder e gestores têm os mesmos poderes de edição do projeto.
+  const isOwner = !project || project.user_id === user?.id || (membersData?.is_admin ?? false);
 
   const fetchTeams = useServerFn(listTeams);
   const { data: teamsData } = useQuery({
