@@ -94,7 +94,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
     staleTime: 60_000,
   });
   const isProjectAdmin = (myRolesData?.roles ?? []).some(
-    (r) => r.project_id === id && (r.role === "manager" || r.role === "leader" || r.role === "admin"),
+    (r) => r.project_id === projectId && (r.role === "manager" || r.role === "leader" || r.role === "admin"),
   );
 
   // Dentro do projeto aparecem as tarefas de TODOS os participantes (a RLS
