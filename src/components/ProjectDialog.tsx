@@ -12,6 +12,7 @@ import { ProjectMembersSection } from "@/components/ProjectMembersSection";
 import { PROJECT_COLORS, PROJECT_STATUS_LABEL, type Project, type ProjectStatus } from "@/hooks/useProjects";
 import type { Role } from "@/hooks/useRoles";
 import { listTeams } from "@/lib/teams.functions";
+import { listProjectMembers } from "@/lib/team.functions";
 import { listKnownCollaborators } from "@/lib/collaborators.functions";
 import { Users, User as UserIcon, Lock, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
