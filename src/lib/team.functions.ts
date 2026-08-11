@@ -564,3 +564,18 @@ export const notifyProjectTeamAccess = createServerFn({ method: "POST" })
 
     return { success: true };
   });
+
+// ============================================================
+// My admin roles across projects (leader/manager)
+// ============================================================
+export const listMyProjectRoles = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("project_members")
+      .select("project_id, role")
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { roles: (data ?? []) as { project_id: string; role: string }[] };
+  });
