@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { addProjectMembers } from "@/lib/collaborators.functions";
-import { transferProjectLeadership } from "@/lib/team.functions";
+import { transferProjectLeadership, listMyProjectRoles } from "@/lib/team.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 import { useMemo, useState, useEffect } from "react";
@@ -87,6 +87,15 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
 
   const addMembers = useServerFn(addProjectMembers);
   const transferLeader = useServerFn(transferProjectLeadership);
+  const fetchMyRoles = useServerFn(listMyProjectRoles);
+  const { data: myRolesData } = useQuery({
+    queryKey: ["my-project-roles"],
+    queryFn: () => fetchMyRoles(),
+    staleTime: 60_000,
+  });
+  const isProjectAdmin = (myRolesData?.roles ?? []).some(
+    (r) => r.project_id === id && (r.role === "manager" || r.role === "leader" || r.role === "admin"),
+  );
 
   // Dentro do projeto aparecem as tarefas de TODOS os participantes (a RLS
   // permite que membros leiam as tarefas do projeto), não só as minhas.
@@ -191,7 +200,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-display text-3xl font-bold leading-tight">{project.name}</h1>
-              {project.user_id === userId && (
+              {(project.user_id === userId || isProjectAdmin) && (
                 <button onClick={() => setEditOpen(true)} className="text-muted-foreground hover:text-foreground" title="Editar">
                   <Pencil className="h-4 w-4" />
                 </button>

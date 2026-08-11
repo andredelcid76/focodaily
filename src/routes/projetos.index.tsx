@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { addProjectMembers } from "@/lib/collaborators.functions";
-import { transferProjectLeadership } from "@/lib/team.functions";
+import { transferProjectLeadership, listMyProjectRoles } from "@/lib/team.functions";
 import { useCallback, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
@@ -133,7 +134,25 @@ function ProjectsInner({ userId }: { userId: string }) {
     });
   }, [projectsApi.projects, filterRole, hideFinished, statusFilter, scope, ownership, userId]);
 
-  const canEdit = useCallback((p: Project) => p.user_id === userId, [userId]);
+  const fetchMyRoles = useServerFn(listMyProjectRoles);
+  const { data: myRolesData } = useQuery({
+    queryKey: ["my-project-roles"],
+    queryFn: () => fetchMyRoles(),
+    staleTime: 60_000,
+  });
+  const adminProjectIds = useMemo(
+    () =>
+      new Set(
+        (myRolesData?.roles ?? [])
+          .filter((r) => r.role === "manager" || r.role === "leader" || r.role === "admin")
+          .map((r) => r.project_id),
+      ),
+    [myRolesData],
+  );
+  const canEdit = useCallback(
+    (p: Project) => p.user_id === userId || adminProjectIds.has(p.id),
+    [userId, adminProjectIds],
+  );
 
 
   const openNew = () => {
