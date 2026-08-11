@@ -130,7 +130,8 @@ export function ProjectMembersSection({ projectId }: Props) {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando membros…</p>;
 
-  const isOwner = data?.is_owner ?? false;
+  // Líder e gestores têm os mesmos poderes de administração do projeto.
+  const isOwner = data?.is_admin ?? false;
   const members = data?.members ?? [];
   const invites = data?.pending_invites ?? [];
 
