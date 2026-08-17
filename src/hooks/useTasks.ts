@@ -415,31 +415,47 @@ export function useTasks(userId: string | undefined) {
     "recurrence_monthly_pattern",
   ]);
 
+  const stripKeys = (patch: Partial<Task>, keys: Set<string>): Partial<Task> => {
+    const out: Partial<Task> = {};
+    for (const [k, v] of Object.entries(patch)) {
+      if (!keys.has(k)) (out as any)[k] = v;
+    }
+    return out;
+  };
+
   const updateTaskWithScope = async (
     task: Task,
     patch: Partial<Task>,
     scope: "this" | "future" | "all" = "this"
   ) => {
+    // Instances (children) never carry the recurrence rule — it lives on the seed.
+    // Without this guard, saving an instance would write recurrence:"none" onto the
+    // series and wipe every future occurrence.
+    const isChild = !!task.recurrence_parent_id;
+    const ownPatch = isChild ? stripKeys(patch, RECURRENCE_RULE_KEYS) : patch;
+
     if (scope === "this") {
       if (
-        task.recurrence_parent_id &&
+        isChild &&
         patch.scheduled_date !== undefined &&
         patch.scheduled_date !== task.scheduled_date
       ) {
-        await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
-        await updateTask(task.id, buildDetachedRecurringPatch(task, patch));
+        await createRecurrenceException(task.recurrence_parent_id!, task.scheduled_date);
+        await updateTask(task.id, buildDetachedRecurringPatch(task, ownPatch));
         return;
       }
-      await updateTask(task.id, patch);
+      await updateTask(task.id, ownPatch);
       return;
     }
     // Strip per-instance fields from the propagated patch
-    const seriesPatch: Partial<Task> = {};
-    for (const [k, v] of Object.entries(patch)) {
-      if (!PER_INSTANCE_KEYS.has(k)) (seriesPatch as any)[k] = v;
-    }
+    const seriesPatch = stripKeys(patch, PER_INSTANCE_KEYS);
+    // Children must keep recurrence:"none"; only the seed holds the rule.
+    const childPatch = stripKeys(seriesPatch, RECURRENCE_RULE_KEYS);
+    // Rule keys only reach the seed when the edit started from the seed itself.
+    const parentPatch = isChild ? childPatch : seriesPatch;
     // Always also apply full patch to the originating row (so its date/etc. update too)
-    await updateTask(task.id, patch);
+    await updateTask(task.id, ownPatch);
+
 
     const { parent, parentId, instances } = getRecurrenceFamily(task);
     const baseDate = task.scheduled_date;
