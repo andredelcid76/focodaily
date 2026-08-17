@@ -462,15 +462,16 @@ export function useTasks(userId: string | undefined) {
 
     if (Object.keys(seriesPatch).length > 0) {
       const targets: Task[] = [];
+      let parentTarget: Task | null = null;
       if (scope === "all") {
-        if (parent && parent.id !== task.id) targets.push(parent);
+        if (parent && parent.id !== task.id) parentTarget = parent;
         for (const t of instances) {
           if (t.id !== task.id) targets.push(t);
         }
       } else {
         // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
         if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
-          targets.push(parent);
+          parentTarget = parent;
         }
         for (const t of instances) {
           if (t.id === task.id) continue;
@@ -478,16 +479,22 @@ export function useTasks(userId: string | undefined) {
           if (t.scheduled_date >= baseDate) targets.push(t);
         }
       }
-      if (targets.length > 0) {
-        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
+      if (targets.length > 0 && Object.keys(childPatch).length > 0) {
+        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...childPatch } : t)));
         const ids = targets.map((t) => t.id);
-        await supabase.from("tasks").update(seriesPatch).in("id", ids);
+        await supabase.from("tasks").update(childPatch).in("id", ids);
+      }
+      if (parentTarget && Object.keys(parentPatch).length > 0) {
+        const pid = parentTarget.id;
+        setTasks((prev) => prev.map((t) => (t.id === pid ? { ...t, ...parentPatch } : t)));
+        await supabase.from("tasks").update(parentPatch).eq("id", pid);
       }
     }
 
     // If recurrence rule changed, prune future open instances that no longer match
     // and let ensureRecurring create any newly-required instances.
-    const ruleChanged = Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+    const ruleChanged = !isChild && Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+
     if (ruleChanged) {
       const today = todayISO();
       const cutoff = baseDate > today ? baseDate : today;
