@@ -241,6 +241,9 @@ export function useTasks(userId: string | undefined) {
             description: p.description,
             category: p.category,
             role_id: p.role_id,
+            project_id: p.project_id,
+            assignee_id: p.assignee_id ?? userId,
+            non_negotiable: p.non_negotiable,
             scheduled_date: dayISO,
             original_date: dayISO,
             duration_minutes: p.duration_minutes,
@@ -248,6 +251,7 @@ export function useTasks(userId: string | undefined) {
             recurrence_parent_id: p.id,
             position: 999,
           });
+
           // Track locally so duplicates within this batch are also prevented
           existingSet.add(`${p.id}__${dayISO}`);
         }
@@ -411,46 +415,63 @@ export function useTasks(userId: string | undefined) {
     "recurrence_monthly_pattern",
   ]);
 
+  const stripKeys = (patch: Partial<Task>, keys: Set<string>): Partial<Task> => {
+    const out: Partial<Task> = {};
+    for (const [k, v] of Object.entries(patch)) {
+      if (!keys.has(k)) (out as any)[k] = v;
+    }
+    return out;
+  };
+
   const updateTaskWithScope = async (
     task: Task,
     patch: Partial<Task>,
     scope: "this" | "future" | "all" = "this"
   ) => {
+    // Instances (children) never carry the recurrence rule — it lives on the seed.
+    // Without this guard, saving an instance would write recurrence:"none" onto the
+    // series and wipe every future occurrence.
+    const isChild = !!task.recurrence_parent_id;
+    const ownPatch = isChild ? stripKeys(patch, RECURRENCE_RULE_KEYS) : patch;
+
     if (scope === "this") {
       if (
-        task.recurrence_parent_id &&
+        isChild &&
         patch.scheduled_date !== undefined &&
         patch.scheduled_date !== task.scheduled_date
       ) {
-        await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
-        await updateTask(task.id, buildDetachedRecurringPatch(task, patch));
+        await createRecurrenceException(task.recurrence_parent_id!, task.scheduled_date);
+        await updateTask(task.id, buildDetachedRecurringPatch(task, ownPatch));
         return;
       }
-      await updateTask(task.id, patch);
+      await updateTask(task.id, ownPatch);
       return;
     }
     // Strip per-instance fields from the propagated patch
-    const seriesPatch: Partial<Task> = {};
-    for (const [k, v] of Object.entries(patch)) {
-      if (!PER_INSTANCE_KEYS.has(k)) (seriesPatch as any)[k] = v;
-    }
+    const seriesPatch = stripKeys(patch, PER_INSTANCE_KEYS);
+    // Children must keep recurrence:"none"; only the seed holds the rule.
+    const childPatch = stripKeys(seriesPatch, RECURRENCE_RULE_KEYS);
+    // Rule keys only reach the seed when the edit started from the seed itself.
+    const parentPatch = isChild ? childPatch : seriesPatch;
     // Always also apply full patch to the originating row (so its date/etc. update too)
-    await updateTask(task.id, patch);
+    await updateTask(task.id, ownPatch);
+
 
     const { parent, parentId, instances } = getRecurrenceFamily(task);
     const baseDate = task.scheduled_date;
 
     if (Object.keys(seriesPatch).length > 0) {
       const targets: Task[] = [];
+      let parentTarget: Task | null = null;
       if (scope === "all") {
-        if (parent && parent.id !== task.id) targets.push(parent);
+        if (parent && parent.id !== task.id) parentTarget = parent;
         for (const t of instances) {
           if (t.id !== task.id) targets.push(t);
         }
       } else {
         // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
         if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
-          targets.push(parent);
+          parentTarget = parent;
         }
         for (const t of instances) {
           if (t.id === task.id) continue;
@@ -458,16 +479,22 @@ export function useTasks(userId: string | undefined) {
           if (t.scheduled_date >= baseDate) targets.push(t);
         }
       }
-      if (targets.length > 0) {
-        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...seriesPatch } : t)));
+      if (targets.length > 0 && Object.keys(childPatch).length > 0) {
+        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...childPatch } : t)));
         const ids = targets.map((t) => t.id);
-        await supabase.from("tasks").update(seriesPatch).in("id", ids);
+        await supabase.from("tasks").update(childPatch).in("id", ids);
+      }
+      if (parentTarget && Object.keys(parentPatch).length > 0) {
+        const pid = parentTarget.id;
+        setTasks((prev) => prev.map((t) => (t.id === pid ? { ...t, ...parentPatch } : t)));
+        await supabase.from("tasks").update(parentPatch).eq("id", pid);
       }
     }
 
     // If recurrence rule changed, prune future open instances that no longer match
     // and let ensureRecurring create any newly-required instances.
-    const ruleChanged = Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+    const ruleChanged = !isChild && Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+
     if (ruleChanged) {
       const today = todayISO();
       const cutoff = baseDate > today ? baseDate : today;
@@ -547,7 +574,9 @@ export function useTasks(userId: string | undefined) {
       instances.forEach((t) => idsToDelete.add(t.id));
     } else {
       // future
-      if (parent && parent.id === task.id) {
+      if (parent && (parent.id === task.id || (!parent.completed && parent.scheduled_date >= baseDate))) {
+        // The seed row is itself an occurrence — if it falls on/after the cut date it
+        // must go too, otherwise it stays visible after "excluir daqui em diante".
         idsToDelete.add(parent.id);
       }
       for (const t of instances) {
@@ -555,6 +584,7 @@ export function useTasks(userId: string | undefined) {
         if (t.scheduled_date >= baseDate) idsToDelete.add(t.id);
       }
     }
+
     const ids = Array.from(idsToDelete);
     setTasks((prev) => prev.filter((t) => !idsToDelete.has(t.id)));
     if (scope === "future") {
