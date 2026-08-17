@@ -574,7 +574,9 @@ export function useTasks(userId: string | undefined) {
       instances.forEach((t) => idsToDelete.add(t.id));
     } else {
       // future
-      if (parent && parent.id === task.id) {
+      if (parent && (parent.id === task.id || (!parent.completed && parent.scheduled_date >= baseDate))) {
+        // The seed row is itself an occurrence — if it falls on/after the cut date it
+        // must go too, otherwise it stays visible after "excluir daqui em diante".
         idsToDelete.add(parent.id);
       }
       for (const t of instances) {
@@ -582,6 +584,7 @@ export function useTasks(userId: string | undefined) {
         if (t.scheduled_date >= baseDate) idsToDelete.add(t.id);
       }
     }
+
     const ids = Array.from(idsToDelete);
     setTasks((prev) => prev.filter((t) => !idsToDelete.has(t.id)));
     if (scope === "future") {
