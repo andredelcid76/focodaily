@@ -654,19 +654,26 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             </div>
             <div>
               <Label>Recorrência</Label>
-              <Select value={recurrence} onValueChange={(v) => setRecurrence(v as TaskRecurrence)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Não repete</SelectItem>
-                  <SelectItem value="daily">Diariamente</SelectItem>
-                  <SelectItem value="weekdays">Dias úteis (seg–sex)</SelectItem>
-                  <SelectItem value="weekly">Semanalmente</SelectItem>
-                  <SelectItem value="monthly">Mensalmente</SelectItem>
-                  <SelectItem value="yearly">Anualmente</SelectItem>
-                  <SelectItem value="custom">Personalizada</SelectItem>
-                </SelectContent>
-              </Select>
+              {task?.recurrence_parent_id ? (
+                <div className="mt-1.5 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Ocorrência de uma série. A regra de repetição é editada na tarefa original.
+                </div>
+              ) : (
+                <Select value={recurrence} onValueChange={(v) => setRecurrence(v as TaskRecurrence)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não repete</SelectItem>
+                    <SelectItem value="daily">Diariamente</SelectItem>
+                    <SelectItem value="weekdays">Dias úteis (seg–sex)</SelectItem>
+                    <SelectItem value="weekly">Semanalmente</SelectItem>
+                    <SelectItem value="monthly">Mensalmente</SelectItem>
+                    <SelectItem value="yearly">Anualmente</SelectItem>
+                    <SelectItem value="custom">Personalizada</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
+
           </div>
 
           {recurrence === "custom" && (
