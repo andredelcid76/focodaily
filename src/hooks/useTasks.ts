@@ -241,6 +241,9 @@ export function useTasks(userId: string | undefined) {
             description: p.description,
             category: p.category,
             role_id: p.role_id,
+            project_id: p.project_id,
+            assignee_id: p.assignee_id ?? userId,
+            non_negotiable: p.non_negotiable,
             scheduled_date: dayISO,
             original_date: dayISO,
             duration_minutes: p.duration_minutes,
@@ -248,6 +251,7 @@ export function useTasks(userId: string | undefined) {
             recurrence_parent_id: p.id,
             position: 999,
           });
+
           // Track locally so duplicates within this batch are also prevented
           existingSet.add(`${p.id}__${dayISO}`);
         }
