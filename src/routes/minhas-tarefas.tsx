@@ -3,9 +3,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   CheckCircle2,
   ListTodo,
   Search,
@@ -358,7 +355,6 @@ function MyTasksPage() {
   };
 
   const allVisibleSelected = sorted.length > 0 && sorted.every((t) => selected.has(t.id));
-  const someVisibleSelected = sorted.some((t) => selected.has(t.id));
 
   const toggleSelectAll = () => {
     const next = new Set(selected);
@@ -388,20 +384,6 @@ function MyTasksPage() {
       completed_at: next ? new Date().toISOString() : null,
       status: next ? "done" : "todo",
     });
-    refetch();
-  };
-
-  const setStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
-    if (status === "done" && !t.completed && !confirmIfBlocked(t.id)) return;
-    const patch: Parameters<typeof updateOne>[1] = { status };
-    if (status === "done") {
-      patch.completed = true;
-      patch.completed_at = new Date().toISOString();
-    } else if (t.completed) {
-      patch.completed = false;
-      patch.completed_at = null;
-    }
-    await updateOne(t.id, patch);
     refetch();
   };
 
