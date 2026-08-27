@@ -506,7 +506,7 @@ function MyTasksPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-[1800px] space-y-4 p-4 md:p-6">
       <header className="space-y-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
           <ListTodo className="h-3.5 w-3.5" /> Visão macro
