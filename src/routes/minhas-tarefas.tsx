@@ -270,6 +270,14 @@ function MyTasksPage() {
       if (projectFilter !== "all") {
         if (projectFilter === "__none" ? !!t.project_id : t.project?.id !== projectFilter) return false;
       }
+      if (projectStatusFilter !== "all") {
+        const ps = t.project?.status ?? null;
+        if (projectStatusFilter === "active_only") {
+          if (ps === "paused" || ps === "finished") return false;
+        } else {
+          if (ps !== projectStatusFilter) return false;
+        }
+      }
       if (roleFilter !== "all") {
         if (roleFilter === "__none" ? !!t.role_id : t.role?.id !== roleFilter) return false;
       }
