@@ -10,6 +10,7 @@ import {
   MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 import { TaskCompleteButton } from "./TaskCompleteButton";
+import { ClaudeCodeButton } from "./ClaudeCodeButton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
