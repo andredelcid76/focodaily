@@ -803,6 +803,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             )}
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
+            {task && (
+              <ClaudeCodeButton
+                variant="button"
+                taskId={task.id}
+                title={title || task.title}
+                projectName={currentProject?.name}
+              />
+            )}
             {task && !isSeed && onToggleComplete && (
               <Button
                 variant={task.completed ? "outline" : "secondary"}
