@@ -19,6 +19,8 @@ import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth";
+import { DeleteProjectDialog, type DeleteProjectOptions } from "@/components/DeleteProjectDialog";
+
 
 type Props = {
   open: boolean;
@@ -38,7 +40,9 @@ type Props = {
     leader_id: string | null;
     member_ids: string[];
   }) => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onDelete?: (options: DeleteProjectOptions) => Promise<void>;
+  allProjects?: Project[];
+
 };
 
 
@@ -132,16 +136,11 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!onDelete) return;
-    if (!window.confirm("Excluir este projeto? As tarefas e reuniões vinculadas ficarão sem projeto.")) return;
-    try {
-      await onDelete();
-      onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao excluir");
-    }
+    setDeleteOpen(true);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
