@@ -704,7 +704,7 @@ function MyTasksPage() {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card/40">
-        <div className="md:min-w-[980px]">
+        <div className="md:min-w-[1200px]">
           <TaskListHeader
             sortKey={headerSortKey}
             sortDir={sortDir}
