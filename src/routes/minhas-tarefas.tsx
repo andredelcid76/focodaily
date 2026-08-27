@@ -468,6 +468,30 @@ function MyTasksPage() {
     }
   };
 
+  const [bulkKey, setBulkKey] = useState(0);
+  const bulkPatch = async (patch: Record<string, unknown>, label: string) => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("tasks").update(patch).in("id", ids);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${label} atualizado em ${ids.length} tarefa(s)`);
+      setBulkKey((k) => k + 1);
+      refetch();
+    }
+  };
+
+  const headerSortKey: TaskSortKey | null =
+    sortKey === "scheduled_date" ? "due"
+    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "status" || sortKey === "duration"
+      ? sortKey
+      : null;
+
+  const handleHeaderSort = (k: TaskSortKey) => {
+    if (k === "position") return;
+    toggleSort(k === "due" ? "scheduled_date" : (k as SortKey));
+  };
+
   const bulkDelete = async () => {
     if (selected.size === 0) return;
     if (!confirm(`Excluir ${selected.size} tarefa(s)? Apenas as suas serão removidas.`)) return;
@@ -853,4 +877,15 @@ function StatCard({
       <div className="font-display text-xl font-semibold tabular-nums">{value}</div>
     </div>
   );
+}
+
+function rowToTask(t: MyTaskRow): Task {
+  return {
+    ...(t as unknown as Task),
+    recurrence: "none",
+    recurrence_parent_id: null,
+    followup_count: 0,
+    postpone_count: 0,
+    time_spent_seconds: 0,
+  } as Task;
 }
