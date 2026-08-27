@@ -195,6 +195,9 @@ function MyTasksPage() {
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "others">("all");
   const [kindFilter, setKindFilter] = useState<"all" | "personal" | "project">("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<
+    "all" | "active_only" | "in_progress" | "active" | "paused" | "not_started" | "finished"
+  >("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
   const [hideDone, setHideDone] = useState(true);
@@ -267,6 +270,14 @@ function MyTasksPage() {
       if (projectFilter !== "all") {
         if (projectFilter === "__none" ? !!t.project_id : t.project?.id !== projectFilter) return false;
       }
+      if (projectStatusFilter !== "all") {
+        const ps = t.project?.status ?? null;
+        if (projectStatusFilter === "active_only") {
+          if (ps === "paused" || ps === "finished") return false;
+        } else {
+          if (ps !== projectStatusFilter) return false;
+        }
+      }
       if (roleFilter !== "all") {
         if (roleFilter === "__none" ? !!t.role_id : t.role?.id !== roleFilter) return false;
       }
@@ -313,7 +324,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, ownerFilter, kindFilter, projectFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [tasks, search, statusFilter, categoryFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -517,6 +528,22 @@ function MyTasksPage() {
             {projectOptions.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={projectStatusFilter}
+          onValueChange={(v) => setProjectStatusFilter(v as typeof projectStatusFilter)}
+        >
+          <SelectTrigger className="h-9 w-48 text-xs"><SelectValue placeholder="Status do projeto" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Projeto: todos status</SelectItem>
+            <SelectItem value="active_only">Sem pausados/finalizados</SelectItem>
+            <SelectItem value="in_progress">Projeto: em andamento</SelectItem>
+            <SelectItem value="active">Projeto: ativo</SelectItem>
+            <SelectItem value="paused">Projeto: pausado</SelectItem>
+            <SelectItem value="not_started">Projeto: não iniciado</SelectItem>
+            <SelectItem value="finished">Projeto: finalizado</SelectItem>
           </SelectContent>
         </Select>
 
