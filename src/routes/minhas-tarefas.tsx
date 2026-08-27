@@ -196,25 +196,31 @@ function MyTasksPage() {
   };
 
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | MyTaskRow["status"]>("all");
-  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "others">("all");
-  const [kindFilter, setKindFilter] = useState<"all" | "personal" | "project">("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [projectStatusFilter, setProjectStatusFilter] = useState<
+  const P = { storage: "local" as const };
+  const taskColumns = useTaskColumns("tasks-table-columns-v1");
+  const [search, setSearch] = useStickyState("mt.search", "", P);
+  const [statusFilter, setStatusFilter] = useStickyState<"all" | MyTaskRow["status"]>("mt.status", "all", P);
+  const [ownerFilter, setOwnerFilter] = useStickyState<"all" | "mine" | "others">("mt.owner", "all", P);
+  const [kindFilter, setKindFilter] = useStickyState<"all" | "personal" | "project">("mt.kind", "all", P);
+  const [projectFilter, setProjectFilter] = useStickyState<string>("mt.project", "all", P);
+  const [projectStatusFilter, setProjectStatusFilter] = useStickyState<
     "all" | "active_only" | "in_progress" | "active" | "paused" | "not_started" | "finished"
-  >("all");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
-  const [hideDone, setHideDone] = useState(true);
-  const [dateRange, setDateRange] = useState<
+  >("mt.projectStatus", "all", P);
+  const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
+  const [categoryFilter, setCategoryFilter] = useStickyState<"all" | MyTaskRow["category"]>("mt.category", "all", P);
+  const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
+  const [dateRange, setDateRange] = useStickyState<
     "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
-  >("all");
-  const [customFrom, setCustomFrom] = useState<string>("");
-  const [customTo, setCustomTo] = useState<string>("");
-  const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  >("mt.dateRange", "all", P);
+  const [customFrom, setCustomFrom] = useStickyState<string>("mt.customFrom", "", P);
+  const [customTo, setCustomTo] = useStickyState<string>("mt.customTo", "", P);
+  const [sortKey, setSortKey] = useStickyState<SortKey>("mt.sortKey", "scheduled_date", P);
+  const [sortDir, setSortDir] = useStickyState<SortDir>("mt.sortDir", "asc", P);
+  const [selected, setSelected] = useStickyState<Set<string>>("mt.selected", new Set<string>(), {
+    serialize: setSerialize,
+    deserialize: setDeserialize,
+  });
+  const [bulkDate, setBulkDate] = useState("");
 
   const dateBounds = useMemo(() => {
     const [y, m, d] = today.split("-").map(Number);
