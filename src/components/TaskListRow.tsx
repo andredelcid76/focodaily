@@ -575,7 +575,7 @@ function QuickActionsMenu({
         <PopoverTrigger asChild>
           <button
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
             aria-label="Mais ações"
             title="Mais ações"
           >
