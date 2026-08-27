@@ -387,6 +387,19 @@ export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDe
           </div>
         </DialogFooter>
       </DialogContent>
+      {project && onDelete && (
+        <DeleteProjectDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          project={project}
+          otherProjects={allProjects.filter((p) => p.id !== project.id)}
+          onConfirm={async (options) => {
+            await onDelete(options);
+            onOpenChange(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
+
