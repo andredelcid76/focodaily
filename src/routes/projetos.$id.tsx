@@ -459,11 +459,13 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
           toast.success("Projeto atualizado");
         }}
 
-        onDelete={async () => {
-          await projectsApi.deleteProject(project.id);
+        allProjects={projectsApi.projects}
+        onDelete={async (options) => {
+          await projectsApi.deleteProject(project.id, options);
           toast.success("Projeto excluído");
           navigate({ to: "/projetos" });
         }}
+
       />
     </div>
   );

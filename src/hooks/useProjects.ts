@@ -121,11 +121,34 @@ export function useProjects(userId: string | undefined) {
     [notifyTeamAccess, projects, userId]
   );
 
-  const deleteProject = useCallback(async (id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    const { error } = await supabase.from("projects").delete().eq("id", id);
-    if (error) throw error;
-  }, []);
+  const deleteProject = useCallback(
+    async (
+      id: string,
+      options?: { taskMode?: "unlink" | "move" | "delete"; targetProjectId?: string | null }
+    ) => {
+      const mode = options?.taskMode ?? "unlink";
+      if (mode === "move" && options?.targetProjectId) {
+        const { error: mvErr } = await supabase
+          .from("tasks")
+          .update({ project_id: options.targetProjectId })
+          .eq("project_id", id);
+        if (mvErr) throw mvErr;
+        const { error: mtErr } = await supabase
+          .from("meetings")
+          .update({ project_id: options.targetProjectId })
+          .eq("project_id", id);
+        if (mtErr) throw mtErr;
+      } else if (mode === "delete") {
+        const { error: delErr } = await supabase.from("tasks").delete().eq("project_id", id);
+        if (delErr) throw delErr;
+      }
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+      if (error) throw error;
+    },
+    []
+  );
+
 
   const projectById = useCallback(
     (id: string | null | undefined) => (id ? projects.find((p) => p.id === id) ?? null : null),
