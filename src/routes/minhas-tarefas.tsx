@@ -469,7 +469,7 @@ function MyTasksPage() {
   };
 
   const [bulkKey, setBulkKey] = useState(0);
-  const bulkPatch = async (patch: Record<string, unknown>, label: string) => {
+  const bulkPatch = async (patch: Partial<Task>, label: string) => {
     if (selected.size === 0) return;
     const ids = Array.from(selected);
     const { error } = await supabase.from("tasks").update(patch).in("id", ids);
@@ -705,7 +705,7 @@ function MyTasksPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select onValueChange={(v) => bulkPatch({ category: v }, "Categoria")}>
+            <Select onValueChange={(v) => bulkPatch({ category: v as Task["category"] }, "Categoria")}>
               <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Categoria…" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="urgent">Urgente</SelectItem>
