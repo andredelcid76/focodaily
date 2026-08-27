@@ -63,7 +63,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category";
+type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration";
 type SortDir = "asc" | "desc";
 
 const STATUS_LABEL: Record<MyTaskRow["status"], string> = {
@@ -358,6 +358,8 @@ function MyTasksPage() {
             return a.status.localeCompare(b.status);
           case "category":
             return a.category.localeCompare(b.category);
+          case "duration":
+            return a.duration_minutes - b.duration_minutes;
         }
       })();
       return v * dir;
