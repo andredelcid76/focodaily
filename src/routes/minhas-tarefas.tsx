@@ -195,6 +195,9 @@ function MyTasksPage() {
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "others">("all");
   const [kindFilter, setKindFilter] = useState<"all" | "personal" | "project">("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<
+    "all" | "active_only" | "in_progress" | "active" | "paused" | "not_started" | "finished"
+  >("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
   const [hideDone, setHideDone] = useState(true);
