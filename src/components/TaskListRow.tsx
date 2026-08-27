@@ -10,6 +10,7 @@ import {
   MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 import { TaskCompleteButton } from "./TaskCompleteButton";
+import { ClaudeCodeButton } from "./ClaudeCodeButton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -377,6 +378,7 @@ export function TaskListRow({
             )}
           </>
         )}
+        <ClaudeCodeButton taskId={task.id} title={task.title} projectName={project?.name} />
         {!task.completed && hasActions && (
           <QuickActionsMenu
             task={task}

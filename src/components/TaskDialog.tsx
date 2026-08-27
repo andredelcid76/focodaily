@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ClaudeCodeButton } from "./ClaudeCodeButton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -803,6 +804,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             )}
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-end">
+            {task && (
+              <ClaudeCodeButton
+                variant="button"
+                taskId={task.id}
+                title={title || task.title}
+                projectName={currentProject?.name}
+              />
+            )}
             {task && !isSeed && onToggleComplete && (
               <Button
                 variant={task.completed ? "outline" : "secondary"}
