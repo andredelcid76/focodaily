@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -7,15 +7,11 @@ import {
   ArrowUp,
   ArrowUpDown,
   CheckCircle2,
-  Circle,
   ListTodo,
-  Lock,
   Search,
   Trash2,
-  User as UserIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,18 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { AppShell } from "@/components/AppShell";
-import { CategoryIcon } from "@/components/CategoryBadge";
-import { TaskCompleteButton } from "@/components/TaskCompleteButton";
-import { formatShort, todayISO } from "@/lib/date";
+import { todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,8 +31,6 @@ import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link2, PauseCircle } from "lucide-react";
 import { TaskListRow, TaskListHeader, type TaskSortKey } from "@/components/TaskListRow";
 import { useTaskColumns } from "@/hooks/useTaskColumns";
 import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
@@ -66,21 +50,6 @@ export const Route = createFileRoute("/minhas-tarefas")({
 type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration";
 type SortDir = "asc" | "desc";
 
-const STATUS_LABEL: Record<MyTaskRow["status"], string> = {
-  todo: "A fazer",
-  doing: "Em andamento",
-  done: "Concluída",
-};
-const STATUS_CLS: Record<MyTaskRow["status"], string> = {
-  todo: "bg-muted text-muted-foreground border-border",
-  doing: "bg-primary/10 text-primary border-primary/30",
-  done: "bg-primary/15 text-primary border-primary/30",
-};
-const CAT_LABEL: Record<MyTaskRow["category"], string> = {
-  urgent: "Urgente",
-  important: "Importante",
-  circumstantial: "Circunstancial",
-};
 
 function MyTasksPage() {
   const { user } = useAuth();
@@ -816,43 +785,6 @@ function MyTasksPage() {
         onToggleComplete={editingTask ? handleDialogToggleComplete : undefined}
       />
     </div>
-  );
-}
-
-function SortHead({
-  label,
-  k,
-  sortKey,
-  sortDir,
-  onSort,
-}: {
-  label: string;
-  k: SortKey;
-  sortKey: SortKey;
-  sortDir: SortDir;
-  onSort: (k: SortKey) => void;
-}) {
-  const active = sortKey === k;
-  return (
-    <TableHead>
-      <button
-        onClick={() => onSort(k)}
-        className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-          active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        {label}
-        {active ? (
-          sortDir === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-50" />
-        )}
-      </button>
-    </TableHead>
   );
 }
 
