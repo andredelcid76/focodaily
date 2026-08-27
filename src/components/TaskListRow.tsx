@@ -329,64 +329,68 @@ export function TaskListRow({
         }
       })}
 
-      {/* Actions: timer + quick-actions popover */}
-      <div
-        className="flex items-center justify-end gap-0.5"
-        data-no-select="true"
-      >
-        {!task.completed && (onStart || onPause || onStop) && (
-          <>
-            {!isActive ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); onStart?.(); }}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary hover:bg-primary/25"
-                aria-label="Iniciar"
-                title="Iniciar"
-              >
-                <Play className="h-3 w-3 fill-current" />
-              </button>
-            ) : running ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); onPause?.(); }}
-                className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-1.5 text-[10px] font-medium text-primary-foreground hover:opacity-90"
-                aria-label="Pausar"
-                title="Pausar"
-              >
-                <Pause className="h-3 w-3 fill-current" />
-                <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
-              </button>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onResume?.(); }}
-                className="inline-flex h-7 items-center gap-1 rounded-md bg-circumstantial/20 px-1.5 text-[10px] font-medium text-circumstantial hover:bg-circumstantial/30"
-                aria-label="Retomar"
-                title="Retomar"
-              >
-                <Play className="h-3 w-3 fill-current" />
-                <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
-              </button>
-            )}
-            {isActive && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onStop?.(); }}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground hover:border-destructive/50 hover:text-destructive"
-                aria-label="Parar"
-                title="Parar e zerar"
-              >
-                <Square className="h-3 w-3 fill-current" />
-              </button>
-            )}
-          </>
-        )}
-        <ClaudeCodeButton taskId={task.id} title={task.title} projectName={project?.name} />
-        {!task.completed && hasActions && (
-          <QuickActionsMenu
-            task={task}
-            onPostpone={onPostpone}
-            onDuplicate={onDuplicate}
-            onFollowUp={onFollowUp}
+      {/* Actions: one unified segmented control (timer · Claude · mais) */}
+      <div className="flex items-center justify-end" data-no-select="true">
+        <div className="inline-flex items-center divide-x divide-border/60 overflow-hidden rounded-md border border-border/60 bg-card/60">
+          {!task.completed && (onStart || onPause || onStop) && (
+            <>
+              {!isActive ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onStart?.(); }}
+                  className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                  aria-label="Iniciar"
+                  title="Iniciar"
+                >
+                  <Play className="h-3 w-3 fill-current" />
+                </button>
+              ) : running ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPause?.(); }}
+                  className="inline-flex h-7 items-center gap-1 bg-primary/15 px-1.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/25"
+                  aria-label="Pausar"
+                  title="Pausar"
+                >
+                  <Pause className="h-3 w-3 fill-current" />
+                  <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onResume?.(); }}
+                  className="inline-flex h-7 items-center gap-1 bg-circumstantial/15 px-1.5 text-[10px] font-medium text-circumstantial transition-colors hover:bg-circumstantial/25"
+                  aria-label="Retomar"
+                  title="Retomar"
+                >
+                  <Play className="h-3 w-3 fill-current" />
+                  <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                </button>
+              )}
+              {isActive && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onStop?.(); }}
+                  className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Parar"
+                  title="Parar e zerar"
+                >
+                  <Square className="h-3 w-3 fill-current" />
+                </button>
+              )}
+            </>
+          )}
+          <ClaudeCodeButton
+            variant="ghost"
+            taskId={task.id}
+            title={task.title}
+            projectName={project?.name}
           />
-        )}
+          {!task.completed && hasActions && (
+            <QuickActionsMenu
+              task={task}
+              onPostpone={onPostpone}
+              onDuplicate={onDuplicate}
+              onFollowUp={onFollowUp}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
