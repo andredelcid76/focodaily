@@ -1,21 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   CheckCircle2,
-  Circle,
   ListTodo,
-  Lock,
   Search,
   Trash2,
-  User as UserIcon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,18 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { AppShell } from "@/components/AppShell";
-import { CategoryIcon } from "@/components/CategoryBadge";
-import { TaskCompleteButton } from "@/components/TaskCompleteButton";
-import { formatShort, todayISO } from "@/lib/date";
+import { todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,8 +28,12 @@ import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Link2, PauseCircle } from "lucide-react";
+import { TaskListRow, TaskListHeader, type TaskSortKey } from "@/components/TaskListRow";
+import { useTaskColumns } from "@/hooks/useTaskColumns";
+import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
+import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
+import { DndContext } from "@dnd-kit/core";
+import { SortableContext } from "@dnd-kit/sortable";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
@@ -57,24 +44,9 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category";
+type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration";
 type SortDir = "asc" | "desc";
 
-const STATUS_LABEL: Record<MyTaskRow["status"], string> = {
-  todo: "A fazer",
-  doing: "Em andamento",
-  done: "Concluída",
-};
-const STATUS_CLS: Record<MyTaskRow["status"], string> = {
-  todo: "bg-muted text-muted-foreground border-border",
-  doing: "bg-primary/10 text-primary border-primary/30",
-  done: "bg-primary/15 text-primary border-primary/30",
-};
-const CAT_LABEL: Record<MyTaskRow["category"], string> = {
-  urgent: "Urgente",
-  important: "Importante",
-  circumstantial: "Circunstancial",
-};
 
 function MyTasksPage() {
   const { user } = useAuth();
@@ -190,25 +162,31 @@ function MyTasksPage() {
   };
 
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | MyTaskRow["status"]>("all");
-  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "others">("all");
-  const [kindFilter, setKindFilter] = useState<"all" | "personal" | "project">("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [projectStatusFilter, setProjectStatusFilter] = useState<
+  const P = { storage: "local" as const };
+  const taskColumns = useTaskColumns("tasks-table-columns-v1");
+  const [search, setSearch] = useStickyState("mt.search", "", P);
+  const [statusFilter, setStatusFilter] = useStickyState<"all" | MyTaskRow["status"]>("mt.status", "all", P);
+  const [ownerFilter, setOwnerFilter] = useStickyState<"all" | "mine" | "others">("mt.owner", "all", P);
+  const [kindFilter, setKindFilter] = useStickyState<"all" | "personal" | "project">("mt.kind", "all", P);
+  const [projectFilter, setProjectFilter] = useStickyState<string>("mt.project", "all", P);
+  const [projectStatusFilter, setProjectStatusFilter] = useStickyState<
     "all" | "active_only" | "in_progress" | "active" | "paused" | "not_started" | "finished"
-  >("all");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | MyTaskRow["category"]>("all");
-  const [hideDone, setHideDone] = useState(true);
-  const [dateRange, setDateRange] = useState<
+  >("mt.projectStatus", "all", P);
+  const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
+  const [categoryFilter, setCategoryFilter] = useStickyState<"all" | MyTaskRow["category"]>("mt.category", "all", P);
+  const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
+  const [dateRange, setDateRange] = useStickyState<
     "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
-  >("all");
-  const [customFrom, setCustomFrom] = useState<string>("");
-  const [customTo, setCustomTo] = useState<string>("");
-  const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  >("mt.dateRange", "all", P);
+  const [customFrom, setCustomFrom] = useStickyState<string>("mt.customFrom", "", P);
+  const [customTo, setCustomTo] = useStickyState<string>("mt.customTo", "", P);
+  const [sortKey, setSortKey] = useStickyState<SortKey>("mt.sortKey", "scheduled_date", P);
+  const [sortDir, setSortDir] = useStickyState<SortDir>("mt.sortDir", "asc", P);
+  const [selected, setSelected] = useStickyState<Set<string>>("mt.selected", new Set<string>(), {
+    serialize: setSerialize,
+    deserialize: setDeserialize,
+  });
+  const [bulkDate, setBulkDate] = useState("");
 
   const dateBounds = useMemo(() => {
     const [y, m, d] = today.split("-").map(Number);
@@ -346,6 +324,8 @@ function MyTasksPage() {
             return a.status.localeCompare(b.status);
           case "category":
             return a.category.localeCompare(b.category);
+          case "duration":
+            return a.duration_minutes - b.duration_minutes;
         }
       })();
       return v * dir;
@@ -375,7 +355,6 @@ function MyTasksPage() {
   };
 
   const allVisibleSelected = sorted.length > 0 && sorted.every((t) => selected.has(t.id));
-  const someVisibleSelected = sorted.some((t) => selected.has(t.id));
 
   const toggleSelectAll = () => {
     const next = new Set(selected);
@@ -405,20 +384,6 @@ function MyTasksPage() {
       completed_at: next ? new Date().toISOString() : null,
       status: next ? "done" : "todo",
     });
-    refetch();
-  };
-
-  const setStatus = async (t: MyTaskRow, status: MyTaskRow["status"]) => {
-    if (status === "done" && !t.completed && !confirmIfBlocked(t.id)) return;
-    const patch: Parameters<typeof updateOne>[1] = { status };
-    if (status === "done") {
-      patch.completed = true;
-      patch.completed_at = new Date().toISOString();
-    } else if (t.completed) {
-      patch.completed = false;
-      patch.completed_at = null;
-    }
-    await updateOne(t.id, patch);
     refetch();
   };
 
@@ -454,6 +419,30 @@ function MyTasksPage() {
     }
   };
 
+  const [bulkKey, setBulkKey] = useState(0);
+  const bulkPatch = async (patch: Partial<Task>, label: string) => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("tasks").update(patch).in("id", ids);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${label} atualizado em ${ids.length} tarefa(s)`);
+      setBulkKey((k) => k + 1);
+      refetch();
+    }
+  };
+
+  const headerSortKey: TaskSortKey | null =
+    sortKey === "scheduled_date" ? "due"
+    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "status" || sortKey === "duration"
+      ? sortKey
+      : null;
+
+  const handleHeaderSort = (k: TaskSortKey) => {
+    if (k === "position") return;
+    toggleSort(k === "due" ? "scheduled_date" : (k as SortKey));
+  };
+
   const bulkDelete = async () => {
     if (selected.size === 0) return;
     if (!confirm(`Excluir ${selected.size} tarefa(s)? Apenas as suas serão removidas.`)) return;
@@ -468,7 +457,7 @@ function MyTasksPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-[1800px] space-y-4 p-4 md:p-6">
       <header className="space-y-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
           <ListTodo className="h-3.5 w-3.5" /> Visão macro
@@ -626,222 +615,141 @@ function MyTasksPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
-          <span className="font-medium text-primary">{selected.size} selecionada(s)</span>
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("todo")}>
-              A fazer
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("doing")}>
-              Em andamento
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("done")}>
-              <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
-            </Button>
-            <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={bulkDelete}>
-              <Trash2 className="mr-1 h-3 w-3" /> Excluir
-            </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelected(new Set())}>
-              Limpar
-            </Button>
+        <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium text-primary">{selected.size} selecionada(s)</span>
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("todo")}>
+                A fazer
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("doing")}>
+                Em andamento
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkStatus("done")}>
+                <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
+              </Button>
+              <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={bulkDelete}>
+                <Trash2 className="mr-1 h-3 w-3" /> Excluir
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelected(new Set())}>
+                Limpar
+              </Button>
+            </div>
+          </div>
+          <div key={bulkKey} className="flex flex-wrap items-center gap-1.5 border-t border-primary/20 pt-2">
+            <span className="text-muted-foreground">Alterar em massa:</span>
+            <Select onValueChange={(v) => bulkPatch({ project_id: v === "__none" ? null : v }, "Projeto")}>
+              <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Projeto…" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Sem projeto</SelectItem>
+                {projects.filter((p) => (p as any).status !== "finished").map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(v) => bulkPatch({ role_id: v === "__none" ? null : v }, "Papel")}>
+              <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Papel…" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Sem papel</SelectItem>
+                {roles.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(v) => bulkPatch({ category: v as Task["category"] }, "Categoria")}>
+              <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Categoria…" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="urgent">Urgente</SelectItem>
+                <SelectItem value="important">Importante</SelectItem>
+                <SelectItem value="circumstantial">Circunstancial</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1">
+              <Input
+                type="date"
+                value={bulkDate}
+                onChange={(e) => setBulkDate(e.target.value)}
+                className="h-7 w-[140px] text-xs"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={!bulkDate}
+                onClick={() => bulkPatch({ scheduled_date: bulkDate }, "Data")}
+              >
+                Mover data
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8">
-                <Checkbox
-                  checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
-                  onCheckedChange={toggleSelectAll}
-                />
-              </TableHead>
-              <TableHead className="w-8"></TableHead>
-              <SortHead label="Tarefa" k="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Origem" k="kind" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Projeto" k="project" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Papel" k="role" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Categoria" k="category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Vencimento" k="scheduled_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              <SortHead label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {/* Toolbar + list */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Clique na linha para selecionar. Arraste a borda do cabeçalho para ajustar a largura.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={toggleSelectAll}>
+            {allVisibleSelected ? "Desmarcar todas" : "Selecionar todas"}
+          </Button>
+          <ColumnSettingsPopover
+            columns={taskColumns.columns}
+            onToggleVisible={taskColumns.toggleVisible}
+            onReorder={taskColumns.reorder}
+            onReset={taskColumns.reset}
+          />
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card/40">
+        <div className="md:min-w-[1320px]">
+          <TaskListHeader
+            sortKey={headerSortKey}
+            sortDir={sortDir}
+            onSort={handleHeaderSort}
+            columns={taskColumns.columns}
+            gridTemplate={taskColumns.gridTemplate}
+            onResizeColumn={(key, px) => taskColumns.setWidth(key, `${Math.round(px)}px`)}
+            onReorderColumn={taskColumns.reorder}
+          />
+          <div className="flex flex-col gap-1.5 p-2">
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
-                  Carregando…
-                </TableCell>
-              </TableRow>
+              <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>
             ) : sorted.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
-                  {tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhum resultado com os filtros atuais."}
-                </TableCell>
-              </TableRow>
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                {tasks.length === 0 ? "Nenhuma tarefa ainda." : "Nenhum resultado com os filtros atuais."}
+              </p>
             ) : (
-              sorted.map((t) => {
-                const suspended = !t.completed && t.project?.status === "paused";
-                const overdue = !t.completed && !suspended && t.scheduled_date < today;
-
-                const isSelected = selected.has(t.id);
-                return (
-                  <TableRow key={t.id} data-state={isSelected ? "selected" : undefined}>
-                    <TableCell>
-                      <button
-                        type="button"
-                        onClick={() => toggleOne(t.id)}
-                        className={`grid h-5 w-5 place-items-center rounded-sm border transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-muted-foreground/40 bg-background hover:border-primary/60"
-                        }`}
-                        aria-label={isSelected ? "Desmarcar tarefa" : "Selecionar tarefa"}
-                        aria-pressed={isSelected}
-                        title={isSelected ? "Desmarcar tarefa" : "Selecionar tarefa"}
-                      >
-                        {isSelected && <CheckCircle2 className="h-3 w-3" />}
-                      </button>
-                    </TableCell>
-                    <TableCell>
-                      <TaskCompleteButton
-                        completed={!!t.completed}
+              <DndContext>
+                <SortableContext items={sorted.map((t) => t.id)}>
+                  {sorted.map((t, i) => {
+                    const suspended = !t.completed && t.project?.status === "paused";
+                    const overdue = !t.completed && !suspended && t.scheduled_date < today;
+                    return (
+                      <TaskListRow
+                        key={t.id}
+                        task={rowToTask(t)}
+                        role={t.role as any}
+                        project={(t.project as any) ?? null}
+                        index={i + 1}
+                        isOverdue={overdue}
                         onToggle={() => toggleComplete(t)}
-                        size="md"
+                        onEdit={() => openTask(t.id)}
+                        selected={selected.has(t.id)}
+                        onSelectToggle={() => toggleOne(t.id)}
+                        blockedBy={blockedByMap.get(t.id)}
+                        columns={taskColumns.columns}
+                        gridTemplate={taskColumns.gridTemplate}
                       />
-                    </TableCell>
-
-                    <TableCell className="max-w-[280px]">
-                      <div className="flex items-center gap-1.5">
-                        {t.non_negotiable && !t.completed && (
-                          <Lock className="h-3 w-3 shrink-0 text-overdue" />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => openTask(t.id)}
-                          disabled={opening === t.id}
-                          className={`truncate text-left text-sm hover:underline disabled:opacity-60 ${
-                            t.completed ? "text-muted-foreground line-through" : ""
-                          }`}
-                          title="Abrir tarefa"
-                        >
-                          {t.title}
-                        </button>
-                      </div>
-                      {blockedByMap.get(t.id) && !t.completed && (
-                        <TooltipProvider delayDuration={150}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
-                                <Link2 className="h-2.5 w-2.5" /> Bloqueada
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-[260px] text-xs">
-                              Aguardando: {blockedByMap.get(t.id)!.join(", ")}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      {suspended && (
-                        <span
-                          className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-muted-foreground/30 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                          title="Projeto pausado — tarefa suspensa"
-                        >
-                          <PauseCircle className="h-2.5 w-2.5" /> Suspensa
-                        </span>
-                      )}
-                      {t.delegated_by_name && (
-                        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                          delegada por {t.delegated_by_name}
-                        </div>
-                      )}
-                    </TableCell>
-
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
-                          t.kind === "delegated"
-                            ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                            : "border-border/60 bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        <UserIcon className="h-2.5 w-2.5" />
-                        {t.kind === "delegated" ? "Delegada" : "Minha"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {t.project ? (
-                        <Link
-                          to="/projetos/$id"
-                          params={{ id: t.project.id }}
-                          className="inline-flex items-center gap-1.5 text-xs hover:underline"
-                        >
-                          <span
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: t.project.color ?? "#888" }}
-                          />
-                          <span className="truncate">{t.project.name}</span>
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Pessoal</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {t.role ? (
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium"
-                          style={{
-                            backgroundColor: `${t.role.color}20`,
-                            borderColor: `${t.role.color}55`,
-                            color: t.role.color,
-                          }}
-                        >
-                          <span
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: t.role.color }}
-                          />
-                          {t.role.name}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1 text-xs">
-                        <CategoryIcon category={t.category} className="h-3 w-3" />
-                        {CAT_LABEL[t.category]}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`tabular-nums text-xs ${
-                          overdue ? "font-medium text-overdue" : "text-muted-foreground"
-                        }`}
-                      >
-                        {formatShort(t.scheduled_date)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Select value={t.status} onValueChange={(v) => setStatus(t, v as MyTaskRow["status"])}>
-                        <SelectTrigger className={`h-7 w-[130px] text-xs ${STATUS_CLS[t.status]}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(Object.keys(STATUS_LABEL) as MyTaskRow["status"][]).map((s) => (
-                            <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+                    );
+                  })}
+                </SortableContext>
+              </DndContext>
             )}
-          </TableBody>
-        </Table>
+          </div>
+        </div>
       </div>
 
       <TaskDialog
@@ -859,43 +767,6 @@ function MyTasksPage() {
         onToggleComplete={editingTask ? handleDialogToggleComplete : undefined}
       />
     </div>
-  );
-}
-
-function SortHead({
-  label,
-  k,
-  sortKey,
-  sortDir,
-  onSort,
-}: {
-  label: string;
-  k: SortKey;
-  sortKey: SortKey;
-  sortDir: SortDir;
-  onSort: (k: SortKey) => void;
-}) {
-  const active = sortKey === k;
-  return (
-    <TableHead>
-      <button
-        onClick={() => onSort(k)}
-        className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-          active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        {label}
-        {active ? (
-          sortDir === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
-          ) : (
-            <ArrowDown className="h-3 w-3" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-50" />
-        )}
-      </button>
-    </TableHead>
   );
 }
 
@@ -920,4 +791,15 @@ function StatCard({
       <div className="font-display text-xl font-semibold tabular-nums">{value}</div>
     </div>
   );
+}
+
+function rowToTask(t: MyTaskRow): Task {
+  return {
+    ...(t as unknown as Task),
+    recurrence: "none",
+    recurrence_parent_id: null,
+    followup_count: 0,
+    postpone_count: 0,
+    time_spent_seconds: 0,
+  } as Task;
 }

@@ -11,15 +11,20 @@ export function useStickyState<T>(
   opts?: {
     serialize?: (v: T) => string;
     deserialize?: (raw: string) => T;
+    /** "session" (default) survives navigation; "local" survives tab close. */
+    storage?: "session" | "local";
   },
 ) {
   const serialize = opts?.serialize ?? JSON.stringify;
   const deserialize = opts?.deserialize ?? (JSON.parse as (raw: string) => T);
+  const storageKind = opts?.storage ?? "session";
+  const getStore = () =>
+    storageKind === "local" ? window.localStorage : window.sessionStorage;
 
   const [state, setState] = useState<T>(() => {
     if (typeof window === "undefined") return initial;
     try {
-      const raw = window.sessionStorage.getItem(key);
+      const raw = getStore().getItem(key);
       return raw != null ? deserialize(raw) : initial;
     } catch {
       return initial;
@@ -33,7 +38,7 @@ export function useStickyState<T>(
       return;
     }
     try {
-      window.sessionStorage.setItem(key, serialize(state));
+      getStore().setItem(key, serialize(state));
     } catch {
       /* ignore quota */
     }
