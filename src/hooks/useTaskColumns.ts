@@ -33,10 +33,10 @@ type PersistedState = {
   widths: Partial<Record<TaskColumnKey, string>>;
 };
 
-function loadFromStorage(): PersistedState | null {
+function loadFromStorage(key: string = STORAGE_KEY): PersistedState | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedState;
     if (!Array.isArray(parsed.order)) return null;
@@ -46,10 +46,10 @@ function loadFromStorage(): PersistedState | null {
   }
 }
 
-function saveToStorage(state: PersistedState) {
+function saveToStorage(state: PersistedState, key: string = STORAGE_KEY) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(key, JSON.stringify(state));
   } catch {
     /* quota / private mode — ignore */
   }
@@ -74,8 +74,8 @@ function applyPersisted(persisted: PersistedState | null): TaskColumnDef[] {
   return result;
 }
 
-export function useTaskColumns() {
-  const [columns, setColumns] = useState<TaskColumnDef[]>(() => applyPersisted(loadFromStorage()));
+export function useTaskColumns(storageKey: string = STORAGE_KEY) {
+  const [columns, setColumns] = useState<TaskColumnDef[]>(() => applyPersisted(loadFromStorage(storageKey)));
 
   // Persist on every change.
   useEffect(() => {
@@ -85,19 +85,19 @@ export function useTaskColumns() {
       widths: Object.fromEntries(columns.map((c) => [c.key, c.width])) as Partial<
         Record<TaskColumnKey, string>
       >,
-    });
-  }, [columns]);
+    }, storageKey);
+  }, [columns, storageKey]);
 
   // Cross-tab sync.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY) return;
-      setColumns(applyPersisted(loadFromStorage()));
+      if (e.key !== storageKey) return;
+      setColumns(applyPersisted(loadFromStorage(storageKey)));
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [storageKey]);
 
   const setWidth = useCallback((key: TaskColumnKey, width: string) => {
     setColumns((prev) => prev.map((c) => (c.key === key ? { ...c, width } : c)));
