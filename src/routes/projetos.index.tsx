@@ -406,14 +406,16 @@ function ProjectsInner({ userId }: { userId: string }) {
           await projectsApi.refresh();
         }}
 
+        allProjects={projectsApi.projects}
         onDelete={
           editing
-            ? async () => {
-                await projectsApi.deleteProject(editing.id);
+            ? async (options) => {
+                await projectsApi.deleteProject(editing.id, options);
                 toast.success("Projeto excluído");
               }
             : undefined
         }
+
       />
     </div>
   );
