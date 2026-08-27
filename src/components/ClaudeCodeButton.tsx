@@ -30,8 +30,8 @@ type Props = {
   taskId: string;
   title: string;
   projectName?: string | null;
-  /** "icon" for dense lists, "button" for dialogs/toolbars. */
-  variant?: "icon" | "button";
+  /** "ghost" inside segmented groups, "icon" standalone, "button" for dialogs/toolbars. */
+  variant?: "ghost" | "icon" | "button";
   className?: string;
 };
 
@@ -50,6 +50,22 @@ export function ClaudeCodeButton({ taskId, title, projectName, variant = "icon",
     "aria-label": TOOLTIP,
     style: { color: CLAUDE_ORANGE, borderColor: `${CLAUDE_ORANGE}59`, backgroundColor: `${CLAUDE_ORANGE}14` },
   };
+
+  if (variant === "ghost") {
+    return (
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={handleClick}
+        title={TOOLTIP}
+        aria-label={TOOLTIP}
+        className={`inline-flex h-7 w-7 items-center justify-center transition-colors ${className ?? ""}`}
+        style={{ color: CLAUDE_ORANGE }}
+      >
+        <ClaudeMark className="h-3.5 w-3.5" />
+      </button>
+    );
+  }
 
   if (variant === "button") {
     return (
