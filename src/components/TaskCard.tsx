@@ -15,6 +15,7 @@ import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
 import { ProjectChip } from "./ProjectChip";
+import { ClaudeCodeButton } from "./ClaudeCodeButton";
 import { useProfiles, profileInitials } from "@/hooks/useProfiles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
