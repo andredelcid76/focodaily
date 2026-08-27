@@ -531,6 +531,22 @@ function MyTasksPage() {
           </SelectContent>
         </Select>
 
+        <Select
+          value={projectStatusFilter}
+          onValueChange={(v) => setProjectStatusFilter(v as typeof projectStatusFilter)}
+        >
+          <SelectTrigger className="h-9 w-48 text-xs"><SelectValue placeholder="Status do projeto" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Projeto: todos status</SelectItem>
+            <SelectItem value="active_only">Sem pausados/finalizados</SelectItem>
+            <SelectItem value="in_progress">Projeto: em andamento</SelectItem>
+            <SelectItem value="active">Projeto: ativo</SelectItem>
+            <SelectItem value="paused">Projeto: pausado</SelectItem>
+            <SelectItem value="not_started">Projeto: não iniciado</SelectItem>
+            <SelectItem value="finished">Projeto: finalizado</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="h-9 w-36 text-xs"><SelectValue placeholder="Papel" /></SelectTrigger>
           <SelectContent>
