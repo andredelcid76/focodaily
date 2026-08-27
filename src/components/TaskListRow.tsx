@@ -118,7 +118,7 @@ export function TaskListRow({
   const visibleCols = cols.filter((c) => c.visible);
   const computedGridTemplate =
     gridTemplate ??
-    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 6.75rem`;
+    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 5.5rem`;
 
   return (
     <div
@@ -423,7 +423,7 @@ export function TaskListHeader({
   const visibleCols = cols.filter((c) => c.visible);
   const computedGridTemplate =
     gridTemplate ??
-    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 6.75rem`;
+    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 5.5rem`;
 
   const SortBtn = ({ k, label, align = "left" }: { k: TaskSortKey; label: string; align?: "left" | "center" }) => {
     const active = sortKey === k;

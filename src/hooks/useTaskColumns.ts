@@ -16,7 +16,7 @@ const STORAGE_KEY = "today-table-columns-v1";
 
 /** Fixed leading/trailing columns — not customizable. */
 const FIXED_LEADING = "1rem 1.75rem"; // drag handle + complete button
-const FIXED_TRAILING = "6.75rem";
+const FIXED_TRAILING = "5.5rem";
 
 const DEFAULT_COLUMNS: TaskColumnDef[] = [
   { key: "title",    label: "Tarefa",     width: "1.5fr", visible: true, minPx: 140 },
