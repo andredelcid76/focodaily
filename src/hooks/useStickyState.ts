@@ -38,7 +38,7 @@ export function useStickyState<T>(
       return;
     }
     try {
-      window.sessionStorage.setItem(key, serialize(state));
+      getStore().setItem(key, serialize(state));
     } catch {
       /* ignore quota */
     }
