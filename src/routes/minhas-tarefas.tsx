@@ -47,6 +47,12 @@ import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link2, PauseCircle } from "lucide-react";
+import { TaskListRow, TaskListHeader, type TaskSortKey } from "@/components/TaskListRow";
+import { useTaskColumns } from "@/hooks/useTaskColumns";
+import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
+import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
+import { DndContext } from "@dnd-kit/core";
+import { SortableContext } from "@dnd-kit/sortable";
 
 export const Route = createFileRoute("/minhas-tarefas")({
   component: () => (
