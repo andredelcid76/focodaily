@@ -377,6 +377,7 @@ export function TaskListRow({
             )}
           </>
         )}
+        <ClaudeCodeButton taskId={task.id} title={task.title} projectName={project?.name} />
         {!task.completed && hasActions && (
           <QuickActionsMenu
             task={task}
