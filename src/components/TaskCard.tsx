@@ -389,6 +389,8 @@ export function TaskCard({
             </>
           )}
 
+          <ClaudeCodeButton taskId={task.id} title={task.title} projectName={project?.name} />
+
           {hasActions && (
             <InlineQuickActions
               task={task}
