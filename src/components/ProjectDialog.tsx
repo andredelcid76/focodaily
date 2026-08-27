@@ -46,7 +46,8 @@ type Props = {
 };
 
 
-export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDelete }: Props) {
+export function ProjectDialog({ open, onOpenChange, project, roles, onSave, onDelete, allProjects = [] }: Props) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
