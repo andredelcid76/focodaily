@@ -128,14 +128,19 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     setPredecessorProjectFilter(activePid ? activePid : "__all__");
   }, [open, task?.id, depsApi.deps, defaultProjectId]);
 
+  // Chave de inicialização: os campos de recorrência só são semeados quando muda
+  // a tarefa/abertura — nunca em re-renders (evita sobrescrever a regra da série).
+  const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (open) {
+      const initKey = `${task?.id ?? "new"}|${defaultDate}`;
+      const isFreshInit = initKeyRef.current !== initKey;
+      initKeyRef.current = initKey;
       setTitle(task?.title ?? "");
       setDescription(task?.description ?? "");
       setCategory(task?.category ?? "important");
       setDuration(task?.duration_minutes ?? 30);
       setDate(task?.scheduled_date ?? defaultDate);
-      setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
       const initialProjectId = ((task as any)?.project_id ?? defaultProjectId ?? null) as string | null;
       setProjectId(initialProjectId);
@@ -152,6 +157,8 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           : user?.id ?? null;
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
+      if (!isFreshInit) return;
+      setRecurrence(task?.recurrence ?? "none");
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
       const t: any = task;
@@ -166,8 +173,11 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         setMonthlyWeek(1);
         setMonthlyWeekday(1);
       }
+    } else {
+      initKeyRef.current = null;
     }
   }, [open, task, defaultDate, defaultProjectId, lockedProjectId, projects, user?.id]);
+
 
   const toggleWeekday = (v: number) => {
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
