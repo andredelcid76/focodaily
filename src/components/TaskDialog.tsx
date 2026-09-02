@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -43,15 +43,16 @@ type Props = {
       category: TaskCategory;
       duration_minutes: number;
       scheduled_date: string;
-      recurrence: TaskRecurrence;
+      recurrence?: TaskRecurrence;
       role_id: string | null;
       project_id: string | null;
       assignee_id: string | null;
       non_negotiable: boolean;
-      recurrence_interval: number | null;
-      recurrence_weekdays: number[] | null;
-      recurrence_week_interval: number | null;
-      recurrence_monthly_pattern: { week: number; weekday: number } | null;
+      recurrence_interval?: number | null;
+      recurrence_weekdays?: number[] | null;
+      recurrence_week_interval?: number | null;
+      recurrence_monthly_pattern?: { week: number; weekday: number } | null;
+
     },
     scope?: RecurrenceScope
   ) => Promise<string | void>;
@@ -128,14 +129,19 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     setPredecessorProjectFilter(activePid ? activePid : "__all__");
   }, [open, task?.id, depsApi.deps, defaultProjectId]);
 
+  // Chave de inicialização: os campos de recorrência só são semeados quando muda
+  // a tarefa/abertura — nunca em re-renders (evita sobrescrever a regra da série).
+  const initKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (open) {
+      const initKey = `${task?.id ?? "new"}|${defaultDate}`;
+      const isFreshInit = initKeyRef.current !== initKey;
+      initKeyRef.current = initKey;
       setTitle(task?.title ?? "");
       setDescription(task?.description ?? "");
       setCategory(task?.category ?? "important");
       setDuration(task?.duration_minutes ?? 30);
       setDate(task?.scheduled_date ?? defaultDate);
-      setRecurrence(task?.recurrence ?? "none");
       setRoleId(task?.role_id ?? null);
       const initialProjectId = ((task as any)?.project_id ?? defaultProjectId ?? null) as string | null;
       setProjectId(initialProjectId);
@@ -152,6 +158,8 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           : user?.id ?? null;
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
+      if (!isFreshInit) return;
+      setRecurrence(task?.recurrence ?? "none");
       setIntervalDays(task?.recurrence_interval ?? 2);
       setWeekdays(task?.recurrence_weekdays ?? []);
       const t: any = task;
@@ -166,8 +174,11 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         setMonthlyWeek(1);
         setMonthlyWeekday(1);
       }
+    } else {
+      initKeyRef.current = null;
     }
   }, [open, task, defaultDate, defaultProjectId, lockedProjectId, projects, user?.id]);
+
 
   const toggleWeekday = (v: number) => {
     setWeekdays((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v].sort()));
@@ -213,18 +224,24 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   // Quando o escopo é a série (futuras/todas), a regra de repetição do "seed" é
   // carregada para permitir edição a partir da ocorrência.
   const seriesEditable = !!chosenScope && chosenScope !== "this";
+  const [seedRuleLoaded, setSeedRuleLoaded] = useState(false);
   useEffect(() => {
     if (!open || !seriesEditable) return;
     const parentId = task?.recurrence_parent_id;
-    if (!parentId) return;
+    if (!parentId) {
+      // A própria linha já é o seed: a regra veio do formulário.
+      setSeedRuleLoaded(true);
+      return;
+    }
+    setSeedRuleLoaded(false);
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .select("recurrence, recurrence_interval, recurrence_weekdays, recurrence_week_interval, recurrence_monthly_pattern")
         .eq("id", parentId)
         .maybeSingle();
-      if (cancelled || !data) return;
+      if (cancelled || error || !data) return;
       setRecurrence((data.recurrence ?? "none") as TaskRecurrence);
       setIntervalDays(data.recurrence_interval ?? 2);
       setWeekdays((data.recurrence_weekdays as number[] | null) ?? []);
@@ -234,7 +251,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         setMonthlyMode(true);
         setMonthlyWeek(mp.week);
         setMonthlyWeekday(mp.weekday);
+      } else {
+        setMonthlyMode(false);
       }
+      setSeedRuleLoaded(true);
     })();
     return () => { cancelled = true; };
   }, [open, seriesEditable, task?.recurrence_parent_id]);
@@ -242,7 +262,26 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
 
 
+
   const doSave = async (scope?: RecurrenceScope) => {
+    // Segurança: em escopo de série, só enviamos a regra de repetição se ela já foi
+    // carregada do seed. Caso contrário, omitimos os campos para não gravar
+    // "não repete" e apagar as ocorrências futuras.
+    const seriesScope = !!scope && scope !== "this";
+    const includeRule = !seriesScope || !task?.recurrence_parent_id || seedRuleLoaded;
+    const rulePatch = includeRule
+      ? {
+          recurrence,
+          recurrence_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
+          recurrence_weekdays:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekdays : null,
+          recurrence_week_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekInterval : null,
+          recurrence_monthly_pattern:
+            recurrence === "custom" && monthlyMode ? { week: monthlyWeek, weekday: monthlyWeekday } : null,
+        }
+      : {};
     setSaving(true);
     try {
       const result = await onSave(
@@ -252,22 +291,15 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           category,
           duration_minutes: Math.max(5, Math.min(600, duration)),
           scheduled_date: date,
-          recurrence,
           role_id: delegatedToOther ? null : roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           assignee_id: assigneeId ?? user?.id ?? null,
           non_negotiable: nonNegotiable,
-          recurrence_interval:
-            recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
-          recurrence_weekdays:
-            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekdays : null,
-          recurrence_week_interval:
-            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekInterval : null,
-          recurrence_monthly_pattern:
-            recurrence === "custom" && monthlyMode ? { week: monthlyWeek, weekday: monthlyWeekday } : null,
+          ...rulePatch,
         },
         scope
       );
+
       // Persist dependencies — for new tasks, use the id returned by onSave.
       const targetId = task?.id ?? (typeof result === "string" ? result : undefined);
       if (targetId && (predecessorIds.length > 0 || task?.id)) {
