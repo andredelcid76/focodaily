@@ -451,8 +451,13 @@ export function useTasks(userId: string | undefined) {
     const seriesPatch = stripKeys(patch, PER_INSTANCE_KEYS);
     // Children must keep recurrence:"none"; only the seed holds the rule.
     const childPatch = stripKeys(seriesPatch, RECURRENCE_RULE_KEYS);
-    // Rule keys only reach the seed when the edit started from the seed itself.
-    const parentPatch = isChild ? childPatch : seriesPatch;
+    // Rule keys reach the seed when editing the seed itself, or when editing an
+    // instance with a series-wide scope ("future"/"all") — the rule lives on the seed.
+    const rulePatch: Partial<Task> = {};
+    for (const [k, v] of Object.entries(patch)) {
+      if (RECURRENCE_RULE_KEYS.has(k)) (rulePatch as any)[k] = v;
+    }
+    const parentPatch = isChild ? { ...childPatch, ...rulePatch } : seriesPatch;
     // Always also apply full patch to the originating row (so its date/etc. update too)
     await updateTask(task.id, ownPatch);
 
