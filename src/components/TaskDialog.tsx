@@ -223,18 +223,24 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   // Quando o escopo é a série (futuras/todas), a regra de repetição do "seed" é
   // carregada para permitir edição a partir da ocorrência.
   const seriesEditable = !!chosenScope && chosenScope !== "this";
+  const [seedRuleLoaded, setSeedRuleLoaded] = useState(false);
   useEffect(() => {
     if (!open || !seriesEditable) return;
     const parentId = task?.recurrence_parent_id;
-    if (!parentId) return;
+    if (!parentId) {
+      // A própria linha já é o seed: a regra veio do formulário.
+      setSeedRuleLoaded(true);
+      return;
+    }
+    setSeedRuleLoaded(false);
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .select("recurrence, recurrence_interval, recurrence_weekdays, recurrence_week_interval, recurrence_monthly_pattern")
         .eq("id", parentId)
         .maybeSingle();
-      if (cancelled || !data) return;
+      if (cancelled || error || !data) return;
       setRecurrence((data.recurrence ?? "none") as TaskRecurrence);
       setIntervalDays(data.recurrence_interval ?? 2);
       setWeekdays((data.recurrence_weekdays as number[] | null) ?? []);
@@ -244,10 +250,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         setMonthlyMode(true);
         setMonthlyWeek(mp.week);
         setMonthlyWeekday(mp.weekday);
+      } else {
+        setMonthlyMode(false);
       }
+      setSeedRuleLoaded(true);
     })();
     return () => { cancelled = true; };
   }, [open, seriesEditable, task?.recurrence_parent_id]);
+
 
 
 
