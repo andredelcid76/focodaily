@@ -191,7 +191,25 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"save" | "delete" | "open" | null>(null);
+  // Escopo escolhido ao abrir uma tarefa recorrente (comportamento tipo Outlook)
+  const [chosenScope, setChosenScope] = useState<RecurrenceScope | null>(null);
+
+  // Ao abrir uma ocorrência de série, pergunta o escopo antes de editar.
+  useEffect(() => {
+    if (!open) {
+      setChosenScope(null);
+      setScopeOpen(false);
+      setPendingAction(null);
+      return;
+    }
+    if (isRecurringInstance) {
+      setChosenScope(null);
+      setPendingAction("open");
+      setScopeOpen(true);
+    }
+  }, [open, task?.id, isRecurringInstance]);
+
 
   const doSave = async (scope?: RecurrenceScope) => {
     setSaving(true);
