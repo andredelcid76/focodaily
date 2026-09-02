@@ -327,7 +327,22 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       <DialogContent className="w-[96vw] sm:max-w-[1100px] h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border/60 shrink-0">
           <DialogTitle className="text-lg">{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
+          {isRecurringInstance && chosenScope && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5">
+                Recorrente · {scopeLabel(chosenScope)}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setPendingAction("open"); setScopeOpen(true); }}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                alterar escopo
+              </button>
+            </div>
+          )}
         </DialogHeader>
+
 
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-0 overflow-y-auto lg:overflow-hidden">
           {/* LEFT — Title + Description (focal) */}
