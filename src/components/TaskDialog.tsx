@@ -210,6 +210,37 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     }
   }, [open, task?.id, isRecurringInstance]);
 
+  // Quando o escopo é a série (futuras/todas), a regra de repetição do "seed" é
+  // carregada para permitir edição a partir da ocorrência.
+  const seriesEditable = !!chosenScope && chosenScope !== "this";
+  useEffect(() => {
+    if (!open || !seriesEditable) return;
+    const parentId = task?.recurrence_parent_id;
+    if (!parentId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select("recurrence, recurrence_interval, recurrence_weekdays, recurrence_week_interval, recurrence_monthly_pattern")
+        .eq("id", parentId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setRecurrence((data.recurrence ?? "none") as TaskRecurrence);
+      setIntervalDays(data.recurrence_interval ?? 2);
+      setWeekdays((data.recurrence_weekdays as number[] | null) ?? []);
+      setWeekInterval((data as any).recurrence_week_interval ?? 1);
+      const mp = (data as any).recurrence_monthly_pattern as { week: number; weekday: number } | null;
+      if (mp && typeof mp.week === "number") {
+        setMonthlyMode(true);
+        setMonthlyWeek(mp.week);
+        setMonthlyWeekday(mp.weekday);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, seriesEditable, task?.recurrence_parent_id]);
+
+
+
 
   const doSave = async (scope?: RecurrenceScope) => {
     setSaving(true);
