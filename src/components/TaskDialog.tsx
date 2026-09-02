@@ -274,6 +274,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       return;
     }
     if (isRecurringInstance) {
+      if (chosenScope) {
+        await doSave(chosenScope);
+        return;
+      }
       setPendingAction("save");
       setScopeOpen(true);
       return;
@@ -284,6 +288,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const handleDeleteClick = () => {
     if (!onDelete) return;
     if (isRecurringInstance) {
+      if (chosenScope) {
+        doDelete(chosenScope);
+        return;
+      }
       setPendingAction("delete");
       setScopeOpen(true);
       return;
@@ -293,10 +301,26 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
   const applyScope = async (scope: RecurrenceScope) => {
     setScopeOpen(false);
+    if (pendingAction === "open") {
+      setChosenScope(scope);
+      setPendingAction(null);
+      return;
+    }
     if (pendingAction === "save") await doSave(scope);
     else if (pendingAction === "delete") await doDelete(scope);
     setPendingAction(null);
   };
+
+  const scopeLabel = (s: RecurrenceScope) =>
+    s === "this" ? "Apenas esta ocorrência" : s === "future" ? "Esta e as futuras" : "Toda a série";
+
+  const cancelScope = () => {
+    setScopeOpen(false);
+    const wasOpening = pendingAction === "open";
+    setPendingAction(null);
+    if (wasOpening) onOpenChange(false);
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
