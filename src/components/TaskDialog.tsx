@@ -893,16 +893,19 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
 
       {/* Recurrence scope sub-dialog */}
-      <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) { setScopeOpen(false); setPendingAction(null); } }}>
+      <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) cancelScope(); }}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
             <DialogTitle>
-              {pendingAction === "delete" ? "Excluir tarefa recorrente" : "Alterar tarefa recorrente"}
+              {pendingAction === "delete" ? "Excluir tarefa recorrente" : "Tarefa recorrente"}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Esta tarefa se repete. O que você quer {pendingAction === "delete" ? "excluir" : "alterar"}?
+            {pendingAction === "delete"
+              ? "Esta tarefa se repete. O que você quer excluir?"
+              : "Esta tarefa faz parte de uma série. O que você quer editar?"}
           </p>
+
           <div className="mt-2 space-y-2">
             <button
               onClick={() => applyScope("this")}
