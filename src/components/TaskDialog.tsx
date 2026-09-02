@@ -210,6 +210,37 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     }
   }, [open, task?.id, isRecurringInstance]);
 
+  // Quando o escopo é a série (futuras/todas), a regra de repetição do "seed" é
+  // carregada para permitir edição a partir da ocorrência.
+  const seriesEditable = !!chosenScope && chosenScope !== "this";
+  useEffect(() => {
+    if (!open || !seriesEditable) return;
+    const parentId = task?.recurrence_parent_id;
+    if (!parentId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("tasks")
+        .select("recurrence, recurrence_interval, recurrence_weekdays, recurrence_week_interval, recurrence_monthly_pattern")
+        .eq("id", parentId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setRecurrence((data.recurrence ?? "none") as TaskRecurrence);
+      setIntervalDays(data.recurrence_interval ?? 2);
+      setWeekdays((data.recurrence_weekdays as number[] | null) ?? []);
+      setWeekInterval((data as any).recurrence_week_interval ?? 1);
+      const mp = (data as any).recurrence_monthly_pattern as { week: number; weekday: number } | null;
+      if (mp && typeof mp.week === "number") {
+        setMonthlyMode(true);
+        setMonthlyWeek(mp.week);
+        setMonthlyWeekday(mp.weekday);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, seriesEditable, task?.recurrence_parent_id]);
+
+
+
 
   const doSave = async (scope?: RecurrenceScope) => {
     setSaving(true);
@@ -712,9 +743,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             </div>
             <div>
               <Label>Recorrência</Label>
-              {task?.recurrence_parent_id ? (
+              {task?.recurrence_parent_id && !seriesEditable ? (
                 <div className="mt-1.5 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Ocorrência de uma série. A regra de repetição é editada na tarefa original.
+                  Editando apenas esta ocorrência. Para mudar a repetição, altere o escopo para
+                  “esta e as futuras” ou “toda a série”.
                 </div>
               ) : (
                 <Select value={recurrence} onValueChange={(v) => setRecurrence(v as TaskRecurrence)}>

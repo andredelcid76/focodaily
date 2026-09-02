@@ -451,8 +451,13 @@ export function useTasks(userId: string | undefined) {
     const seriesPatch = stripKeys(patch, PER_INSTANCE_KEYS);
     // Children must keep recurrence:"none"; only the seed holds the rule.
     const childPatch = stripKeys(seriesPatch, RECURRENCE_RULE_KEYS);
-    // Rule keys only reach the seed when the edit started from the seed itself.
-    const parentPatch = isChild ? childPatch : seriesPatch;
+    // Rule keys reach the seed when editing the seed itself, or when editing an
+    // instance with a series-wide scope ("future"/"all") — the rule lives on the seed.
+    const rulePatch: Partial<Task> = {};
+    for (const [k, v] of Object.entries(patch)) {
+      if (RECURRENCE_RULE_KEYS.has(k)) (rulePatch as any)[k] = v;
+    }
+    const parentPatch = isChild ? { ...childPatch, ...rulePatch } : seriesPatch;
     // Always also apply full patch to the originating row (so its date/etc. update too)
     await updateTask(task.id, ownPatch);
 
@@ -488,12 +493,19 @@ export function useTasks(userId: string | undefined) {
         const pid = parentTarget.id;
         setTasks((prev) => prev.map((t) => (t.id === pid ? { ...t, ...parentPatch } : t)));
         await supabase.from("tasks").update(parentPatch).eq("id", pid);
+      } else if (isChild && Object.keys(rulePatch).length > 0) {
+        // The seed wasn't in the propagation targets (past/completed), but the rule
+        // change must still land on it — it's the only row that holds the rule.
+        setTasks((prev) => prev.map((t) => (t.id === parentId ? { ...t, ...rulePatch } : t)));
+        await supabase.from("tasks").update(rulePatch).eq("id", parentId);
       }
     }
 
     // If recurrence rule changed, prune future open instances that no longer match
     // and let ensureRecurring create any newly-required instances.
-    const ruleChanged = !isChild && Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
+    const ruleChanged =
+      (!isChild || Object.keys(rulePatch).length > 0) &&
+      Object.keys(patch).some((k) => RECURRENCE_RULE_KEYS.has(k));
 
     if (ruleChanged) {
       const today = todayISO();
