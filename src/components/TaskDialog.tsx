@@ -191,7 +191,25 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"save" | "delete" | "open" | null>(null);
+  // Escopo escolhido ao abrir uma tarefa recorrente (comportamento tipo Outlook)
+  const [chosenScope, setChosenScope] = useState<RecurrenceScope | null>(null);
+
+  // Ao abrir uma ocorrência de série, pergunta o escopo antes de editar.
+  useEffect(() => {
+    if (!open) {
+      setChosenScope(null);
+      setScopeOpen(false);
+      setPendingAction(null);
+      return;
+    }
+    if (isRecurringInstance) {
+      setChosenScope(null);
+      setPendingAction("open");
+      setScopeOpen(true);
+    }
+  }, [open, task?.id, isRecurringInstance]);
+
 
   const doSave = async (scope?: RecurrenceScope) => {
     setSaving(true);
@@ -256,6 +274,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       return;
     }
     if (isRecurringInstance) {
+      if (chosenScope) {
+        await doSave(chosenScope);
+        return;
+      }
       setPendingAction("save");
       setScopeOpen(true);
       return;
@@ -266,6 +288,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const handleDeleteClick = () => {
     if (!onDelete) return;
     if (isRecurringInstance) {
+      if (chosenScope) {
+        doDelete(chosenScope);
+        return;
+      }
       setPendingAction("delete");
       setScopeOpen(true);
       return;
@@ -275,17 +301,48 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
   const applyScope = async (scope: RecurrenceScope) => {
     setScopeOpen(false);
+    if (pendingAction === "open") {
+      setChosenScope(scope);
+      setPendingAction(null);
+      return;
+    }
     if (pendingAction === "save") await doSave(scope);
     else if (pendingAction === "delete") await doDelete(scope);
     setPendingAction(null);
   };
+
+  const scopeLabel = (s: RecurrenceScope) =>
+    s === "this" ? "Apenas esta ocorrência" : s === "future" ? "Esta e as futuras" : "Toda a série";
+
+  const cancelScope = () => {
+    setScopeOpen(false);
+    const wasOpening = pendingAction === "open";
+    setPendingAction(null);
+    if (wasOpening) onOpenChange(false);
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] sm:max-w-[1100px] h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border/60 shrink-0">
           <DialogTitle className="text-lg">{task && !isSeed ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
+          {isRecurringInstance && chosenScope && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5">
+                Recorrente · {scopeLabel(chosenScope)}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setPendingAction("open"); setScopeOpen(true); }}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                alterar escopo
+              </button>
+            </div>
+          )}
         </DialogHeader>
+
 
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-0 overflow-y-auto lg:overflow-hidden">
           {/* LEFT — Title + Description (focal) */}
@@ -836,22 +893,25 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
 
       {/* Recurrence scope sub-dialog */}
-      <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) { setScopeOpen(false); setPendingAction(null); } }}>
+      <Dialog open={scopeOpen} onOpenChange={(v) => { if (!v) cancelScope(); }}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
             <DialogTitle>
-              {pendingAction === "delete" ? "Excluir tarefa recorrente" : "Alterar tarefa recorrente"}
+              {pendingAction === "delete" ? "Excluir tarefa recorrente" : "Tarefa recorrente"}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Esta tarefa se repete. O que você quer {pendingAction === "delete" ? "excluir" : "alterar"}?
+            {pendingAction === "delete"
+              ? "Esta tarefa se repete. O que você quer excluir?"
+              : "Esta tarefa faz parte de uma série. O que você quer editar?"}
           </p>
+
           <div className="mt-2 space-y-2">
             <button
               onClick={() => applyScope("this")}
               className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
             >
-              <div className="text-sm font-semibold">Apenas esta instância</div>
+              <div className="text-sm font-semibold">Apenas esta ocorrência</div>
               <div className="text-xs text-muted-foreground">As outras ocorrências continuam como estão.</div>
             </button>
             <button
@@ -865,15 +925,16 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               onClick={() => applyScope("all")}
               className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
             >
-              <div className="text-sm font-semibold">Todas as instâncias (sempre)</div>
+              <div className="text-sm font-semibold">Toda a série</div>
               <div className="text-xs text-muted-foreground">Aplica a toda a série, inclusive as anteriores em aberto.</div>
             </button>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setScopeOpen(false); setPendingAction(null); }}>Cancelar</Button>
+            <Button variant="outline" onClick={cancelScope}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </Dialog>
   );
 }
