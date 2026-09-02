@@ -743,9 +743,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             </div>
             <div>
               <Label>Recorrência</Label>
-              {task?.recurrence_parent_id ? (
+              {task?.recurrence_parent_id && !seriesEditable ? (
                 <div className="mt-1.5 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Ocorrência de uma série. A regra de repetição é editada na tarefa original.
+                  Editando apenas esta ocorrência. Para mudar a repetição, altere o escopo para
+                  “esta e as futuras” ou “toda a série”.
                 </div>
               ) : (
                 <Select value={recurrence} onValueChange={(v) => setRecurrence(v as TaskRecurrence)}>
