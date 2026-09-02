@@ -43,15 +43,16 @@ type Props = {
       category: TaskCategory;
       duration_minutes: number;
       scheduled_date: string;
-      recurrence: TaskRecurrence;
+      recurrence?: TaskRecurrence;
       role_id: string | null;
       project_id: string | null;
       assignee_id: string | null;
       non_negotiable: boolean;
-      recurrence_interval: number | null;
-      recurrence_weekdays: number[] | null;
-      recurrence_week_interval: number | null;
-      recurrence_monthly_pattern: { week: number; weekday: number } | null;
+      recurrence_interval?: number | null;
+      recurrence_weekdays?: number[] | null;
+      recurrence_week_interval?: number | null;
+      recurrence_monthly_pattern?: { week: number; weekday: number } | null;
+
     },
     scope?: RecurrenceScope
   ) => Promise<string | void>;
