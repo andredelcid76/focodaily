@@ -911,7 +911,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               onClick={() => applyScope("this")}
               className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
             >
-              <div className="text-sm font-semibold">Apenas esta instância</div>
+              <div className="text-sm font-semibold">Apenas esta ocorrência</div>
               <div className="text-xs text-muted-foreground">As outras ocorrências continuam como estão.</div>
             </button>
             <button
@@ -925,15 +925,16 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               onClick={() => applyScope("all")}
               className="w-full rounded-xl border border-border/60 bg-card/60 p-3 text-left hover:border-primary/50 transition-colors"
             >
-              <div className="text-sm font-semibold">Todas as instâncias (sempre)</div>
+              <div className="text-sm font-semibold">Toda a série</div>
               <div className="text-xs text-muted-foreground">Aplica a toda a série, inclusive as anteriores em aberto.</div>
             </button>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setScopeOpen(false); setPendingAction(null); }}>Cancelar</Button>
+            <Button variant="outline" onClick={cancelScope}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </Dialog>
   );
 }
