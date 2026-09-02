@@ -263,6 +263,24 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
 
   const doSave = async (scope?: RecurrenceScope) => {
+    // Segurança: em escopo de série, só enviamos a regra de repetição se ela já foi
+    // carregada do seed. Caso contrário, omitimos os campos para não gravar
+    // "não repete" e apagar as ocorrências futuras.
+    const seriesScope = !!scope && scope !== "this";
+    const includeRule = !seriesScope || !task?.recurrence_parent_id || seedRuleLoaded;
+    const rulePatch = includeRule
+      ? {
+          recurrence,
+          recurrence_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
+          recurrence_weekdays:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekdays : null,
+          recurrence_week_interval:
+            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekInterval : null,
+          recurrence_monthly_pattern:
+            recurrence === "custom" && monthlyMode ? { week: monthlyWeek, weekday: monthlyWeekday } : null,
+        }
+      : {};
     setSaving(true);
     try {
       const result = await onSave(
@@ -272,22 +290,15 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           category,
           duration_minutes: Math.max(5, Math.min(600, duration)),
           scheduled_date: date,
-          recurrence,
           role_id: delegatedToOther ? null : roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           assignee_id: assigneeId ?? user?.id ?? null,
           non_negotiable: nonNegotiable,
-          recurrence_interval:
-            recurrence === "custom" && !monthlyMode && weekdays.length === 0 ? interval : null,
-          recurrence_weekdays:
-            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekdays : null,
-          recurrence_week_interval:
-            recurrence === "custom" && !monthlyMode && weekdays.length > 0 ? weekInterval : null,
-          recurrence_monthly_pattern:
-            recurrence === "custom" && monthlyMode ? { week: monthlyWeek, weekday: monthlyWeekday } : null,
+          ...rulePatch,
         },
         scope
       );
+
       // Persist dependencies — for new tasks, use the id returned by onSave.
       const targetId = task?.id ?? (typeof result === "string" ? result : undefined);
       if (targetId && (predecessorIds.length > 0 || task?.id)) {
