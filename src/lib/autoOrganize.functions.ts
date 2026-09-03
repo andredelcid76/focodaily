@@ -25,6 +25,19 @@ type DbTask = {
 
 const CATEGORY_RANK: Record<string, number> = { urgent: 0, important: 1, circumstantial: 2 };
 
+function roleRankFromName(name: string | undefined): number {
+  if (!name) return 90;
+  const n = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  if (n === "ceo" || n.includes("ceo")) return 0;
+  if (n.includes("pre") && n.includes("venda")) return 2;
+  if (n.includes("venda")) return 1;
+  return 90;
+}
+
 function isInboxOrganizingTask(t: DbTask) {
   const s = `${t.title} ${t.description ?? ""}`.toLowerCase();
   return /(organizar|revisar|processar|limpar|esvaziar).*(caixa de entrada|inbox|e-?mail)|inbox\s*zero/.test(s);
@@ -34,7 +47,7 @@ function isNextDayPlanningTask(t: DbTask) {
   return /(planejar|organizar|preparar).*(amanh\u00e3|pr\u00f3ximo dia|dia seguinte)/.test(s);
 }
 
-function heuristicOrder(tasks: DbTask[]): DbTask[] {
+function heuristicOrder(tasks: DbTask[], roleNames: Map<string, string> = new Map()): DbTask[] {
   const open = tasks.filter((t) => !t.completed);
   const completed = tasks.filter((t) => t.completed);
 
@@ -48,61 +61,54 @@ function heuristicOrder(tasks: DbTask[]): DbTask[] {
     else middle.push(t);
   }
 
-  // Intra-group priority score (lower = earlier)
-  const score = (t: DbTask) => {
-    let s = 0;
-    if (!t.non_negotiable) s += 1000;
-    s -= t.postpone_count * 100;
-    s += (CATEGORY_RANK[t.category] ?? 1) * 10;
-    s += t.position * 0.001;
-    return s;
+  const roleRank = (t: DbTask) => roleRankFromName(t.role_id ? roleNames.get(t.role_id) : undefined);
+
+  // Critérios finais dentro de qualquer grupo:
+  // adiadas primeiro (6) → papel (7) → mais rápidas (8) → posição atual
+  const cmp = (a: DbTask, b: DbTask) => {
+    if (b.postpone_count !== a.postpone_count) return b.postpone_count - a.postpone_count;
+    const ra = roleRank(a);
+    const rb = roleRank(b);
+    if (ra !== rb) return ra - rb;
+    if (a.duration_minutes !== b.duration_minutes) return a.duration_minutes - b.duration_minutes;
+    return a.position - b.position;
   };
 
-  // Rule 3: tasks without project first, with project at the end
-  const noProject = middle.filter((t) => !t.project_id).sort((a, b) => score(a) - score(b));
-  const withProject = middle.filter((t) => !!t.project_id);
+  // Rule 5: urgentes têm prioridade sobre a divisão sem projeto / com projeto
+  const urgent = middle.filter((t) => t.category === "urgent").sort(cmp);
+  const rest = middle.filter((t) => t.category !== "urgent");
 
-  // Rule 1: group by project (contiguous); order projects by best-scoring task
+  // Rule 4: sem projeto antes das com projeto
+  const noProject = rest.filter((t) => !t.project_id).sort((a, b) => {
+    const ca = CATEGORY_RANK[a.category] ?? 1;
+    const cb = CATEGORY_RANK[b.category] ?? 1;
+    if (ca !== cb) return ca - cb;
+    return cmp(a, b);
+  });
+
+  // Rule 3: tarefas de projeto agrupadas (contíguas)
+  const withProject = rest.filter((t) => !!t.project_id);
   const projectGroups = new Map<string, DbTask[]>();
   for (const t of withProject) {
     const k = t.project_id!;
     if (!projectGroups.has(k)) projectGroups.set(k, []);
     projectGroups.get(k)!.push(t);
   }
-  const orderedProjectGroups = [...projectGroups.values()]
-    .map((g) => {
-      g.sort((a, b) => score(a) - score(b));
-      return g;
-    })
-    .sort((a, b) => score(a[0]) - score(b[0]));
+  const projectsFlat = [...projectGroups.values()]
+    .map((g) => g.sort(cmp))
+    .sort((a, b) => cmp(a[0], b[0]))
+    .flat();
 
-  // Rule 2: within each project group, keep same role contiguous
-  const groupByRoleContiguous = (g: DbTask[]) => {
-    const byRole = new Map<string, DbTask[]>();
-    const roleOrder: string[] = [];
-    for (const t of g) {
-      const k = t.role_id ?? "__none__";
-      if (!byRole.has(k)) {
-        byRole.set(k, []);
-        roleOrder.push(k);
-      }
-      byRole.get(k)!.push(t);
-    }
-    return roleOrder.flatMap((k) => byRole.get(k)!);
-  };
-  const projectsFlat = orderedProjectGroups.flatMap(groupByRoleContiguous);
-
-  // Also keep no-project tasks grouped by role contiguously
-  const noProjectGrouped = groupByRoleContiguous(noProject);
-
-  return [...inboxOrg, ...noProjectGrouped, ...projectsFlat, ...nextDayPlan, ...completed];
+  return [...inboxOrg, ...urgent, ...noProject, ...projectsFlat, ...nextDayPlan, ...completed];
 }
+
 
 async function refineWithAI(
   tasks: DbTask[],
   baseOrder: DbTask[],
   capacityMinutes: number,
   apiKey: string,
+  roleNames: Map<string, string> = new Map(),
 ): Promise<{ orderedIds: string[]; reasoning: string } | null> {
   const open = baseOrder.filter((t) => !t.completed);
   if (open.length <= 1) return null;
@@ -117,20 +123,22 @@ async function refineWithAI(
     recurring: t.recurrence !== "none" || !!t.recurrence_parent_id,
     from: t.origin_source ?? null,
     project_id: t.project_id,
-    role_id: t.role_id,
+    role: t.role_id ? roleNames.get(t.role_id) ?? null : null,
   }));
 
   const totalMin = open.reduce((s, t) => s + t.duration_minutes, 0);
 
-  const system = `Você é um especialista em GTD e produtividade. Reordene tarefas do dia priorizando energia, contexto e impacto.
-Regras inegociáveis (nesta ordem):
+  const system = `Você é um especialista em GTD e produtividade. Reordene as tarefas do dia seguindo EXATAMENTE estes critérios, na ordem de importância:
 1) Tarefas de "organizar caixa de entrada / inbox" SEMPRE primeiro.
-2) Tarefas SEM projeto (project_id null) vêm antes de tarefas COM projeto.
-3) Tarefas do MESMO project_id devem ficar CONTÍGUAS (agrupadas em bloco).
-4) Dentro de um projeto, tarefas do MESMO role_id devem ficar CONTÍGUAS.
-5) Tarefas de "planejar / organizar amanhã" SEMPRE por último.
-6) Dentro de cada grupo: non_negotiable primeiro, depois postponed alto, depois urgent > important > circumstantial.
+2) Tarefas de "planejar / organizar o dia seguinte / amanhã" SEMPRE por último.
+3) Tarefas do MESMO project_id devem ficar CONTÍGUAS (bloco único).
+4) Tarefas SEM projeto (project_id null) vêm antes das tarefas COM projeto — exceto urgentes.
+5) Tarefas category="urgent" têm prioridade máxima (vêm antes da regra 4).
+6) Tarefas adiadas (postponed alto) têm prioridade, abaixo da urgência e do agrupamento por projeto.
+7) Critério de papel (role), nesta ordem: CEO, Head de Vendas, Head de Pré-vendas, depois os demais.
+8) Último critério de desempate: tarefas mais rápidas (menor duration_min) primeiro.
 Responda APENAS JSON válido: {"ordered_ids": ["id1","id2",...], "reasoning": "1 frase curta"}`;
+
 
   const user = `Capacidade do dia: ${capacityMinutes}min. Soma das tarefas abertas: ${totalMin}min.
 Tarefas (ordem-base já aplica heurística básica):
@@ -211,14 +219,17 @@ export const autoOrganizeDay = createServerFn({ method: "POST" })
       return { ok: true, ordered_ids: [], reasoning: "Nenhuma tarefa no dia.", capacity_minutes: capacity, total_minutes: 0, overflow: false };
     }
 
-    const heuristic = heuristicOrder(list);
+    const { data: rolesData } = await supabase.from("roles").select("id,name").eq("user_id", userId);
+    const roleNames = new Map<string, string>((rolesData ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
+
+    const heuristic = heuristicOrder(list, roleNames);
     let finalOrder = heuristic;
     let reasoning = "Aplicada heurística (inbox → inegociáveis → adiadas → urgentes → importantes → circunstanciais → planejar amanhã).";
 
     if (useAi) {
       const apiKey = process.env.LOVABLE_API_KEY;
       if (apiKey) {
-        const refined = await refineWithAI(list, heuristic, capacity, apiKey);
+        const refined = await refineWithAI(list, heuristic, capacity, apiKey, roleNames);
         if (refined) {
           const byId = new Map(list.map((t) => [t.id, t]));
           const completed = list.filter((t) => t.completed);
@@ -303,6 +314,9 @@ export const autoOrganizeWeek = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const allTasks = (tasks ?? []) as DbTask[];
 
+    const { data: rolesData } = await supabase.from("roles").select("id,name").eq("user_id", userId);
+    const roleNames = new Map<string, string>((rolesData ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
+
     const summary: Array<{ date: string; total_minutes: number; capacity_minutes: number; overflow: boolean; count: number }> = [];
 
     for (const date of days) {
@@ -311,10 +325,10 @@ export const autoOrganizeWeek = createServerFn({ method: "POST" })
         summary.push({ date, total_minutes: 0, capacity_minutes: capacity, overflow: false, count: 0 });
         continue;
       }
-      const heuristic = heuristicOrder(dayTasks);
+      const heuristic = heuristicOrder(dayTasks, roleNames);
       let finalOrder = heuristic;
       if (useAi && apiKey) {
-        const refined = await refineWithAI(dayTasks, heuristic, capacity, apiKey);
+        const refined = await refineWithAI(dayTasks, heuristic, capacity, apiKey, roleNames);
         if (refined) {
           const byId = new Map(dayTasks.map((t) => [t.id, t]));
           const completed = dayTasks.filter((t) => t.completed);
