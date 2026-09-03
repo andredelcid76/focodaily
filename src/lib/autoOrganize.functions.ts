@@ -110,6 +110,7 @@ async function refineWithAI(
   baseOrder: DbTask[],
   capacityMinutes: number,
   apiKey: string,
+  roleNames: Map<string, string> = new Map(),
 ): Promise<{ orderedIds: string[]; reasoning: string } | null> {
   const open = baseOrder.filter((t) => !t.completed);
   if (open.length <= 1) return null;
@@ -124,20 +125,22 @@ async function refineWithAI(
     recurring: t.recurrence !== "none" || !!t.recurrence_parent_id,
     from: t.origin_source ?? null,
     project_id: t.project_id,
-    role_id: t.role_id,
+    role: t.role_id ? roleNames.get(t.role_id) ?? null : null,
   }));
 
   const totalMin = open.reduce((s, t) => s + t.duration_minutes, 0);
 
-  const system = `Você é um especialista em GTD e produtividade. Reordene tarefas do dia priorizando energia, contexto e impacto.
-Regras inegociáveis (nesta ordem):
+  const system = `Você é um especialista em GTD e produtividade. Reordene as tarefas do dia seguindo EXATAMENTE estes critérios, na ordem de importância:
 1) Tarefas de "organizar caixa de entrada / inbox" SEMPRE primeiro.
-2) Tarefas SEM projeto (project_id null) vêm antes de tarefas COM projeto.
-3) Tarefas do MESMO project_id devem ficar CONTÍGUAS (agrupadas em bloco).
-4) Dentro de um projeto, tarefas do MESMO role_id devem ficar CONTÍGUAS.
-5) Tarefas de "planejar / organizar amanhã" SEMPRE por último.
-6) Dentro de cada grupo: non_negotiable primeiro, depois postponed alto, depois urgent > important > circumstantial.
+2) Tarefas de "planejar / organizar o dia seguinte / amanhã" SEMPRE por último.
+3) Tarefas do MESMO project_id devem ficar CONTÍGUAS (bloco único).
+4) Tarefas SEM projeto (project_id null) vêm antes das tarefas COM projeto — exceto urgentes.
+5) Tarefas category="urgent" têm prioridade máxima (vêm antes da regra 4).
+6) Tarefas adiadas (postponed alto) têm prioridade, abaixo da urgência e do agrupamento por projeto.
+7) Critério de papel (role), nesta ordem: CEO, Head de Vendas, Head de Pré-vendas, depois os demais.
+8) Último critério de desempate: tarefas mais rápidas (menor duration_min) primeiro.
 Responda APENAS JSON válido: {"ordered_ids": ["id1","id2",...], "reasoning": "1 frase curta"}`;
+
 
   const user = `Capacidade do dia: ${capacityMinutes}min. Soma das tarefas abertas: ${totalMin}min.
 Tarefas (ordem-base já aplica heurística básica):
