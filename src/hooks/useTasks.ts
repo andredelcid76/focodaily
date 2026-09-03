@@ -288,6 +288,12 @@ export function useTasks(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return;
     (async () => {
+      // 1) Mostra as tarefas o quanto antes
+      await refresh();
+      // 2) Materializa recorrências em segundo plano (no máximo 1x a cada 5 min)
+      const last = ensureDoneAt.get(userId) ?? 0;
+      if (Date.now() - last < ENSURE_TTL_MS) return;
+      ensureDoneAt.set(userId, Date.now());
       await ensureRecurring();
       await refresh();
     })();
