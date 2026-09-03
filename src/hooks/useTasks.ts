@@ -71,9 +71,16 @@ function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
   return false;
 }
 
+// Cache em memória por usuário: ao navegar entre telas as tarefas aparecem
+// instantaneamente e a atualização acontece em segundo plano.
+const tasksCache = new Map<string, Task[]>();
+// Evita repetir o trabalho de materializar recorrências a cada navegação
+const ensureDoneAt = new Map<string, number>();
+const ENSURE_TTL_MS = 5 * 60 * 1000;
+
 export function useTasks(userId: string | undefined) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>(() => (userId ? tasksCache.get(userId) ?? [] : []));
+  const [loading, setLoading] = useState(() => !(userId && tasksCache.has(userId)));
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -82,7 +89,10 @@ export function useTasks(userId: string | undefined) {
       .select("*")
       .order("scheduled_date", { ascending: true })
       .order("position", { ascending: true });
-    if (!error && data) setTasks(data);
+    if (!error && data) {
+      tasksCache.set(userId, data);
+      setTasks(data);
+    }
     setLoading(false);
   }, [userId]);
 
