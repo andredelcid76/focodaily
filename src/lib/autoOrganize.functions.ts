@@ -25,8 +25,6 @@ type DbTask = {
 
 const CATEGORY_RANK: Record<string, number> = { urgent: 0, important: 1, circumstantial: 2 };
 
-// Ordem de prioridade por papel (rule 7)
-const ROLE_PRIORITY = ["ceo", "head de pre-vendas", "head de vendas"];
 function roleRankFromName(name: string | undefined): number {
   if (!name) return 90;
   const n = name
@@ -221,14 +219,17 @@ export const autoOrganizeDay = createServerFn({ method: "POST" })
       return { ok: true, ordered_ids: [], reasoning: "Nenhuma tarefa no dia.", capacity_minutes: capacity, total_minutes: 0, overflow: false };
     }
 
-    const heuristic = heuristicOrder(list);
+    const { data: rolesData } = await supabase.from("roles").select("id,name").eq("user_id", userId);
+    const roleNames = new Map<string, string>((rolesData ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
+
+    const heuristic = heuristicOrder(list, roleNames);
     let finalOrder = heuristic;
     let reasoning = "Aplicada heurística (inbox → inegociáveis → adiadas → urgentes → importantes → circunstanciais → planejar amanhã).";
 
     if (useAi) {
       const apiKey = process.env.LOVABLE_API_KEY;
       if (apiKey) {
-        const refined = await refineWithAI(list, heuristic, capacity, apiKey);
+        const refined = await refineWithAI(list, heuristic, capacity, apiKey, roleNames);
         if (refined) {
           const byId = new Map(list.map((t) => [t.id, t]));
           const completed = list.filter((t) => t.completed);
@@ -313,6 +314,9 @@ export const autoOrganizeWeek = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const allTasks = (tasks ?? []) as DbTask[];
 
+    const { data: rolesData } = await supabase.from("roles").select("id,name").eq("user_id", userId);
+    const roleNames = new Map<string, string>((rolesData ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
+
     const summary: Array<{ date: string; total_minutes: number; capacity_minutes: number; overflow: boolean; count: number }> = [];
 
     for (const date of days) {
@@ -321,10 +325,10 @@ export const autoOrganizeWeek = createServerFn({ method: "POST" })
         summary.push({ date, total_minutes: 0, capacity_minutes: capacity, overflow: false, count: 0 });
         continue;
       }
-      const heuristic = heuristicOrder(dayTasks);
+      const heuristic = heuristicOrder(dayTasks, roleNames);
       let finalOrder = heuristic;
       if (useAi && apiKey) {
-        const refined = await refineWithAI(dayTasks, heuristic, capacity, apiKey);
+        const refined = await refineWithAI(dayTasks, heuristic, capacity, apiKey, roleNames);
         if (refined) {
           const byId = new Map(dayTasks.map((t) => [t.id, t]));
           const completed = dayTasks.filter((t) => t.completed);
