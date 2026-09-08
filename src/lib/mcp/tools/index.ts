@@ -469,6 +469,54 @@ export const createTask = defineTool({
   },
 });
 
+/**
+ * Registra a exceção de recorrência para (pai, data) — o mesmo que a UI faz em
+ * `createRecurrenceException` (useTasks.ts).
+ *
+ * POR QUE ISSO É OBRIGATÓRIO: `ensureRecurring()` materializa ocorrências
+ * comparando os pares (recurrence_parent_id, scheduled_date) que já existem
+ * contra a tabela `task_recurrence_exceptions`. Se uma instância é apagada ou
+ * movida SEM registrar a exceção, o par deixa de existir, não há exceção que o
+ * cubra, e o gerador **recria a ocorrência** no próximo carregamento do app
+ * (até 1x a cada 5 min). Era o bug: a UI registrava a exceção, o MCP não.
+ */
+const recordRecurrenceException = async (
+  auth: unknown,
+  userId: string,
+  parentTaskId: string,
+  exceptionDate: string,
+) => {
+  const { error } = await db(auth)
+    .from("task_recurrence_exceptions")
+    .upsert(
+      {
+        user_id: userId,
+        parent_task_id: parentTaskId,
+        exception_date: exceptionDate,
+        kind: "deleted",
+      } as never,
+      {
+        onConflict: "user_id,parent_task_id,exception_date,kind",
+        ignoreDuplicates: true,
+      },
+    );
+  if (error) throw new Error(error.message);
+};
+
+/** Lê os campos de recorrência de uma tarefa que o usuário pode ver. */
+const readRecurrenceRef = async (auth: unknown, userId: string, id: string) => {
+  const { data } = await db(auth)
+    .from("tasks")
+    .select("scheduled_date, recurrence_parent_id")
+    .eq("id", id)
+    .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
+    .maybeSingle();
+  return {
+    parentId: (data?.recurrence_parent_id as string | null) ?? null,
+    date: (data?.scheduled_date as string | undefined) ?? undefined,
+  };
+};
+
 export const updateTask = defineTool({
   name: "update_task",
   description: "Atualiza uma tarefa existente: mover de data, mudar título, concluir, recategorizar, alterar recorrência etc.",
@@ -509,6 +557,27 @@ export const updateTask = defineTool({
     // Mover uma tarefa para dentro de um projeto exige acesso a esse projeto
     // (service_role bypassa a RLS). Definir project_id = null é permitido.
     if (args.project_id) await assertProjectAccess(ctx.auth, args.project_id, userId);
+
+    // ── Recorrência: mover INSTÂNCIA de série tem de seguir o mesmo contrato da
+    // UI (`updateTaskWithScope`, escopo "this"): registrar a exceção na data
+    // ANTIGA e DESTACAR a instância da série. Sem isso o gerador recria a
+    // ocorrência na data antiga e o usuário vê a tarefa "voltar".
+    if (args.scheduled_date !== undefined) {
+      const { parentId, date: oldDate } = await readRecurrenceRef(ctx.auth, userId, args.id);
+      if (parentId && oldDate && oldDate !== args.scheduled_date) {
+        await recordRecurrenceException(ctx.auth, userId, parentId, oldDate);
+        // Instância movida vira tarefa avulsa — instância nunca carrega a regra,
+        // que vive só na semente (mesma razão do stripKeys da UI).
+        patch.recurrence_parent_id = null;
+        patch.recurrence = "none";
+        patch.original_date = args.scheduled_date;
+        patch.recurrence_interval = null;
+        patch.recurrence_weekdays = null;
+        patch.recurrence_week_interval = null;
+        patch.recurrence_monthly_pattern = null;
+      }
+    }
+
     const { data, error } = await db(ctx.auth)
       .from("tasks")
       .update(patch as never)
@@ -523,17 +592,27 @@ export const updateTask = defineTool({
 
 export const deleteTask = defineTool({
   name: "delete_task",
-  description: "Exclui uma tarefa do usuário (criador ou responsável).",
+  description:
+    "Exclui uma tarefa do usuário (criador ou responsável). Se for uma INSTÂNCIA de série recorrente, registra a exceção da data antes de apagar — assim a ocorrência não é recriada pelo gerador. Apagar a SEMENTE (a tarefa que carrega a regra) encerra a série: as instâncias futuras órfãs são varridas pela limpeza do ensureRecurring.",
   parameters: z.object({ id: z.string() }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+
+    // ── Recorrência: registrar a exceção ANTES de apagar, igual à UI
+    // (`deleteTaskWithScope`, escopo "this"). Sem a exceção, `ensureRecurring()`
+    // recria a ocorrência no próximo carregamento do app.
+    const { parentId, date } = await readRecurrenceRef(ctx.auth, userId, args.id);
+    if (parentId && date) {
+      await recordRecurrenceException(ctx.auth, userId, parentId, date);
+    }
+
     const { error } = await db(ctx.auth)
       .from("tasks")
       .delete()
       .eq("id", args.id)
       .or(`user_id.eq.${userId},assignee_id.eq.${userId}`);
     if (error) throw new Error(error.message);
-    return JSON.stringify({ ok: true });
+    return JSON.stringify({ ok: true, recurrence_exception: parentId ? { parent_task_id: parentId, date } : null });
   },
 });
 
