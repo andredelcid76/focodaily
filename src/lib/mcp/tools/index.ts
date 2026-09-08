@@ -146,7 +146,7 @@ export const listTasks = defineTool({
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const selectCols =
-      "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+      "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,role:roles(id,name,color),project:projects(id,name,color,user_id)";
     let q = db(ctx.auth)
       .from("tasks")
       .select(selectCols)
