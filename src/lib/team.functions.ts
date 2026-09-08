@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CollaborationNoticeEmail } from "@/lib/email-templates/collaboration-notice";
+import { getOrCreateUnsubscribeToken } from "@/lib/email/unsubscribeToken.server";
 
 const SITE_NAME = "Focou";
 const FROM_DOMAIN = "anpla.com.br";
@@ -40,6 +41,18 @@ async function enqueueCollaborationEmail(input: {
       status: "pending",
     });
 
+    const unsubscribeToken = await getOrCreateUnsubscribeToken(input.to);
+    if (!unsubscribeToken) {
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: input.label,
+        recipient_email: input.to,
+        status: "failed",
+        error_message: "Failed to prepare unsubscribe token",
+      });
+      return;
+    }
+
     const { error } = await supabaseAdmin.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
@@ -53,6 +66,7 @@ async function enqueueCollaborationEmail(input: {
         purpose: "transactional",
         label: input.label,
         idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     });
