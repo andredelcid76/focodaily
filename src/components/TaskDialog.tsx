@@ -45,6 +45,8 @@ type Props = {
       duration_minutes: number;
       scheduled_date: string | null;
       status?: "todo" | "doing" | "in_progress" | "blocked" | "done";
+      completed?: boolean;
+      completed_at?: string | null;
       blocked_reason?: string | null;
       recurrence?: TaskRecurrence;
       role_id: string | null;
