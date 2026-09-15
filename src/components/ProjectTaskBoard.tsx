@@ -32,13 +32,20 @@ type Member = {
 const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "A fazer",
   doing: "Em andamento",
+  in_progress: "Em andamento",
+  blocked: "Bloqueada",
   done: "Concluída",
 };
 const STATUS_COLOR: Record<TaskStatus, string> = {
   todo: "bg-muted text-muted-foreground border-border",
   doing: "bg-primary/10 text-primary border-primary/30",
+  in_progress: "bg-primary/10 text-primary border-primary/30",
+  blocked: "bg-overdue/10 text-overdue border-overdue/30",
   done: "bg-primary/15 text-primary border-primary/30",
 };
+
+/** Backlog tasks have no date: never overdue, always sort last. */
+const sd = (d: string | null | undefined) => d ?? "9999-12-31";
 
 function nameOf(m?: Member | null) {
   if (!m) return "Sem responsável";
@@ -363,9 +370,9 @@ function TableView({
     const buckets = { overdue: [] as Task[], today: [] as Task[], week: [] as Task[], later: [] as Task[], done: [] as Task[] };
     for (const t of visibleTasks) {
       if (t.completed) buckets.done.push(t);
-      else if (t.scheduled_date < today) buckets.overdue.push(t);
+      else if (sd(t.scheduled_date) < today) buckets.overdue.push(t);
       else if (t.scheduled_date === today) buckets.today.push(t);
-      else if (t.scheduled_date <= in7) buckets.week.push(t);
+      else if (sd(t.scheduled_date) <= in7) buckets.week.push(t);
       else buckets.later.push(t);
     }
     return [
@@ -550,7 +557,7 @@ function TaskRow({
   onToggleComplete: () => void;
 }) {
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   return (
     <div className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
       <Checkbox
@@ -580,7 +587,7 @@ function TaskRow({
       <div className="relative">
         <input
           type="date"
-          value={task.scheduled_date}
+          value={task.scheduled_date ?? ""}
           onChange={(e) => onDate(e.target.value)}
           className={`date-input h-7 w-full rounded border border-border/50 bg-transparent px-1.5 text-xs tabular-nums ${isOverdue ? "text-overdue border-overdue/40" : ""}`}
         />
@@ -638,12 +645,13 @@ function KanbanView({
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
   onToggleComplete: (t: Task) => Promise<void> | void;
 }) {
-  const cols: TaskStatus[] = ["todo", "doing", "done"];
+  const cols: TaskStatus[] = ["todo", "doing", "blocked", "done"];
   const byStatus = useMemo(() => {
-    const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], done: [] };
+    const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], in_progress: [], blocked: [], done: [] };
+      const alias = (s: TaskStatus): TaskStatus => (s === "in_progress" ? "doing" : s);
     for (const t of tasks) {
       const s = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
-      map[s].push(t);
+      map[alias(s)].push(t);
     }
     for (const k of cols) map[k] = sortByDate(map[k]);
     return map;
@@ -696,7 +704,7 @@ function KanbanCard({
   onToggleComplete: () => void;
 }) {
   const today = todayISO();
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   return (
     <div className={`rounded-xl border border-border/60 bg-background/60 p-2.5 shadow-sm hover:border-primary/40 ${task.completed ? "opacity-70" : ""}`}>
       <div className="flex items-start gap-2">
@@ -716,7 +724,7 @@ function KanbanCard({
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
         <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 tabular-nums ${isOverdue ? "border-overdue/40 bg-overdue/10 text-overdue" : "border-border/60 text-muted-foreground"}`}>
           {isOverdue && <AlertCircle className="h-2.5 w-2.5" />}
-          {formatShort(task.scheduled_date)}
+          {task.scheduled_date ? formatShort(task.scheduled_date) : "Sem data"}
         </span>
         {role && <RoleBadge role={role} size="xs" />}
       </div>
@@ -843,8 +851,8 @@ function TimelineView({
 
   const today = todayISO();
   // Pad range a bit so today line + future drag space are visible
-  const rawMin = sorted[0].scheduled_date;
-  const rawMax = sorted[sorted.length - 1].scheduled_date;
+  const rawMin = sorted[0].scheduled_date ?? today;
+  const rawMax = sorted[sorted.length - 1].scheduled_date ?? today;
   const minDate = addDays(rawMin < today ? rawMin : today, -3);
   const maxDate = addDays(rawMax > today ? rawMax : today, 14);
   const totalDays = diffDays(minDate, maxDate) + 1;
@@ -899,7 +907,7 @@ function TimelineView({
       const startOff = Math.max(0, diffDays(minDate, wCursor));
       const endOff = Math.min(totalDays, diffDays(minDate, next));
       const inWeek = sorted.filter(
-        (t) => t.scheduled_date >= wCursor && t.scheduled_date < next,
+        (t) => sd(t.scheduled_date) >= wCursor && sd(t.scheduled_date) < next,
       );
       const done = inWeek.filter((t) => t.completed).length;
       weeks.push({
@@ -1176,12 +1184,12 @@ function TimelineRow({
   onEdit: () => void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
 }) {
-  const baseLeft = diffDays(minDate, task.scheduled_date) * pxPerDay;
+  const baseLeft = diffDays(minDate, sd(task.scheduled_date)) * pxPerDay;
   const [dragOffset, setDragOffset] = useState(0);
   const draggingRef = useRef(false);
 
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   const color = task.completed
     ? "bg-primary/70 border-primary/100"
     : isOverdue
@@ -1214,7 +1222,7 @@ function TimelineRow({
       // Reset dragging after click handler check
       setTimeout(() => { draggingRef.current = false; }, 0);
       if (days !== 0) {
-        const newDate = addDays(task.scheduled_date, days);
+        const newDate = addDays(sd(task.scheduled_date), days);
         try {
           await onUpdate(task.id, { scheduled_date: newDate } as any);
           toast.success(`Movida para ${fmtDay(newDate)}`);
@@ -1244,7 +1252,7 @@ function TimelineRow({
         role="button"
         onMouseDown={onMouseDown}
         onClick={onClick}
-        title={`${task.title} · ${fmtDay(task.scheduled_date)}${dragOffset !== 0 ? ` → ${fmtDay(addDays(task.scheduled_date, Math.round(dragOffset / pxPerDay)))}` : ""}`}
+        title={`${task.title} · ${fmtDay(sd(task.scheduled_date))}${dragOffset !== 0 ? ` → ${fmtDay(addDays(sd(task.scheduled_date), Math.round(dragOffset / pxPerDay)))}` : ""}`}
         className={`group absolute top-1.5 flex h-6 cursor-grab items-center gap-1.5 rounded-md border px-1.5 text-[10px] font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing ${color} ${task.completed ? "opacity-75" : ""}`}
         style={{ left, width: barWidth }}
       >
@@ -1289,7 +1297,7 @@ function Avatar({ name }: { name: string }) {
 
 function sortByDate(arr: Task[]) {
   return [...arr].sort(
-    (a, b) => a.scheduled_date.localeCompare(b.scheduled_date) || a.position - b.position,
+    (a, b) => sd(a.scheduled_date).localeCompare(sd(b.scheduled_date)) || a.position - b.position,
   );
 }
 
