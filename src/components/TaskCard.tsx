@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CategoryIcon } from "./CategoryBadge";
+import { PriorityIcon } from "./PriorityBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
@@ -200,6 +201,7 @@ export function TaskCard({
       <div className="flex-1 min-w-0 text-left">
         <div className="flex items-center gap-1.5 flex-wrap">
             <CategoryIcon category={task.category} className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+            <PriorityIcon priority={(task as any).priority} className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             {(task as any).non_negotiable && !task.completed && (
               <Lock className="h-3 w-3 text-overdue" aria-label="Inegociável hoje" />
             )}
