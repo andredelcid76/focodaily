@@ -51,6 +51,7 @@ type Props = {
       project_id: string | null;
       assignee_id: string | null;
       non_negotiable: boolean;
+      priority?: number;
       recurrence_interval?: number | null;
       recurrence_weekdays?: number[] | null;
       recurrence_week_interval?: number | null;
@@ -92,6 +93,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [projectId, setProjectId] = useState<string | null>(null);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [nonNegotiable, setNonNegotiable] = useState(false);
+  const [priority, setPriority] = useState<PriorityLevel>(3);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekInterval, setWeekInterval] = useState(1);
@@ -169,6 +171,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           : user?.id ?? null;
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
+      setPriority(task ? toPriority((task as any)?.priority) : 3);
       if (!isFreshInit) return;
       setRecurrence(task?.recurrence ?? "none");
       setIntervalDays(task?.recurrence_interval ?? 2);
@@ -308,6 +311,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           assignee_id: assigneeId ?? user?.id ?? null,
           non_negotiable: nonNegotiable,
+          priority,
           ...rulePatch,
         },
         scope
