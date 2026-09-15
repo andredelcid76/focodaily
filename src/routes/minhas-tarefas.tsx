@@ -45,7 +45,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration" | "priority";
+type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "duration" | "priority";
 type SortDir = "asc" | "desc";
 
 
@@ -175,7 +175,6 @@ function MyTasksPage() {
   >("mt.projectStatus", "all", P);
   const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
   const [priorityFilter, setPriorityFilter] = useStickyState<string>("mt.priority", "all", P);
-  const [categoryFilter, setCategoryFilter] = useStickyState<"all" | MyTaskRow["category"]>("mt.category", "all", P);
   const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
   const [dateRange, setDateRange] = useStickyState<
     "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
@@ -241,7 +240,6 @@ function MyTasksPage() {
     return tasks.filter((t) => {
       if (hideDone && t.completed) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
       if (priorityFilter !== "all" && toPriority(t.priority) !== Number(priorityFilter)) return false;
       // Owner-based primary toggle: minhas = own/delegated; outros = shared
       if (ownerFilter === "mine" && t.kind === "shared") return false;
@@ -305,7 +303,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [tasks, search, statusFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -325,8 +323,6 @@ function MyTasksPage() {
             return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~");
           case "status":
             return a.status.localeCompare(b.status);
-          case "category":
-            return a.category.localeCompare(b.category);
           case "duration":
             return a.duration_minutes - b.duration_minutes;
           case "priority":
@@ -562,16 +558,6 @@ function MyTasksPage() {
           </SelectContent>
         </Select>
 
-        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as typeof categoryFilter)}>
-          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            <SelectItem value="urgent">Urgente</SelectItem>
-            <SelectItem value="important">Importante</SelectItem>
-            <SelectItem value="circumstantial">Circunstancial</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
           <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Prioridade" /></SelectTrigger>
           <SelectContent>
@@ -669,14 +655,6 @@ function MyTasksPage() {
                 {roles.map((r) => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={(v) => bulkPatch({ category: v as Task["category"] }, "Categoria")}>
-              <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Categoria…" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="urgent">Urgente</SelectItem>
-                <SelectItem value="important">Importante</SelectItem>
-                <SelectItem value="circumstantial">Circunstancial</SelectItem>
               </SelectContent>
             </Select>
             <Select onValueChange={(v) => bulkPatch({ priority: Number(v) } as any, "Prioridade")}>

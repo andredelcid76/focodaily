@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { TaskFiltersBar, applyTaskFilters, emptyFilters, type TaskFilters } from "@/components/TaskFiltersBar";
 import { AutoOrganizeButton } from "@/components/AutoOrganizeButton";
@@ -1504,32 +1503,7 @@ function QuickAdd({
 
       {expanded && (
         <div className="border-t border-border/40 p-3 space-y-3">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div>
-              <Label className="text-xs">Tríade</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urgent">
-                    <span className="inline-flex items-center gap-2">
-                      <CategoryIcon category="urgent" /> Urgente
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="important">
-                    <span className="inline-flex items-center gap-2">
-                      <CategoryIcon category="important" /> Importante
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="circumstantial">
-                    <span className="inline-flex items-center gap-2">
-                      <CategoryIcon category="circumstantial" /> Circunstancial
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
               <Label className="text-xs">Data</Label>
               <DatePickerField value={date} onChange={setDate} size="sm" />

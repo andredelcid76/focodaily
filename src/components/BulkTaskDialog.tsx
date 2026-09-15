@@ -199,17 +199,6 @@ export function BulkTaskDialog({
               <Input type="number" min={5} step={5} value={duration} onChange={(e) => setDuration(Math.max(5, parseInt(e.target.value || "30", 10)))} />
             </div>
             <div>
-              <Label className="text-xs">Categoria padrão</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urgent">Urgente</SelectItem>
-                  <SelectItem value="important">Importante</SelectItem>
-                  <SelectItem value="circumstantial">Circunstancial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label className="text-xs">Papel</Label>
               <Select value={roleId} onValueChange={setRoleId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
