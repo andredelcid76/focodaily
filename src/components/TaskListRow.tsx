@@ -405,7 +405,7 @@ export function TaskListRow({
   );
 }
 
-export type TaskSortKey = "position" | "title" | "project" | "role" | "priority" | "duration" | "due" | "status";
+export type TaskSortKey = "position" | "title" | "project" | "role" | "assignee" | "priority" | "duration" | "due" | "status";
 export type TaskSortDir = "asc" | "desc";
 
 /** Header row matching TaskListRow's grid template. */
