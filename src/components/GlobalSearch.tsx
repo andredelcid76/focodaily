@@ -11,7 +11,6 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { CategoryIcon } from "@/components/CategoryBadge";
 import { PriorityIcon } from "@/components/PriorityBadge";
 import {
   CalendarDays,

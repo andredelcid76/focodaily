@@ -7,7 +7,6 @@ import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMe
 import { useRoles, type Role } from "@/hooks/useRoles";
 import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
-import { CategoryIcon } from "@/components/CategoryBadge";
 import { PriorityIcon } from "@/components/PriorityBadge";
 import { Lock, Repeat } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";

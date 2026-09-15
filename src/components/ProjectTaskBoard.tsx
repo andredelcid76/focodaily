@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
-import { CategoryIcon } from "./CategoryBadge";
 import { PriorityIcon, PriorityBadge, PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "./PriorityBadge";
 import { TaskCompleteButton } from "./TaskCompleteButton";
 import { formatShort, todayISO, addDays } from "@/lib/date";

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CategoryIcon } from "./CategoryBadge";
 import { PriorityIcon } from "./PriorityBadge";
 import { RoleBadge } from "./RoleBadge";
 import {
