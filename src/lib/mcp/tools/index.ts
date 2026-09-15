@@ -89,6 +89,10 @@ async function assertCanAssign(
 
 const taskStatusEnum = z.enum(["todo", "doing", "in_progress", "blocked", "done"]);
 
+/** Escala de prioridade documentada no schema para clientes MCP. */
+const PRIORITY_DOC =
+  "Prioridade (número inteiro de 1 a 5, quanto MAIOR mais urgente): 5=Crítica, 4=Alta, 3=Média (padrão), 2=Baixa, 1=Muito baixa.";
+
 export const listRoles = defineTool({
   name: "list_roles",
   description: "Lista os papéis do usuário (CEO, Pessoal, etc) com id, nome e cor.",
@@ -111,7 +115,7 @@ export const createRole = defineTool({
   parameters: z.object({
     name: z.string().min(1).max(100),
     color: z.string().optional().describe("Hex tipo #8b5cf6. Padrão violet."),
-    position: z.number().int().optional(),
+    position: z.coerce.number().int().optional(),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
@@ -137,7 +141,7 @@ export const updateRole = defineTool({
     id: z.string(),
     name: z.string().min(1).max(100).optional(),
     color: z.string().optional(),
-    position: z.number().int().optional(),
+    position: z.coerce.number().int().optional(),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
@@ -209,11 +213,11 @@ export const listTasks = defineTool({
       .optional()
       .describe("Resposta enxuta: id, título, data, status, responsável e projeto."),
     priority: z
-      .union([z.number().int().min(1).max(5), z.array(z.number().int().min(1).max(5))])
+      .union([z.coerce.number().int().min(1).max(5), z.array(z.coerce.number().int().min(1).max(5))])
       .optional()
       .describe("Filtra por um ou mais níveis de prioridade (1 a 5)."),
-    limit: z.number().optional().describe("Padrão 100, máximo 500"),
-    offset: z.number().optional().describe("Deslocamento para paginação. Padrão 0."),
+    limit: z.coerce.number().optional().describe("Padrão 100, máximo 500"),
+    offset: z.coerce.number().optional().describe("Deslocamento para paginação. Padrão 0."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
@@ -451,8 +455,8 @@ export const listProjects = defineTool({
       .describe("Filtra por um ou mais status."),
     name: z.string().optional().describe("Filtro por parte do nome (case-insensitive)."),
     compact: z.boolean().optional().describe("Resposta enxuta: id, nome, status, deadline e líder."),
-    limit: z.number().optional().describe("Padrão 200, máximo 500."),
-    offset: z.number().optional().describe("Deslocamento para paginação. Padrão 0."),
+    limit: z.coerce.number().optional().describe("Padrão 200, máximo 500."),
+    offset: z.coerce.number().optional().describe("Deslocamento para paginação. Padrão 0."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
@@ -606,15 +610,29 @@ export const createTask = defineTool({
       .string()
       .optional()
       .describe("Responsável pela tarefa. Precisa ser membro do projeto/equipe. Omitido = tarefa de quem cria."),
-    duration_minutes: z.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
+    duration_minutes: z.coerce.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
-    priority: z.number().int().min(1).max(5).optional().describe("Prioridade 1=Muito baixa, 2=Baixa, 3=Média (padrão), 4=Alta, 5=Crítica."),
+    priority: z.coerce.number().int().min(1).max(5).optional().describe(PRIORITY_DOC),
+    status: taskStatusEnum
+      .optional()
+      .describe("todo (padrão), in_progress, blocked ou done. Com blocked, informe blocked_reason."),
+    blocked_reason: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Motivo curto do bloqueio. Obrigatório quando status = blocked."),
+    backlog_position: z.coerce
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe("Ordem manual dentro do backlog (menor = mais no topo). Só se aplica a tarefas sem data."),
     project_id: z.string().optional(),
     role_id: z.string().optional(),
     recurrence: recurrenceEnum.optional().describe("Padrão: none"),
-    recurrence_interval: z.number().int().positive().optional().describe("Para custom (a cada N dias)"),
-    recurrence_weekdays: z.array(z.number().int().min(0).max(6)).optional().describe("Para weekly: 0=Dom..6=Sáb"),
-    recurrence_week_interval: z.number().int().positive().optional().describe("A cada N semanas (weekly)"),
+    recurrence_interval: z.coerce.number().int().positive().optional().describe("Para custom (a cada N dias)"),
+    recurrence_weekdays: z.array(z.coerce.number().int().min(0).max(6)).optional().describe("Para weekly: 0=Dom..6=Sáb"),
+    recurrence_week_interval: z.coerce.number().int().positive().optional().describe("A cada N semanas (weekly)"),
     recurrence_until: z.string().optional().describe("YYYY-MM-DD final (opcional)"),
   }),
   execute: async (args, ctx) => {
@@ -636,6 +654,20 @@ export const createTask = defineTool({
       role_id: args.role_id ?? null,
       recurrence: args.recurrence ?? "none",
     };
+    if (args.status !== undefined) {
+      insert.status = args.status;
+      insert.completed = args.status === "done";
+      insert.completed_at = args.status === "done" ? new Date().toISOString() : null;
+      if (args.status === "blocked") {
+        if (!args.blocked_reason || !args.blocked_reason.trim()) {
+          throw new Error("Informe blocked_reason (motivo curto) ao criar a tarefa como blocked.");
+        }
+        insert.blocked_reason = args.blocked_reason.trim();
+      }
+    } else if (args.blocked_reason) {
+      insert.blocked_reason = args.blocked_reason.trim();
+    }
+    if (args.backlog_position !== undefined) insert.backlog_position = args.backlog_position;
     if (args.assignee_id) {
       await assertCanAssign(ctx.auth, userId, args.project_id ?? null, userId);
       await assertAssigneeAllowed(ctx.auth, args.assignee_id, args.project_id ?? null, userId);
@@ -711,7 +743,7 @@ export const updateTask = defineTool({
       .nullable()
       .optional()
       .describe("YYYY-MM-DD, ou null para devolver a tarefa ao BACKLOG (sem data)."),
-    duration_minutes: z.number().optional(),
+    duration_minutes: z.coerce.number().optional(),
     assignee_id: z
       .string()
       .nullable()
@@ -724,13 +756,19 @@ export const updateTask = defineTool({
       .optional()
       .describe("Motivo curto do bloqueio. Obrigatório ao mudar status para blocked."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
-    priority: z.number().int().min(1).max(5).optional().describe("Prioridade 1=Muito baixa, 2=Baixa, 3=Média (padrão), 4=Alta, 5=Crítica."),
+    priority: z.coerce.number().int().min(1).max(5).optional().describe(PRIORITY_DOC),
+    backlog_position: z.coerce
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe("Ordem manual dentro do backlog (menor = mais no topo). Só se aplica a tarefas sem data."),
     completed: z.boolean().optional(),
     project_id: z.string().nullable().optional(),
     recurrence: recurrenceEnum.optional(),
-    recurrence_interval: z.number().int().positive().nullable().optional(),
-    recurrence_weekdays: z.array(z.number().int().min(0).max(6)).nullable().optional(),
-    recurrence_week_interval: z.number().int().positive().nullable().optional(),
+    recurrence_interval: z.coerce.number().int().positive().nullable().optional(),
+    recurrence_weekdays: z.array(z.coerce.number().int().min(0).max(6)).nullable().optional(),
+    recurrence_week_interval: z.coerce.number().int().positive().nullable().optional(),
     recurrence_until: z.string().nullable().optional(),
   }),
   execute: async (args, ctx) => {
@@ -742,6 +780,7 @@ export const updateTask = defineTool({
     if (args.duration_minutes !== undefined) patch.duration_minutes = args.duration_minutes;
     if (args.category !== undefined) patch.category = args.category;
     if (args.priority !== undefined) patch.priority = args.priority;
+    if (args.backlog_position !== undefined) patch.backlog_position = args.backlog_position;
     if (args.project_id !== undefined) patch.project_id = args.project_id;
     if (args.recurrence !== undefined) patch.recurrence = args.recurrence;
     if (args.recurrence_interval !== undefined) patch.recurrence_interval = args.recurrence_interval;
@@ -882,7 +921,7 @@ export const addTaskDependency = defineTool({
   parameters: z.object({
     predecessor_id: z.string().describe("Tarefa que precisa terminar primeiro."),
     successor_id: z.string().describe("Tarefa que depende da antecessora."),
-    lag_days: z.number().int().min(0).max(365).optional().describe("Dias de folga entre término da antecessora e início da sucessora. Padrão 0."),
+    lag_days: z.coerce.number().int().min(0).max(365).optional().describe("Dias de folga entre término da antecessora e início da sucessora. Padrão 0."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
@@ -964,7 +1003,7 @@ async function fireflies(userId: string, query: string, variables: Record<string
 export const listFirefliesMeetings = defineTool({
   name: "list_fireflies_meetings",
   description: "Lista as últimas reuniões transcritas do Fireflies (id, título, data, action items).",
-  parameters: z.object({ limit: z.number().optional().describe("Padrão 10") }),
+  parameters: z.object({ limit: z.coerce.number().optional().describe("Padrão 10") }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const limit = args.limit ?? 10;
