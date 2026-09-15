@@ -227,13 +227,13 @@ export type ProjectStats = {
 
 export function computeProjectStats(
   project: Project,
-  tasks: { completed: boolean; duration_minutes: number; time_spent_seconds: number; scheduled_date: string }[],
+  tasks: { completed: boolean; duration_minutes: number; time_spent_seconds: number; scheduled_date: string | null }[],
   todayISO: string
 ): ProjectStats {
   const total = tasks.length;
   const done = tasks.filter((t) => t.completed).length;
   const open = total - done;
-  const overdueTasks = tasks.filter((t) => !t.completed && t.scheduled_date < todayISO).length;
+  const overdueTasks = tasks.filter((t) => !t.completed && !!t.scheduled_date && t.scheduled_date < todayISO).length;
   const estimatedMinutes = tasks
     .filter((t) => !t.completed)
     .reduce((s, t) => s + (t.duration_minutes ?? 0), 0);
