@@ -780,6 +780,7 @@ export const updateTask = defineTool({
     if (args.duration_minutes !== undefined) patch.duration_minutes = args.duration_minutes;
     if (args.category !== undefined) patch.category = args.category;
     if (args.priority !== undefined) patch.priority = args.priority;
+    if (args.backlog_position !== undefined) patch.backlog_position = args.backlog_position;
     if (args.project_id !== undefined) patch.project_id = args.project_id;
     if (args.recurrence !== undefined) patch.recurrence = args.recurrence;
     if (args.recurrence_interval !== undefined) patch.recurrence_interval = args.recurrence_interval;
