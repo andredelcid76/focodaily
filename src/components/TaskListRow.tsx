@@ -27,11 +27,15 @@ import { DEFAULT_COLUMNS } from "@/hooks/useTaskColumns";
 const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "A fazer",
   doing: "Em andamento",
+  in_progress: "Em andamento",
+  blocked: "Bloqueada",
   done: "Concluída",
 };
 const STATUS_COLOR: Record<TaskStatus, string> = {
   todo: "border-border/60 bg-muted/30 text-muted-foreground",
   doing: "border-primary/40 bg-primary/10 text-primary",
+  in_progress: "border-primary/40 bg-primary/10 text-primary",
+  blocked: "border-overdue/40 bg-overdue/10 text-overdue",
   done: "border-primary/40 bg-primary/15 text-primary",
 };
 
@@ -309,10 +313,10 @@ export function TaskListRow({
                       ? "border-overdue/40 bg-overdue/10 text-overdue"
                       : "border-border/60 bg-muted/30 text-muted-foreground"
                   }`}
-                  title={task.scheduled_date}
+                  title={task.scheduled_date ?? "Sem data"}
                 >
                   {isOverdue && !task.completed && <AlertCircle className="h-3 w-3" />}
-                  {formatShort(task.scheduled_date)}
+                  {task.scheduled_date ? formatShort(task.scheduled_date) : "Sem data"}
                 </span>
               </div>
             );

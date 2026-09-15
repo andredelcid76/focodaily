@@ -19,7 +19,7 @@ export function ActiveTaskBanner() {
   const [task, setTask] = useState<{
     id: string;
     title: string;
-    scheduled_date: string;
+    scheduled_date: string | null;
     time_spent_seconds: number;
   } | null>(null);
 

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2, Circle, Clock, Table as TableIcon, KanbanSquare, GanttChart,
   Plus, Lock, AlertCircle, Layers, Pencil, Trash2, X,
-  ArrowUp, ArrowDown, ArrowUpDown, Filter as FilterIcon,
+  ArrowUp, ArrowDown, ArrowUpDown, Filter as FilterIcon, Inbox, GripVertical, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,13 +32,20 @@ type Member = {
 const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "A fazer",
   doing: "Em andamento",
+  in_progress: "Em andamento",
+  blocked: "Bloqueada",
   done: "Concluída",
 };
 const STATUS_COLOR: Record<TaskStatus, string> = {
   todo: "bg-muted text-muted-foreground border-border",
   doing: "bg-primary/10 text-primary border-primary/30",
+  in_progress: "bg-primary/10 text-primary border-primary/30",
+  blocked: "bg-overdue/10 text-overdue border-overdue/30",
   done: "bg-primary/15 text-primary border-primary/30",
 };
+
+/** Backlog tasks have no date: never overdue, always sort last. */
+const sd = (d: string | null | undefined) => d ?? "9999-12-31";
 
 function nameOf(m?: Member | null) {
   if (!m) return "Sem responsável";
@@ -99,11 +106,26 @@ export function ProjectTaskBoard({
   const memberById = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return tasks;
     return tasks.filter((t) => t.title.toLowerCase().includes(q));
   }, [tasks, search]);
+
+  // Backlog = sem data. Nunca entra nas visões por data (tabela/kanban/cronograma);
+  // vive numa lista própria com ordenação manual.
+  const filtered = useMemo(() => searched.filter((t) => !!t.scheduled_date), [searched]);
+  const backlog = useMemo(
+    () =>
+      searched
+        .filter((t) => !t.scheduled_date)
+        .sort(
+          (a, b) =>
+            ((a as any).backlog_position ?? 0) - ((b as any).backlog_position ?? 0) ||
+            a.title.localeCompare(b.title, "pt-BR"),
+        ),
+    [searched],
+  );
 
   return (
     <div className="space-y-3">
@@ -141,7 +163,7 @@ export function ProjectTaskBoard({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && backlog.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
           <p className="text-sm text-muted-foreground">Nenhuma subtarefa.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={onAdd}>
@@ -183,6 +205,110 @@ export function ProjectTaskBoard({
           onUpdate={onUpdate}
         />
       )}
+
+      <BacklogList
+        tasks={backlog}
+        members={members}
+        memberById={memberById}
+        onEdit={onEdit}
+        onUpdate={onUpdate}
+      />
+    </div>
+  );
+}
+
+/* ============================================================
+   Backlog (tarefas sem data) — ordenação manual por arrastar
+============================================================ */
+function BacklogList({
+  tasks, members, memberById, onEdit, onUpdate,
+}: {
+  tasks: Task[];
+  members: Member[];
+  memberById: Map<string, Member>;
+  onEdit: (t: Task) => void;
+  onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
+}) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  if (tasks.length === 0) return null;
+
+  const reorder = async (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    const ids = tasks.map((t) => t.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    await Promise.all(ids.map((id, i) => onUpdate(id, { backlog_position: i } as any)));
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/30 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <Inbox className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Backlog</h3>
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+          {tasks.length}
+        </span>
+        <span className="ml-auto text-[11px] text-muted-foreground">
+          Sem data. Arraste para ordenar; o responsável escolhe o dia.
+        </span>
+      </div>
+      <div className="space-y-1">
+        {tasks.map((t) => {
+          const assignee = t.assignee_id ? memberById.get(t.assignee_id) : undefined;
+          return (
+            <div
+              key={t.id}
+              draggable
+              onDragStart={() => setDragId(t.id)}
+              onDragEnd={() => { setDragId(null); setOverId(null); }}
+              onDragOver={(e) => { e.preventDefault(); setOverId(t.id); }}
+              onDrop={(e) => { e.preventDefault(); reorder(t.id); setDragId(null); setOverId(null); }}
+              className={`flex items-center gap-2 rounded-lg border bg-background/60 px-2 py-1.5 ${
+                overId === t.id && dragId !== t.id ? "border-primary/60" : "border-border/50"
+              } ${dragId === t.id ? "opacity-50" : ""}`}
+            >
+              <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
+              <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+              <button onClick={() => onEdit(t)} className="min-w-0 flex-1 truncate text-left text-sm">
+                {t.title}
+              </button>
+              {(t as any).blocked_reason && (
+                <span className="hidden shrink-0 rounded border border-overdue/40 bg-overdue/10 px-1.5 py-0.5 text-[10px] text-overdue sm:inline">
+                  Bloqueada: {(t as any).blocked_reason}
+                </span>
+              )}
+              <span className="hidden w-32 shrink-0 truncate text-[11px] text-muted-foreground sm:block">
+                {assignee ? assignee.display_name ?? assignee.email : "Sem responsável"}
+              </span>
+              <Select
+                value={t.assignee_id ?? ""}
+                onValueChange={(v) => onUpdate(t.id, { assignee_id: v || null } as any)}
+              >
+                <SelectTrigger className="h-7 w-8 shrink-0 justify-center px-0 text-xs [&>svg:last-child]:hidden">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.display_name ?? m.email}{m.is_me ? " (você)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                type="date"
+                value=""
+                onChange={(e) => e.target.value && onUpdate(t.id, { scheduled_date: e.target.value } as any)}
+                title="Agendar para um dia"
+                className="date-input h-7 w-[8.5rem] shrink-0 rounded border border-border/50 bg-transparent px-1.5 text-xs tabular-nums"
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -363,9 +489,9 @@ function TableView({
     const buckets = { overdue: [] as Task[], today: [] as Task[], week: [] as Task[], later: [] as Task[], done: [] as Task[] };
     for (const t of visibleTasks) {
       if (t.completed) buckets.done.push(t);
-      else if (t.scheduled_date < today) buckets.overdue.push(t);
+      else if (sd(t.scheduled_date) < today) buckets.overdue.push(t);
       else if (t.scheduled_date === today) buckets.today.push(t);
-      else if (t.scheduled_date <= in7) buckets.week.push(t);
+      else if (sd(t.scheduled_date) <= in7) buckets.week.push(t);
       else buckets.later.push(t);
     }
     return [
@@ -550,7 +676,7 @@ function TaskRow({
   onToggleComplete: () => void;
 }) {
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   return (
     <div className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
       <Checkbox
@@ -580,7 +706,7 @@ function TaskRow({
       <div className="relative">
         <input
           type="date"
-          value={task.scheduled_date}
+          value={task.scheduled_date ?? ""}
           onChange={(e) => onDate(e.target.value)}
           className={`date-input h-7 w-full rounded border border-border/50 bg-transparent px-1.5 text-xs tabular-nums ${isOverdue ? "text-overdue border-overdue/40" : ""}`}
         />
@@ -638,12 +764,13 @@ function KanbanView({
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
   onToggleComplete: (t: Task) => Promise<void> | void;
 }) {
-  const cols: TaskStatus[] = ["todo", "doing", "done"];
+  const cols: TaskStatus[] = ["todo", "doing", "blocked", "done"];
   const byStatus = useMemo(() => {
-    const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], done: [] };
+    const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], in_progress: [], blocked: [], done: [] };
+      const alias = (s: TaskStatus): TaskStatus => (s === "in_progress" ? "doing" : s);
     for (const t of tasks) {
       const s = (t.status ?? (t.completed ? "done" : "todo")) as TaskStatus;
-      map[s].push(t);
+      map[alias(s)].push(t);
     }
     for (const k of cols) map[k] = sortByDate(map[k]);
     return map;
@@ -696,7 +823,7 @@ function KanbanCard({
   onToggleComplete: () => void;
 }) {
   const today = todayISO();
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   return (
     <div className={`rounded-xl border border-border/60 bg-background/60 p-2.5 shadow-sm hover:border-primary/40 ${task.completed ? "opacity-70" : ""}`}>
       <div className="flex items-start gap-2">
@@ -716,7 +843,7 @@ function KanbanCard({
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
         <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 tabular-nums ${isOverdue ? "border-overdue/40 bg-overdue/10 text-overdue" : "border-border/60 text-muted-foreground"}`}>
           {isOverdue && <AlertCircle className="h-2.5 w-2.5" />}
-          {formatShort(task.scheduled_date)}
+          {task.scheduled_date ? formatShort(task.scheduled_date) : "Sem data"}
         </span>
         {role && <RoleBadge role={role} size="xs" />}
       </div>
@@ -843,8 +970,8 @@ function TimelineView({
 
   const today = todayISO();
   // Pad range a bit so today line + future drag space are visible
-  const rawMin = sorted[0].scheduled_date;
-  const rawMax = sorted[sorted.length - 1].scheduled_date;
+  const rawMin = sorted[0].scheduled_date ?? today;
+  const rawMax = sorted[sorted.length - 1].scheduled_date ?? today;
   const minDate = addDays(rawMin < today ? rawMin : today, -3);
   const maxDate = addDays(rawMax > today ? rawMax : today, 14);
   const totalDays = diffDays(minDate, maxDate) + 1;
@@ -899,7 +1026,7 @@ function TimelineView({
       const startOff = Math.max(0, diffDays(minDate, wCursor));
       const endOff = Math.min(totalDays, diffDays(minDate, next));
       const inWeek = sorted.filter(
-        (t) => t.scheduled_date >= wCursor && t.scheduled_date < next,
+        (t) => sd(t.scheduled_date) >= wCursor && sd(t.scheduled_date) < next,
       );
       const done = inWeek.filter((t) => t.completed).length;
       weeks.push({
@@ -1176,12 +1303,12 @@ function TimelineRow({
   onEdit: () => void;
   onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
 }) {
-  const baseLeft = diffDays(minDate, task.scheduled_date) * pxPerDay;
+  const baseLeft = diffDays(minDate, sd(task.scheduled_date)) * pxPerDay;
   const [dragOffset, setDragOffset] = useState(0);
   const draggingRef = useRef(false);
 
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
-  const isOverdue = !task.completed && task.scheduled_date < today;
+  const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   const color = task.completed
     ? "bg-primary/70 border-primary/100"
     : isOverdue
@@ -1214,7 +1341,7 @@ function TimelineRow({
       // Reset dragging after click handler check
       setTimeout(() => { draggingRef.current = false; }, 0);
       if (days !== 0) {
-        const newDate = addDays(task.scheduled_date, days);
+        const newDate = addDays(sd(task.scheduled_date), days);
         try {
           await onUpdate(task.id, { scheduled_date: newDate } as any);
           toast.success(`Movida para ${fmtDay(newDate)}`);
@@ -1244,7 +1371,7 @@ function TimelineRow({
         role="button"
         onMouseDown={onMouseDown}
         onClick={onClick}
-        title={`${task.title} · ${fmtDay(task.scheduled_date)}${dragOffset !== 0 ? ` → ${fmtDay(addDays(task.scheduled_date, Math.round(dragOffset / pxPerDay)))}` : ""}`}
+        title={`${task.title} · ${fmtDay(sd(task.scheduled_date))}${dragOffset !== 0 ? ` → ${fmtDay(addDays(sd(task.scheduled_date), Math.round(dragOffset / pxPerDay)))}` : ""}`}
         className={`group absolute top-1.5 flex h-6 cursor-grab items-center gap-1.5 rounded-md border px-1.5 text-[10px] font-medium text-primary-foreground shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing ${color} ${task.completed ? "opacity-75" : ""}`}
         style={{ left, width: barWidth }}
       >
@@ -1289,7 +1416,7 @@ function Avatar({ name }: { name: string }) {
 
 function sortByDate(arr: Task[]) {
   return [...arr].sort(
-    (a, b) => a.scheduled_date.localeCompare(b.scheduled_date) || a.position - b.position,
+    (a, b) => sd(a.scheduled_date).localeCompare(sd(b.scheduled_date)) || a.position - b.position,
   );
 }
 

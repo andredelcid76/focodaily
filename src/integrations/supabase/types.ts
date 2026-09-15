@@ -1184,6 +1184,41 @@ export type Database = {
           },
         ]
       }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_dependencies: {
         Row: {
           created_at: string
@@ -1331,6 +1366,8 @@ export type Database = {
       tasks: {
         Row: {
           assignee_id: string | null
+          backlog_position: number | null
+          blocked_reason: string | null
           category: Database["public"]["Enums"]["task_category"]
           completed: boolean
           completed_at: string | null
@@ -1344,8 +1381,8 @@ export type Database = {
           origin_source: string | null
           origin_source_label: string | null
           origin_source_url: string | null
-          original_date: string
-          planned_date: string
+          original_date: string | null
+          planned_date: string | null
           planner_etag: string | null
           planner_task_id: string | null
           position: number
@@ -1359,7 +1396,7 @@ export type Database = {
           recurrence_week_interval: number | null
           recurrence_weekdays: number[] | null
           role_id: string | null
-          scheduled_date: string
+          scheduled_date: string | null
           status: Database["public"]["Enums"]["task_status"]
           time_spent_seconds: number
           title: string
@@ -1368,6 +1405,8 @@ export type Database = {
         }
         Insert: {
           assignee_id?: string | null
+          backlog_position?: number | null
+          blocked_reason?: string | null
           category?: Database["public"]["Enums"]["task_category"]
           completed?: boolean
           completed_at?: string | null
@@ -1381,8 +1420,8 @@ export type Database = {
           origin_source?: string | null
           origin_source_label?: string | null
           origin_source_url?: string | null
-          original_date?: string
-          planned_date?: string
+          original_date?: string | null
+          planned_date?: string | null
           planner_etag?: string | null
           planner_task_id?: string | null
           position?: number
@@ -1396,7 +1435,7 @@ export type Database = {
           recurrence_week_interval?: number | null
           recurrence_weekdays?: number[] | null
           role_id?: string | null
-          scheduled_date?: string
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           time_spent_seconds?: number
           title: string
@@ -1405,6 +1444,8 @@ export type Database = {
         }
         Update: {
           assignee_id?: string | null
+          backlog_position?: number | null
+          blocked_reason?: string | null
           category?: Database["public"]["Enums"]["task_category"]
           completed?: boolean
           completed_at?: string | null
@@ -1418,8 +1459,8 @@ export type Database = {
           origin_source?: string | null
           origin_source_label?: string | null
           origin_source_url?: string | null
-          original_date?: string
-          planned_date?: string
+          original_date?: string | null
+          planned_date?: string | null
           planner_etag?: string | null
           planner_task_id?: string | null
           position?: number
@@ -1433,7 +1474,7 @@ export type Database = {
           recurrence_week_interval?: number | null
           recurrence_weekdays?: number[] | null
           role_id?: string | null
-          scheduled_date?: string
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           time_spent_seconds?: number
           title?: string
@@ -1643,6 +1684,10 @@ export type Database = {
       accept_contact_invite: { Args: { _token: string }; Returns: string }
       accept_project_invite: { Args: { _token: string }; Returns: string }
       accept_team_invite: { Args: { _token: string }; Returns: string }
+      can_access_task: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_edit_project: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -1720,7 +1765,7 @@ export type Database = {
         | "custom"
         | "weekdays"
         | "yearly"
-      task_status: "todo" | "doing" | "done"
+      task_status: "todo" | "doing" | "done" | "in_progress" | "blocked"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1866,7 +1911,7 @@ export const Constants = {
         "weekdays",
         "yearly",
       ],
-      task_status: ["todo", "doing", "done"],
+      task_status: ["todo", "doing", "done", "in_progress", "blocked"],
     },
   },
 } as const

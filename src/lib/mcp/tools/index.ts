@@ -40,6 +40,55 @@ async function assertRoleOwnership(auth: unknown, roleId: string, userId: string
   if (!data) throw new Error("Papel inexistente ou sem acesso.");
 }
 
+/** Garante que assignee_id pode receber a tarefa (dono, membro do projeto ou membro da equipe do projeto). */
+async function assertAssigneeAllowed(
+  auth: unknown,
+  assigneeId: string,
+  projectId: string | null | undefined,
+  taskOwnerId: string,
+): Promise<void> {
+  if (assigneeId === taskOwnerId) return;
+  if (!projectId) {
+    throw new Error(
+      "Para delegar, a tarefa precisa estar em um projeto compartilhado — ou atribua ao próprio dono da tarefa.",
+    );
+  }
+  const client = db(auth);
+  const [memberRes, ownerRes] = await Promise.all([
+    client.rpc("is_project_member", { _project_id: projectId, _user_id: assigneeId }),
+    client.rpc("is_project_owner", { _project_id: projectId, _user_id: assigneeId }),
+  ]);
+  if (!memberRes.data && !ownerRes.data) {
+    throw new Error("assignee_id não é membro do projeto nem da equipe do projeto.");
+  }
+}
+
+/** Respeita members_can_reassign: se false, só dono da tarefa/projeto (ou gestor) atribui. */
+async function assertCanAssign(
+  auth: unknown,
+  userId: string,
+  projectId: string | null | undefined,
+  taskOwnerId: string,
+): Promise<void> {
+  if (userId === taskOwnerId) return;
+  if (!projectId) throw new Error("Somente o dono da tarefa pode alterar o responsável.");
+  const client = db(auth);
+  const { data: project } = await client
+    .from("projects")
+    .select("user_id,members_can_reassign")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Projeto não encontrado.");
+  if (project.user_id === userId) return;
+  const admin = await client.rpc("is_project_admin", { _project_id: projectId, _user_id: userId });
+  if (admin.data) return;
+  if (!project.members_can_reassign) {
+    throw new Error("Este projeto só permite que o dono/gestor atribua ou reatribua tarefas.");
+  }
+}
+
+const taskStatusEnum = z.enum(["todo", "doing", "in_progress", "blocked", "done"]);
+
 export const listRoles = defineTool({
   name: "list_roles",
   description: "Lista os papéis do usuário (CEO, Pessoal, etc) com id, nome e cor.",
@@ -141,17 +190,38 @@ export const listTasks = defineTool({
       .boolean()
       .optional()
       .describe("Se true, retorna só tarefas criadas pelo usuário (user_id)."),
+    assignee_id: z.string().optional().describe("Filtra por responsável específico."),
+    delegated_by_me: z
+      .boolean()
+      .optional()
+      .describe("Se true, só tarefas criadas por mim cuja responsabilidade é de outra pessoa."),
+    status: z
+      .union([taskStatusEnum, z.array(taskStatusEnum)])
+      .optional()
+      .describe("Filtra por um ou mais status."),
+    backlog_only: z.boolean().optional().describe("Se true, só tarefas SEM data (backlog)."),
+    include_backlog: z
+      .boolean()
+      .optional()
+      .describe("Se true, inclui tarefas sem data mesmo com filtros de data."),
+    compact: z
+      .boolean()
+      .optional()
+      .describe("Resposta enxuta: id, título, data, status, responsável e projeto."),
     limit: z.number().optional().describe("Padrão 100, máximo 500"),
+    offset: z.number().optional().describe("Deslocamento para paginação. Padrão 0."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const selectCols =
-      "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+    const limit = Math.min(args.limit ?? 100, 500);
+    const offset = Math.max(args.offset ?? 0, 0);
     let q = db(ctx.auth)
       .from("tasks")
-      .select(selectCols)
-      .order("scheduled_date", { ascending: true })
-      .limit(Math.min(args.limit ?? 100, 500));
+      .select(selectCols, { count: "exact" })
+      .order("scheduled_date", { ascending: true, nullsFirst: false })
+      .range(offset, offset + limit - 1);
     if (args.assigned_to_me) {
       q = q.eq("assignee_id", userId);
     } else if (args.created_by_me) {
@@ -165,11 +235,29 @@ export const listTasks = defineTool({
       // browsing should pass project_id explicitly.
       q = q.or(`user_id.eq.${userId},assignee_id.eq.${userId}`);
     }
-    if (args.from_date) q = q.gte("scheduled_date", args.from_date);
-    if (args.to_date) q = q.lte("scheduled_date", args.to_date);
+    if (args.backlog_only) {
+      q = q.is("scheduled_date", null);
+    } else if (args.include_backlog && (args.from_date || args.to_date)) {
+      const range = [
+        args.from_date ? `scheduled_date.gte.${args.from_date}` : null,
+        args.to_date ? `scheduled_date.lte.${args.to_date}` : null,
+      ].filter(Boolean) as string[];
+      q = q.or(`scheduled_date.is.null,and(${range.join(",")})`);
+    } else {
+      if (args.from_date) q = q.gte("scheduled_date", args.from_date);
+      if (args.to_date) q = q.lte("scheduled_date", args.to_date);
+    }
     if (args.only_open) q = q.eq("completed", false);
     if (args.project_id) q = q.eq("project_id", args.project_id);
-    const { data, error } = await q;
+    if (args.assignee_id) q = q.eq("assignee_id", args.assignee_id);
+    if (args.delegated_by_me) {
+      q = q.eq("user_id", userId).not("assignee_id", "is", null).neq("assignee_id", userId);
+    }
+    if (args.status) {
+      const statuses = Array.isArray(args.status) ? args.status : [args.status];
+      q = q.in("status", statuses);
+    }
+    const { data, error, count } = await q;
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     // Enrich assignee/creator/project-owner with display_name via a batched
@@ -188,16 +276,51 @@ export const listTasks = defineTool({
         .in("user_id", Array.from(userIds));
       profileMap = new Map((profs ?? []).map((p) => [p.user_id as string, { display_name: p.display_name, email: p.email }]));
     }
+    // Contagem de comentários por tarefa (PostgREST não agrupa: contamos aqui).
+    const taskIds = (rows as Array<{ id?: string }>).map((r) => r.id).filter(Boolean) as string[];
+    const commentCount = new Map<string, number>();
+    if (taskIds.length > 0) {
+      const { data: commentRows } = await db(ctx.auth)
+        .from("task_comments")
+        .select("task_id")
+        .in("task_id", taskIds);
+      for (const c of commentRows ?? []) {
+        const key = c.task_id as string;
+        commentCount.set(key, (commentCount.get(key) ?? 0) + 1);
+      }
+    }
     const enriched = (rows as Array<Record<string, unknown>>).map((r) => {
-      const rr = r as { user_id?: string | null; assignee_id?: string | null; project?: { user_id?: string | null } | null };
+      const rr = r as {
+        id?: string;
+        user_id?: string | null;
+        assignee_id?: string | null;
+        project?: { id?: string; name?: string; user_id?: string | null } | null;
+      };
+      const assignee = rr.assignee_id ? profileMap.get(rr.assignee_id) ?? null : null;
+      const comments_count = rr.id ? commentCount.get(rr.id) ?? 0 : 0;
+      if (args.compact) {
+        return {
+          id: rr.id,
+          title: r.title,
+          scheduled_date: r.scheduled_date,
+          status: r.status ?? (r.completed ? "done" : "todo"),
+          completed: r.completed,
+          assignee_id: rr.assignee_id ?? null,
+          assignee_name: assignee?.display_name ?? assignee?.email ?? null,
+          project_id: rr.project?.id ?? null,
+          project_name: rr.project?.name ?? null,
+          comments_count,
+        };
+      }
       return {
         ...r,
-        assignee: rr.assignee_id ? profileMap.get(rr.assignee_id) ?? null : null,
+        assignee,
         creator: rr.user_id ? profileMap.get(rr.user_id) ?? null : null,
         project_owner: rr.project?.user_id ? profileMap.get(rr.project.user_id) ?? null : null,
+        comments_count,
       };
     });
-    return JSON.stringify(enriched);
+    return JSON.stringify({ total: count ?? enriched.length, limit, offset, items: enriched });
   },
 });
 
@@ -309,14 +432,49 @@ export const listProjects = defineTool({
   name: "list_projects",
   description:
     "Lista os projetos acessíveis ao usuário (dono, membro ou via equipe), incluindo líder (dono), equipe, papel associado e a lista de participantes com seus papéis.",
-  parameters: z.object({}),
-  execute: async (_args, ctx) => {
+  parameters: z.object({
+    status: z
+      .union([
+        z.enum(["in_progress", "active", "paused", "not_started", "finished"]),
+        z.array(z.enum(["in_progress", "active", "paused", "not_started", "finished"])),
+      ])
+      .optional()
+      .describe("Filtra por um ou mais status."),
+    name: z.string().optional().describe("Filtro por parte do nome (case-insensitive)."),
+    compact: z.boolean().optional().describe("Resposta enxuta: id, nome, status, deadline e líder."),
+    limit: z.number().optional().describe("Padrão 200, máximo 500."),
+    offset: z.number().optional().describe("Deslocamento para paginação. Padrão 0."),
+  }),
+  execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
+    const limit = Math.min(args.limit ?? 200, 500);
+    const offset = Math.max(args.offset ?? 0, 0);
     const ids = await accessibleProjectIds(ctx.auth, userId);
-    if (ids.length === 0) return JSON.stringify([]);
-    const { data, error } = await db(ctx.auth).from("projects").select(PROJECT_SELECT).in("id", ids);
+    if (ids.length === 0) return JSON.stringify({ total: 0, limit, offset, items: [] });
+    let q = db(ctx.auth)
+      .from("projects")
+      .select(PROJECT_SELECT, { count: "exact" })
+      .in("id", ids)
+      .order("name", { ascending: true })
+      .range(offset, offset + limit - 1);
+    if (args.status) {
+      const statuses = Array.isArray(args.status) ? args.status : [args.status];
+      q = q.in("status", statuses);
+    }
+    if (args.name) q = q.ilike("name", `%${args.name}%`);
+    const { data, error, count } = await q;
     if (error) throw new Error(error.message);
-    return JSON.stringify(await decorateProjects(ctx.auth, (data ?? []) as any[]));
+    const decorated = await decorateProjects(ctx.auth, (data ?? []) as any[]);
+    const items = args.compact
+      ? decorated.map((p) => ({
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          deadline: p.deadline,
+          leader: p.leader,
+        }))
+      : decorated;
+    return JSON.stringify({ total: count ?? items.length, limit, offset, items });
   },
 });
 
@@ -430,7 +588,15 @@ export const createTask = defineTool({
   parameters: z.object({
     title: z.string().min(1).max(500),
     description: z.string().optional(),
-    scheduled_date: z.string().describe("YYYY-MM-DD"),
+    scheduled_date: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("YYYY-MM-DD. Omita (ou null) para criar no BACKLOG, sem data marcada."),
+    assignee_id: z
+      .string()
+      .optional()
+      .describe("Responsável pela tarefa. Precisa ser membro do projeto/equipe. Omitido = tarefa de quem cria."),
     duration_minutes: z.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
     project_id: z.string().optional(),
@@ -451,14 +617,19 @@ export const createTask = defineTool({
       user_id: userId,
       title: args.title,
       description: args.description ?? null,
-      scheduled_date: args.scheduled_date,
-      original_date: args.scheduled_date,
+      scheduled_date: args.scheduled_date ?? null,
+      original_date: args.scheduled_date ?? null,
       duration_minutes: args.duration_minutes ?? 30,
       category: args.category ?? "important",
       project_id: args.project_id ?? null,
       role_id: args.role_id ?? null,
       recurrence: args.recurrence ?? "none",
     };
+    if (args.assignee_id) {
+      await assertCanAssign(ctx.auth, userId, args.project_id ?? null, userId);
+      await assertAssigneeAllowed(ctx.auth, args.assignee_id, args.project_id ?? null, userId);
+      insert.assignee_id = args.assignee_id;
+    }
     if (args.recurrence_interval !== undefined) insert.recurrence_interval = args.recurrence_interval;
     if (args.recurrence_weekdays !== undefined) insert.recurrence_weekdays = args.recurrence_weekdays;
     if (args.recurrence_week_interval !== undefined) insert.recurrence_week_interval = args.recurrence_week_interval;
@@ -524,8 +695,23 @@ export const updateTask = defineTool({
     id: z.string(),
     title: z.string().optional(),
     description: z.string().optional(),
-    scheduled_date: z.string().optional(),
+    scheduled_date: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("YYYY-MM-DD, ou null para devolver a tarefa ao BACKLOG (sem data)."),
     duration_minutes: z.number().optional(),
+    assignee_id: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Novo responsável (membro do projeto/equipe) ou null para remover."),
+    status: taskStatusEnum.optional().describe("todo, in_progress, blocked ou done."),
+    blocked_reason: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Motivo curto do bloqueio. Obrigatório ao mudar status para blocked."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
     completed: z.boolean().optional(),
     project_id: z.string().nullable().optional(),
@@ -554,6 +740,36 @@ export const updateTask = defineTool({
       patch.status = args.completed ? "done" : "todo";
       patch.completed_at = args.completed ? new Date().toISOString() : null;
     }
+    if (args.status !== undefined) {
+      patch.status = args.status;
+      patch.completed = args.status === "done";
+      patch.completed_at = args.status === "done" ? new Date().toISOString() : null;
+      if (args.status === "blocked") {
+        if (!args.blocked_reason || !args.blocked_reason.trim()) {
+          throw new Error("Informe blocked_reason (motivo curto) ao marcar a tarefa como blocked.");
+        }
+        patch.blocked_reason = args.blocked_reason.trim();
+      } else {
+        patch.blocked_reason = null;
+      }
+    } else if (args.blocked_reason !== undefined) {
+      patch.blocked_reason = args.blocked_reason;
+    }
+    if (args.assignee_id !== undefined) {
+      const { data: current, error: curErr } = await db(ctx.auth)
+        .from("tasks")
+        .select("user_id,project_id,assignee_id")
+        .eq("id", args.id)
+        .maybeSingle();
+      if (curErr) throw new Error(curErr.message);
+      if (!current) throw new Error("Tarefa não encontrada.");
+      const projectId = args.project_id !== undefined ? args.project_id : (current.project_id as string | null);
+      await assertCanAssign(ctx.auth, userId, projectId, current.user_id as string);
+      if (args.assignee_id) {
+        await assertAssigneeAllowed(ctx.auth, args.assignee_id, projectId, current.user_id as string);
+      }
+      patch.assignee_id = args.assignee_id;
+    }
     // Mover uma tarefa para dentro de um projeto exige acesso a esse projeto
     // (service_role bypassa a RLS). Definir project_id = null é permitido.
     if (args.project_id) await assertProjectAccess(ctx.auth, args.project_id, userId);
@@ -562,7 +778,7 @@ export const updateTask = defineTool({
     // UI (`updateTaskWithScope`, escopo "this"): registrar a exceção na data
     // ANTIGA e DESTACAR a instância da série. Sem isso o gerador recria a
     // ocorrência na data antiga e o usuário vê a tarefa "voltar".
-    if (args.scheduled_date !== undefined) {
+    if (args.scheduled_date) {
       const { parentId, date: oldDate } = await readRecurrenceRef(ctx.auth, userId, args.id);
       if (parentId && oldDate && oldDate !== args.scheduled_date) {
         await recordRecurrenceException(ctx.auth, userId, parentId, oldDate);
@@ -786,6 +1002,69 @@ export const getFirefliesTranscript = defineTool({
   },
 });
 
+export const addTaskComment = defineTool({
+  name: "add_task_comment",
+  description:
+    "Adiciona um comentário a uma tarefa. Permitido para o criador, o responsável, o dono do projeto e os membros do projeto. Notifica os demais envolvidos.",
+  parameters: z.object({
+    task_id: z.string(),
+    text: z.string().min(1).max(5000),
+  }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const client = db(ctx.auth);
+    // service_role bypassa a RLS: checar acesso explicitamente.
+    const access = await client.rpc("can_access_task", { _task_id: args.task_id, _user_id: userId });
+    if (access.error) throw new Error(access.error.message);
+    if (!access.data) throw new Error("Sem acesso a esta tarefa.");
+    const { data, error } = await client
+      .from("task_comments")
+      .insert({ task_id: args.task_id, user_id: userId, content: args.text.trim() } as never)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return JSON.stringify({ ok: true, comment: data });
+  },
+});
+
+export const listTaskComments = defineTool({
+  name: "list_task_comments",
+  description: "Lista os comentários de uma tarefa em ordem cronológica, com autor e data.",
+  parameters: z.object({ task_id: z.string() }),
+  execute: async (args, ctx) => {
+    const userId = getUserId(ctx.auth);
+    const client = db(ctx.auth);
+    const access = await client.rpc("can_access_task", { _task_id: args.task_id, _user_id: userId });
+    if (access.error) throw new Error(access.error.message);
+    if (!access.data) throw new Error("Sem acesso a esta tarefa.");
+    const { data, error } = await client
+      .from("task_comments")
+      .select("id,task_id,user_id,content,created_at,updated_at")
+      .eq("task_id", args.task_id)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    const authorIds = Array.from(new Set(rows.map((r) => r.user_id as string)));
+    let profileMap = new Map<string, { display_name: string | null; email: string | null }>();
+    if (authorIds.length > 0) {
+      const { data: profs } = await client
+        .from("profiles")
+        .select("user_id,display_name,email")
+        .in("user_id", authorIds);
+      profileMap = new Map(
+        (profs ?? []).map((p) => [p.user_id as string, { display_name: p.display_name, email: p.email }]),
+      );
+    }
+    return JSON.stringify(
+      rows.map((r) => ({
+        ...r,
+        author: profileMap.get(r.user_id as string) ?? null,
+        is_mine: r.user_id === userId,
+      })),
+    );
+  },
+});
+
 export const allTools = [
   listTasks,
   listProjects,
@@ -801,6 +1080,8 @@ export const allTools = [
   createTask,
   updateTask,
   deleteTask,
+  addTaskComment,
+  listTaskComments,
   listTaskDependencies,
   addTaskDependency,
   removeTaskDependency,

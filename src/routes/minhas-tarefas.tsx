@@ -319,7 +319,7 @@ function MyTasksPage() {
           case "role":
             return (a.role?.name ?? "~").localeCompare(b.role?.name ?? "~");
           case "scheduled_date":
-            return a.scheduled_date.localeCompare(b.scheduled_date);
+            return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~");
           case "status":
             return a.status.localeCompare(b.status);
           case "category":
@@ -339,7 +339,7 @@ function MyTasksPage() {
     return {
       total: filtered.length,
       open: open.length,
-      overdue: open.filter((t) => t.scheduled_date < today && !isSuspended(t)).length,
+      overdue: open.filter((t) => !!t.scheduled_date && t.scheduled_date < today && !isSuspended(t)).length,
       due: open.filter((t) => t.scheduled_date === today && !isSuspended(t)).length,
       delegated: filtered.filter((t) => t.kind === "delegated").length,
     };
@@ -726,7 +726,7 @@ function MyTasksPage() {
                 <SortableContext items={sorted.map((t) => t.id)}>
                   {sorted.map((t, i) => {
                     const suspended = !t.completed && t.project?.status === "paused";
-                    const overdue = !t.completed && !suspended && t.scheduled_date < today;
+                    const overdue = !t.completed && !suspended && !!t.scheduled_date && t.scheduled_date < today;
                     return (
                       <TaskListRow
                         key={t.id}

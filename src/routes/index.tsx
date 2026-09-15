@@ -192,7 +192,7 @@ function TodayInner({ userId }: { userId: string }) {
     if (isViewingToday) {
       const completedTodayFromFuture = tasksApi.tasks.filter((t) => {
         if (!t.completed || !t.completed_at) return false;
-        if (t.scheduled_date <= today) return false; // already in base or in past
+        if ((t.scheduled_date ?? "") <= today) return false; // already in base or in past
         if (!isMine(t)) return false;
         return t.completed_at.slice(0, 10) === today;
       });
@@ -260,11 +260,11 @@ function TodayInner({ userId }: { userId: string }) {
         case "duration":
           return (a.duration_minutes - b.duration_minutes) * dir;
         case "due":
-          return a.scheduled_date.localeCompare(b.scheduled_date) * dir;
+          return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~") * dir;
         case "position":
           return (a.position - b.position) * dir;
         case "status": {
-          const order = { todo: 0, doing: 1, done: 2 } as const;
+          const order = { todo: 0, doing: 1, in_progress: 1, blocked: 2, done: 3 } as const;
           const as = (a.status ?? (a.completed ? "done" : "todo")) as keyof typeof order;
           const bs = (b.status ?? (b.completed ? "done" : "todo")) as keyof typeof order;
           return (order[as] - order[bs]) * dir;
@@ -431,7 +431,7 @@ function TodayInner({ userId }: { userId: string }) {
       const found = tasksApi.tasks.find((t) => t.id === detail.taskId);
       if (found) {
         // Switch the view date to the task's date for context
-        setViewDate(found.scheduled_date);
+        if (found.scheduled_date) setViewDate(found.scheduled_date);
         openEdit(found);
       }
     };
