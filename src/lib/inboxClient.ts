@@ -89,7 +89,7 @@ export async function acceptSuggestion(input: {
   task: {
     title: string;
     description: string | null;
-    scheduled_date: string;
+    scheduled_date: string | null;
     duration_minutes: number;
     category: "urgent" | "important" | "circumstantial";
     project_id: string | null;
