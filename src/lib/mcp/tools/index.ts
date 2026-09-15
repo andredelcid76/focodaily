@@ -89,6 +89,10 @@ async function assertCanAssign(
 
 const taskStatusEnum = z.enum(["todo", "doing", "in_progress", "blocked", "done"]);
 
+/** Escala de prioridade documentada no schema para clientes MCP. */
+const PRIORITY_DOC =
+  "Prioridade (número inteiro de 1 a 5, quanto MAIOR mais urgente): 5=Crítica, 4=Alta, 3=Média (padrão), 2=Baixa, 1=Muito baixa.";
+
 export const listRoles = defineTool({
   name: "list_roles",
   description: "Lista os papéis do usuário (CEO, Pessoal, etc) com id, nome e cor.",
