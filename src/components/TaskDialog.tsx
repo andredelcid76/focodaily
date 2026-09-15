@@ -615,6 +615,21 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label>Prioridade</Label>
+              <Select value={String(priority)} onValueChange={(v) => setPriority(toPriority(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_LEVELS.map((p) => (
+                    <SelectItem key={p} value={String(p)}>
+                      <span className="inline-flex items-center gap-2">
+                        <PriorityIcon priority={p} /> {PRIORITY_LABEL[p]}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {!delegatedToOther && (
               <div>
                 <Label>Papel</Label>
