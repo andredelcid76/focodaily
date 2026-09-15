@@ -208,13 +208,17 @@ export const listTasks = defineTool({
       .boolean()
       .optional()
       .describe("Resposta enxuta: id, título, data, status, responsável e projeto."),
+    priority: z
+      .union([z.number().int().min(1).max(5), z.array(z.number().int().min(1).max(5))])
+      .optional()
+      .describe("Filtra por um ou mais níveis de prioridade (1 a 5)."),
     limit: z.number().optional().describe("Padrão 100, máximo 500"),
     offset: z.number().optional().describe("Deslocamento para paginação. Padrão 0."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const selectCols =
-      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,priority,role:roles(id,name,color),project:projects(id,name,color,user_id)";
     const limit = Math.min(args.limit ?? 100, 500);
     const offset = Math.max(args.offset ?? 0, 0);
     let q = db(ctx.auth)
@@ -252,6 +256,10 @@ export const listTasks = defineTool({
     if (args.assignee_id) q = q.eq("assignee_id", args.assignee_id);
     if (args.delegated_by_me) {
       q = q.eq("user_id", userId).not("assignee_id", "is", null).neq("assignee_id", userId);
+    }
+    if (args.priority !== undefined) {
+      const prios = Array.isArray(args.priority) ? args.priority : [args.priority];
+      q = q.in("priority", prios);
     }
     if (args.status) {
       const statuses = Array.isArray(args.status) ? args.status : [args.status];
@@ -309,6 +317,7 @@ export const listTasks = defineTool({
           assignee_name: assignee?.display_name ?? assignee?.email ?? null,
           project_id: rr.project?.id ?? null,
           project_name: rr.project?.name ?? null,
+          priority: r.priority ?? 3,
           comments_count,
         };
       }
@@ -457,6 +466,10 @@ export const listProjects = defineTool({
       .in("id", ids)
       .order("name", { ascending: true })
       .range(offset, offset + limit - 1);
+    if (args.priority !== undefined) {
+      const prios = Array.isArray(args.priority) ? args.priority : [args.priority];
+      q = q.in("priority", prios);
+    }
     if (args.status) {
       const statuses = Array.isArray(args.status) ? args.status : [args.status];
       q = q.in("status", statuses);
@@ -599,6 +612,7 @@ export const createTask = defineTool({
       .describe("Responsável pela tarefa. Precisa ser membro do projeto/equipe. Omitido = tarefa de quem cria."),
     duration_minutes: z.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
+    priority: z.number().int().min(1).max(5).optional().describe("Prioridade 1=Muito baixa, 2=Baixa, 3=Média (padrão), 4=Alta, 5=Crítica."),
     project_id: z.string().optional(),
     role_id: z.string().optional(),
     recurrence: recurrenceEnum.optional().describe("Padrão: none"),
@@ -621,6 +635,7 @@ export const createTask = defineTool({
       original_date: args.scheduled_date ?? null,
       duration_minutes: args.duration_minutes ?? 30,
       category: args.category ?? "important",
+      priority: args.priority ?? 3,
       project_id: args.project_id ?? null,
       role_id: args.role_id ?? null,
       recurrence: args.recurrence ?? "none",
@@ -713,6 +728,7 @@ export const updateTask = defineTool({
       .optional()
       .describe("Motivo curto do bloqueio. Obrigatório ao mudar status para blocked."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
+    priority: z.number().int().min(1).max(5).optional().describe("Prioridade 1=Muito baixa, 2=Baixa, 3=Média (padrão), 4=Alta, 5=Crítica."),
     completed: z.boolean().optional(),
     project_id: z.string().nullable().optional(),
     recurrence: recurrenceEnum.optional(),
@@ -729,6 +745,7 @@ export const updateTask = defineTool({
     if (args.scheduled_date !== undefined) patch.scheduled_date = args.scheduled_date;
     if (args.duration_minutes !== undefined) patch.duration_minutes = args.duration_minutes;
     if (args.category !== undefined) patch.category = args.category;
+    if (args.priority !== undefined) patch.priority = args.priority;
     if (args.project_id !== undefined) patch.project_id = args.project_id;
     if (args.recurrence !== undefined) patch.recurrence = args.recurrence;
     if (args.recurrence_interval !== undefined) patch.recurrence_interval = args.recurrence_interval;
