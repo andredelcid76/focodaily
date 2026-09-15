@@ -87,6 +87,9 @@ export function TaskComments({ taskId, userId }: { taskId: string; userId: strin
     }
     setDraft("");
     refresh();
+    import("@/lib/notifications.functions")
+      .then((m) => m.flushNotificationDelivery())
+      .catch(() => {});
   };
 
   const remove = async (id: string) => {
