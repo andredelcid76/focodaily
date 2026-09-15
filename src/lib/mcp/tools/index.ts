@@ -612,7 +612,21 @@ export const createTask = defineTool({
       .describe("Responsável pela tarefa. Precisa ser membro do projeto/equipe. Omitido = tarefa de quem cria."),
     duration_minutes: z.coerce.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
-    priority: z.coerce.number().int().min(1).max(5).optional().describe("Prioridade 1=Muito baixa, 2=Baixa, 3=Média (padrão), 4=Alta, 5=Crítica."),
+    priority: z.coerce.number().int().min(1).max(5).optional().describe(PRIORITY_DOC),
+    status: taskStatusEnum
+      .optional()
+      .describe("todo (padrão), in_progress, blocked ou done. Com blocked, informe blocked_reason."),
+    blocked_reason: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Motivo curto do bloqueio. Obrigatório quando status = blocked."),
+    backlog_position: z.coerce
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe("Ordem manual dentro do backlog (menor = mais no topo). Só se aplica a tarefas sem data."),
     project_id: z.string().optional(),
     role_id: z.string().optional(),
     recurrence: recurrenceEnum.optional().describe("Padrão: none"),
