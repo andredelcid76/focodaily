@@ -216,9 +216,10 @@ function OutlookCard({
               <Mail className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle>Microsoft Outlook</CardTitle>
+              <CardTitle>Microsoft Outlook e Teams</CardTitle>
               <CardDescription>
-                E-mails, calendário e tarefas. Usado para varrer a caixa de entrada e sincronizar a agenda.
+                E-mails, calendário e tarefas. Usado para varrer a caixa de entrada, sincronizar a
+                agenda e enviar aviso no Teams quando você delega uma tarefa.
               </CardDescription>
             </div>
           </div>
@@ -242,6 +243,10 @@ function OutlookCard({
                 </span>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Aviso no Teams: se você conectou antes desta novidade, clique em Desconectar e conecte
+              de novo para autorizar o envio de mensagens.
+            </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => testMut.mutate()} disabled={testMut.isPending}>
                 {testMut.isPending ? "Testando…" : "Testar conexão"}
