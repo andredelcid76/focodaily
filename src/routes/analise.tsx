@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "@/components/PriorityBadge";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks } from "@/hooks/useTasks";
@@ -220,28 +221,24 @@ function AnaliseInner({ userId }: { userId: string }) {
       .slice(0, 8);
   }, [scoped]);
 
-  // Distribuição por categoria
-  const byCategory = useMemo(() => {
-    const map = new Map<string, number>();
+  // Distribuição por prioridade
+  const byPriority = useMemo(() => {
+    const map = new Map<number, number>();
     for (const t of scoped) {
-      map.set(t.category, (map.get(t.category) ?? 0) + 1);
+      const p = toPriority((t as { priority?: number | null }).priority);
+      map.set(p, (map.get(p) ?? 0) + 1);
     }
-    const colors: Record<string, string> = {
-      important: "#6b8afd",
-      circumstantial: "#e8c468",
-      personal: "#60a5fa",
-      delegated: "#a78bfa",
+    const colors: Record<number, string> = {
+      5: "#f87171",
+      4: "#fb923c",
+      3: "#6b8afd",
+      2: "#38bdf8",
+      1: "#94a3b8",
     };
-    const labels: Record<string, string> = {
-      important: "Importantes",
-      circumstantial: "Circunstanciais",
-      personal: "Pessoais",
-      delegated: "Delegadas",
-    };
-    return Array.from(map.entries()).map(([k, v]) => ({
-      name: labels[k] ?? k,
-      value: v,
-      color: colors[k] ?? "#94a3b8",
+    return PRIORITY_LEVELS.filter((p) => map.has(p)).map((p) => ({
+      name: PRIORITY_LABEL[p],
+      value: map.get(p) ?? 0,
+      color: colors[p],
     }));
   }, [scoped]);
 
@@ -315,15 +312,15 @@ function AnaliseInner({ userId }: { userId: string }) {
           </div>
         </Card>
 
-        <Card title="Por categoria" icon={<Layers className="h-4 w-4" />}>
+        <Card title="Por prioridade" icon={<Layers className="h-4 w-4" />}>
           <div className="h-64">
-            {byCategory.length === 0 ? (
+            {byPriority.length === 0 ? (
               <EmptyState />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={byCategory} dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={2}>
-                    {byCategory.map((entry, i) => (
+                  <Pie data={byPriority} dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={2}>
+                    {byPriority.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>

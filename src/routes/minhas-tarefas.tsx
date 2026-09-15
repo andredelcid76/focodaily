@@ -175,7 +175,6 @@ function MyTasksPage() {
   >("mt.projectStatus", "all", P);
   const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
   const [priorityFilter, setPriorityFilter] = useStickyState<string>("mt.priority", "all", P);
-  const [categoryFilter, setCategoryFilter] = useStickyState<"all" | MyTaskRow["category"]>("mt.category", "all", P);
   const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
   const [dateRange, setDateRange] = useStickyState<
     "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
@@ -241,7 +240,6 @@ function MyTasksPage() {
     return tasks.filter((t) => {
       if (hideDone && t.completed) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
       if (priorityFilter !== "all" && toPriority(t.priority) !== Number(priorityFilter)) return false;
       // Owner-based primary toggle: minhas = own/delegated; outros = shared
       if (ownerFilter === "mine" && t.kind === "shared") return false;
@@ -305,7 +303,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [tasks, search, statusFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
