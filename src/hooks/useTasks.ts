@@ -21,7 +21,7 @@ const ensureLocks = new Map<string, Promise<void>>();
 function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
   if (dayISO === parent.original_date) return false;
   if (parent.recurrence_until && dayISO > parent.recurrence_until) return false;
-  const [sy, sm, sd] = parent.original_date.split("-").map(Number);
+  const [sy, sm, sd] = (parent.original_date ?? parent.scheduled_date ?? "").split("-").map(Number);
   const startD = new Date(sy, sm - 1, sd);
   const [ty, tm, td] = dayISO.split("-").map(Number);
   const dayD = new Date(ty, tm - 1, td);
@@ -181,7 +181,7 @@ export function useTasks(userId: string | undefined) {
       const inserts: TablesInsert<"tasks">[] = [];
 
       for (const p of parents) {
-        const [sy, sm, sd] = p.original_date.split("-").map(Number);
+        const [sy, sm, sd] = (p.original_date ?? p.scheduled_date ?? "").split("-").map(Number);
         const startD = new Date(sy, sm - 1, sd);
 
         for (let i = 0; i <= FUTURE_DAYS; i++) {
@@ -456,7 +456,7 @@ export function useTasks(userId: string | undefined) {
         patch.scheduled_date !== undefined &&
         patch.scheduled_date !== task.scheduled_date
       ) {
-        await createRecurrenceException(task.recurrence_parent_id!, task.scheduled_date);
+        await createRecurrenceException(task.recurrence_parent_id!, task.scheduled_date ?? "");
         await updateTask(task.id, buildDetachedRecurringPatch(task, ownPatch));
         return;
       }
@@ -479,7 +479,7 @@ export function useTasks(userId: string | undefined) {
 
 
     const { parent, parentId, instances } = getRecurrenceFamily(task);
-    const baseDate = task.scheduled_date;
+    const baseDate = task.scheduled_date ?? todayISO();
 
     if (Object.keys(seriesPatch).length > 0) {
       const targets: Task[] = [];
@@ -491,13 +491,13 @@ export function useTasks(userId: string | undefined) {
         }
       } else {
         // future: open instances on/after baseDate (not completed) + parent if its original_date >= baseDate
-        if (parent && parent.id !== task.id && parent.original_date >= baseDate && !parent.completed) {
+        if (parent && parent.id !== task.id && (parent.original_date ?? "") >= baseDate && !parent.completed) {
           parentTarget = parent;
         }
         for (const t of instances) {
           if (t.id === task.id) continue;
           if (t.completed) continue;
-          if (t.scheduled_date >= baseDate) targets.push(t);
+          if ((t.scheduled_date ?? "") >= baseDate) targets.push(t);
         }
       }
       if (targets.length > 0 && Object.keys(childPatch).length > 0) {
@@ -541,7 +541,7 @@ export function useTasks(userId: string | undefined) {
           .eq("completed", false);
         const idsToDelete: string[] = [];
         for (const inst of futureInstances ?? []) {
-          if (!instanceMatchesRecurrence(freshParent as Task, inst.scheduled_date)) {
+          if (!instanceMatchesRecurrence(freshParent as Task, inst.scheduled_date ?? "")) {
             idsToDelete.push(inst.id);
           }
         }
@@ -560,12 +560,12 @@ export function useTasks(userId: string | undefined) {
   const deleteTaskWithScope = async (task: Task, scope: "this" | "future" | "all" = "this") => {
     if (scope === "this") {
       if (task.recurrence_parent_id) {
-        await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
+        await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date ?? "");
         await deleteTask(task.id);
         return;
       }
       if (task.recurrence !== "none") {
-        const nextDate = findNextOccurrenceDate(task, task.scheduled_date);
+        const nextDate = findNextOccurrenceDate(task, task.scheduled_date ?? "");
         if (!nextDate) {
           await deleteTask(task.id);
           return;
@@ -595,21 +595,21 @@ export function useTasks(userId: string | undefined) {
       return;
     }
     const { parent, parentId, instances } = getRecurrenceFamily(task);
-    const baseDate = task.scheduled_date;
+    const baseDate = task.scheduled_date ?? todayISO();
     const idsToDelete = new Set<string>([task.id]);
     if (scope === "all") {
       if (parent) idsToDelete.add(parent.id);
       instances.forEach((t) => idsToDelete.add(t.id));
     } else {
       // future
-      if (parent && (parent.id === task.id || (!parent.completed && parent.scheduled_date >= baseDate))) {
+      if (parent && (parent.id === task.id || (!parent.completed && (parent.scheduled_date ?? "") >= baseDate))) {
         // The seed row is itself an occurrence — if it falls on/after the cut date it
         // must go too, otherwise it stays visible after "excluir daqui em diante".
         idsToDelete.add(parent.id);
       }
       for (const t of instances) {
         if (t.completed) continue;
-        if (t.scheduled_date >= baseDate) idsToDelete.add(t.id);
+        if ((t.scheduled_date ?? "") >= baseDate) idsToDelete.add(t.id);
       }
     }
 
@@ -678,7 +678,7 @@ export function useTasks(userId: string | undefined) {
   const moveTaskToDay = async (taskId: string, date: string, position = 0) => {
     const task = tasks.find((t) => t.id === taskId);
     if (task?.recurrence_parent_id && task.scheduled_date !== date) {
-      await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date);
+      await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date ?? "");
       await updateTask(taskId, {
         ...buildDetachedRecurringPatch(task, { scheduled_date: date, position }),
         position,
@@ -813,7 +813,11 @@ export function useTasks(userId: string | undefined) {
 
   // Overdue = scheduled_date < today AND not completed
   const todayStr = todayISO();
-  const overdueTasks = tasks.filter((t) => !t.completed && t.scheduled_date < todayStr);
+  // Backlog (no date) and blocked tasks never count as overdue.
+  const overdueTasks = tasks.filter(
+    (t) => !t.completed && !!t.scheduled_date && t.scheduled_date < todayStr && t.status !== "blocked",
+  );
+  const backlogTasks = tasks.filter((t) => !t.scheduled_date && !t.completed);
   const todayTasks = tasks.filter((t) => t.scheduled_date === todayStr);
   const tomorrowStr = addDays(todayStr, 1);
   const tomorrowTasks = tasks.filter((t) => t.scheduled_date === tomorrowStr);
@@ -832,6 +836,7 @@ export function useTasks(userId: string | undefined) {
     tasks,
     loading,
     overdueTasks,
+    backlogTasks,
     todayTasks,
     tomorrowTasks,
     tasksByDay,
