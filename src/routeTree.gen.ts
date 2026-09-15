@@ -14,6 +14,7 @@ import { Route as PapeisRouteImport } from './routes/papeis'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as DelegadasRouteImport } from './routes/delegadas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as BemVindoRouteImport } from './routes/bem-vindo'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -73,6 +74,11 @@ const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DelegadasRoute = DelegadasRouteImport.update({
+  id: '/delegadas',
+  path: '/delegadas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/onboarding': typeof OnboardingRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/onboarding': typeof OnboardingRoute
@@ -350,6 +358,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/bem-vindo': typeof BemVindoRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/onboarding': typeof OnboardingRoute
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/bem-vindo'
     | '/configuracoes'
+    | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
     | '/onboarding'
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/bem-vindo'
     | '/configuracoes'
+    | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
     | '/onboarding'
@@ -478,6 +489,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/bem-vindo'
     | '/configuracoes'
+    | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
     | '/onboarding'
@@ -521,6 +533,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BemVindoRoute: typeof BemVindoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  DelegadasRoute: typeof DelegadasRoute
   InboxRoute: typeof InboxRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delegadas': {
+      id: '/delegadas'
+      path: '/delegadas'
+      fullPath: '/delegadas'
+      preLoaderRoute: typeof DelegadasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracoes': {
@@ -859,6 +879,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BemVindoRoute: BemVindoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  DelegadasRoute: DelegadasRoute,
   InboxRoute: InboxRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
   OnboardingRoute: OnboardingRoute,
