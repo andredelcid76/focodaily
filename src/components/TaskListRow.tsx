@@ -10,6 +10,7 @@ import {
   MoreHorizontal, FolderKanban, UserSquare2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 import { TaskCompleteButton } from "./TaskCompleteButton";
+import { PriorityBadge } from "./PriorityBadge";
 import { ClaudeCodeButton } from "./ClaudeCodeButton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -296,6 +297,12 @@ export function TaskListRow({
                 )}
               </div>
             );
+          case "priority":
+            return (
+              <div key="priority" className="min-w-0">
+                <PriorityBadge priority={(task as any).priority} size="xs" />
+              </div>
+            );
           case "duration":
             return (
               <div key="duration" className="text-xs text-muted-foreground tabular-nums">
@@ -400,7 +407,7 @@ export function TaskListRow({
   );
 }
 
-export type TaskSortKey = "position" | "title" | "project" | "role" | "duration" | "due" | "status";
+export type TaskSortKey = "position" | "title" | "project" | "role" | "priority" | "duration" | "due" | "status";
 export type TaskSortDir = "asc" | "desc";
 
 /** Header row matching TaskListRow's grid template. */
