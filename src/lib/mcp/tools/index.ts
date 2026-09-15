@@ -40,6 +40,55 @@ async function assertRoleOwnership(auth: unknown, roleId: string, userId: string
   if (!data) throw new Error("Papel inexistente ou sem acesso.");
 }
 
+/** Garante que assignee_id pode receber a tarefa (dono, membro do projeto ou membro da equipe do projeto). */
+async function assertAssigneeAllowed(
+  auth: unknown,
+  assigneeId: string,
+  projectId: string | null | undefined,
+  taskOwnerId: string,
+): Promise<void> {
+  if (assigneeId === taskOwnerId) return;
+  if (!projectId) {
+    throw new Error(
+      "Para delegar, a tarefa precisa estar em um projeto compartilhado — ou atribua ao próprio dono da tarefa.",
+    );
+  }
+  const client = db(auth);
+  const [memberRes, ownerRes] = await Promise.all([
+    client.rpc("is_project_member", { _project_id: projectId, _user_id: assigneeId }),
+    client.rpc("is_project_owner", { _project_id: projectId, _user_id: assigneeId }),
+  ]);
+  if (!memberRes.data && !ownerRes.data) {
+    throw new Error("assignee_id não é membro do projeto nem da equipe do projeto.");
+  }
+}
+
+/** Respeita members_can_reassign: se false, só dono da tarefa/projeto (ou gestor) atribui. */
+async function assertCanAssign(
+  auth: unknown,
+  userId: string,
+  projectId: string | null | undefined,
+  taskOwnerId: string,
+): Promise<void> {
+  if (userId === taskOwnerId) return;
+  if (!projectId) throw new Error("Somente o dono da tarefa pode alterar o responsável.");
+  const client = db(auth);
+  const { data: project } = await client
+    .from("projects")
+    .select("user_id,members_can_reassign")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Projeto não encontrado.");
+  if (project.user_id === userId) return;
+  const admin = await client.rpc("is_project_admin", { _project_id: projectId, _user_id: userId });
+  if (admin.data) return;
+  if (!project.members_can_reassign) {
+    throw new Error("Este projeto só permite que o dono/gestor atribua ou reatribua tarefas.");
+  }
+}
+
+const taskStatusEnum = z.enum(["todo", "doing", "in_progress", "blocked", "done"]);
+
 export const listRoles = defineTool({
   name: "list_roles",
   description: "Lista os papéis do usuário (CEO, Pessoal, etc) com id, nome e cor.",
@@ -141,17 +190,38 @@ export const listTasks = defineTool({
       .boolean()
       .optional()
       .describe("Se true, retorna só tarefas criadas pelo usuário (user_id)."),
+    assignee_id: z.string().optional().describe("Filtra por responsável específico."),
+    delegated_by_me: z
+      .boolean()
+      .optional()
+      .describe("Se true, só tarefas criadas por mim cuja responsabilidade é de outra pessoa."),
+    status: z
+      .union([taskStatusEnum, z.array(taskStatusEnum)])
+      .optional()
+      .describe("Filtra por um ou mais status."),
+    backlog_only: z.boolean().optional().describe("Se true, só tarefas SEM data (backlog)."),
+    include_backlog: z
+      .boolean()
+      .optional()
+      .describe("Se true, inclui tarefas sem data mesmo com filtros de data."),
+    compact: z
+      .boolean()
+      .optional()
+      .describe("Resposta enxuta: id, título, data, status, responsável e projeto."),
     limit: z.number().optional().describe("Padrão 100, máximo 500"),
+    offset: z.number().optional().describe("Deslocamento para paginação. Padrão 0."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const selectCols =
-      "id,title,description,scheduled_date,duration_minutes,category,status,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+    const limit = Math.min(args.limit ?? 100, 500);
+    const offset = Math.max(args.offset ?? 0, 0);
     let q = db(ctx.auth)
       .from("tasks")
-      .select(selectCols)
-      .order("scheduled_date", { ascending: true })
-      .limit(Math.min(args.limit ?? 100, 500));
+      .select(selectCols, { count: "exact" })
+      .order("scheduled_date", { ascending: true, nullsFirst: false })
+      .range(offset, offset + limit - 1);
     if (args.assigned_to_me) {
       q = q.eq("assignee_id", userId);
     } else if (args.created_by_me) {
@@ -165,11 +235,29 @@ export const listTasks = defineTool({
       // browsing should pass project_id explicitly.
       q = q.or(`user_id.eq.${userId},assignee_id.eq.${userId}`);
     }
-    if (args.from_date) q = q.gte("scheduled_date", args.from_date);
-    if (args.to_date) q = q.lte("scheduled_date", args.to_date);
+    if (args.backlog_only) {
+      q = q.is("scheduled_date", null);
+    } else if (args.include_backlog && (args.from_date || args.to_date)) {
+      const range = [
+        args.from_date ? `scheduled_date.gte.${args.from_date}` : null,
+        args.to_date ? `scheduled_date.lte.${args.to_date}` : null,
+      ].filter(Boolean) as string[];
+      q = q.or(`scheduled_date.is.null,and(${range.join(",")})`);
+    } else {
+      if (args.from_date) q = q.gte("scheduled_date", args.from_date);
+      if (args.to_date) q = q.lte("scheduled_date", args.to_date);
+    }
     if (args.only_open) q = q.eq("completed", false);
     if (args.project_id) q = q.eq("project_id", args.project_id);
-    const { data, error } = await q;
+    if (args.assignee_id) q = q.eq("assignee_id", args.assignee_id);
+    if (args.delegated_by_me) {
+      q = q.eq("user_id", userId).not("assignee_id", "is", null).neq("assignee_id", userId);
+    }
+    if (args.status) {
+      const statuses = Array.isArray(args.status) ? args.status : [args.status];
+      q = q.in("status", statuses);
+    }
+    const { data, error, count } = await q;
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     // Enrich assignee/creator/project-owner with display_name via a batched
@@ -188,16 +276,51 @@ export const listTasks = defineTool({
         .in("user_id", Array.from(userIds));
       profileMap = new Map((profs ?? []).map((p) => [p.user_id as string, { display_name: p.display_name, email: p.email }]));
     }
+    // Contagem de comentários por tarefa (PostgREST não agrupa: contamos aqui).
+    const taskIds = (rows as Array<{ id?: string }>).map((r) => r.id).filter(Boolean) as string[];
+    const commentCount = new Map<string, number>();
+    if (taskIds.length > 0) {
+      const { data: commentRows } = await db(ctx.auth)
+        .from("task_comments")
+        .select("task_id")
+        .in("task_id", taskIds);
+      for (const c of commentRows ?? []) {
+        const key = c.task_id as string;
+        commentCount.set(key, (commentCount.get(key) ?? 0) + 1);
+      }
+    }
     const enriched = (rows as Array<Record<string, unknown>>).map((r) => {
-      const rr = r as { user_id?: string | null; assignee_id?: string | null; project?: { user_id?: string | null } | null };
+      const rr = r as {
+        id?: string;
+        user_id?: string | null;
+        assignee_id?: string | null;
+        project?: { id?: string; name?: string; user_id?: string | null } | null;
+      };
+      const assignee = rr.assignee_id ? profileMap.get(rr.assignee_id) ?? null : null;
+      const comments_count = rr.id ? commentCount.get(rr.id) ?? 0 : 0;
+      if (args.compact) {
+        return {
+          id: rr.id,
+          title: r.title,
+          scheduled_date: r.scheduled_date,
+          status: r.status ?? (r.completed ? "done" : "todo"),
+          completed: r.completed,
+          assignee_id: rr.assignee_id ?? null,
+          assignee_name: assignee?.display_name ?? assignee?.email ?? null,
+          project_id: rr.project?.id ?? null,
+          project_name: rr.project?.name ?? null,
+          comments_count,
+        };
+      }
       return {
         ...r,
-        assignee: rr.assignee_id ? profileMap.get(rr.assignee_id) ?? null : null,
+        assignee,
         creator: rr.user_id ? profileMap.get(rr.user_id) ?? null : null,
         project_owner: rr.project?.user_id ? profileMap.get(rr.project.user_id) ?? null : null,
+        comments_count,
       };
     });
-    return JSON.stringify(enriched);
+    return JSON.stringify({ total: count ?? enriched.length, limit, offset, items: enriched });
   },
 });
 
