@@ -82,7 +82,7 @@ export function TaskListRow({
   onStart, onPause, onResume, onStop,
   onPostpone, onDuplicate, onFollowUp,
   selected, onSelectToggle,
-  subtaskCount, blockedBy,
+  subtaskCount, blockedBy, assigneeName,
   columns, gridTemplate,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
