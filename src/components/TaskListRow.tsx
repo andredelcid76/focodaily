@@ -313,10 +313,10 @@ export function TaskListRow({
                       ? "border-overdue/40 bg-overdue/10 text-overdue"
                       : "border-border/60 bg-muted/30 text-muted-foreground"
                   }`}
-                  title={task.scheduled_date}
+                  title={task.scheduled_date ?? "Sem data"}
                 >
                   {isOverdue && !task.completed && <AlertCircle className="h-3 w-3" />}
-                  {formatShort(task.scheduled_date)}
+                  {task.scheduled_date ? formatShort(task.scheduled_date) : "Sem data"}
                 </span>
               </div>
             );

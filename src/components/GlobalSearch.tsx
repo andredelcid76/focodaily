@@ -151,7 +151,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                 </span>
                 {t.non_negotiable && <Lock className="h-3 w-3 text-overdue" />}
                 <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                  {formatHuman(t.scheduled_date)}
+                  {t.scheduled_date ? formatHuman(t.scheduled_date) : "Sem data"}
                 </span>
               </CommandItem>
             ))}

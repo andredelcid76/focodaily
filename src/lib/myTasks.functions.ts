@@ -9,7 +9,7 @@ export type MyTaskRow = {
   category: "urgent" | "important" | "circumstantial";
   status: "todo" | "doing" | "done";
   completed: boolean;
-  scheduled_date: string;
+  scheduled_date: string | null;
   duration_minutes: number;
   assignee_id: string | null;
   user_id: string;

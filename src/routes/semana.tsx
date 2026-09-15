@@ -82,7 +82,7 @@ function WeekInner({ userId }: { userId: string }) {
       userId
     );
     for (const t of filteredTasks) {
-      if (map.has(t.scheduled_date)) {
+      if (t.scheduled_date && map.has(t.scheduled_date)) {
         map.get(t.scheduled_date)!.push(t);
       }
     }
@@ -127,7 +127,7 @@ function WeekInner({ userId }: { userId: string }) {
   };
   const openEdit = (t: Task) => {
     setEditing(t);
-    setDefaultDate(t.scheduled_date);
+    setDefaultDate(t.scheduled_date ?? todayISO());
     setDialogOpen(true);
   };
   const handleSave = async (data: any) => {
