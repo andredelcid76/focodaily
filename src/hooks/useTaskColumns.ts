@@ -22,6 +22,7 @@ const DEFAULT_COLUMNS: TaskColumnDef[] = [
   { key: "title",    label: "Tarefa",     width: "1.5fr", visible: true, minPx: 140 },
   { key: "project",  label: "Projeto",    width: "2fr",   visible: true, minPx: 120 },
   { key: "role",     label: "Papel",      width: "7rem",  visible: true, minPx: 80 },
+  { key: "assignee", label: "Responsável", width: "9rem", visible: true, minPx: 110 },
   { key: "priority", label: "Prioridade", width: "7rem",  visible: true, minPx: 88 },
   { key: "duration", label: "Duração",    width: "4.5rem",visible: true, minPx: 56 },
   { key: "due",      label: "Vencimento", width: "6rem",  visible: true, minPx: 80 },
