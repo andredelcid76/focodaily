@@ -63,6 +63,8 @@ type Props = {
   selected?: boolean;
   onSelectToggle?: () => void;
   subtaskCount?: { total: number; completed: number };
+  /** Display name (or e-mail) of the task's assignee, when known. */
+  assigneeName?: string | null;
   blockedBy?: string[];
   /** Custom column config (order + visibility). Defaults to all default columns visible. */
   columns?: TaskColumnDef[];
