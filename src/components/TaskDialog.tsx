@@ -20,6 +20,7 @@ import { CategoryIcon } from "@/components/CategoryBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { FolderKanban, Lock, CheckCircle2, RotateCcw, User, Link2, X } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
+import { TaskComments } from "@/components/TaskComments";
 import { TaskActivityLog } from "@/components/TaskActivityLog";
 import { useAuth } from "@/lib/auth";
 import { listProjectMembers } from "@/lib/team.functions";
@@ -42,7 +43,9 @@ type Props = {
       description: string | null;
       category: TaskCategory;
       duration_minutes: number;
-      scheduled_date: string;
+      scheduled_date: string | null;
+      status?: "todo" | "doing" | "in_progress" | "blocked" | "done";
+      blocked_reason?: string | null;
       recurrence?: TaskRecurrence;
       role_id: string | null;
       project_id: string | null;
@@ -80,6 +83,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [category, setCategory] = useState<TaskCategory>("important");
   const [duration, setDuration] = useState(30);
   const [date, setDate] = useState(defaultDate);
+  /** Backlog = tarefa sem data. Quem executa decide quando agendar. */
+  const [noDate, setNoDate] = useState(false);
+  const [status, setStatus] = useState<"todo" | "in_progress" | "blocked" | "done">("todo");
+  const [blockedReason, setBlockedReason] = useState("");
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [roleId, setRoleId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -142,6 +149,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       setCategory(task?.category ?? "important");
       setDuration(task?.duration_minutes ?? 30);
       setDate(task?.scheduled_date ?? defaultDate);
+      setNoDate(!!task && !task.scheduled_date);
+      const rawStatus = ((task as any)?.status ?? (task?.completed ? "done" : "todo")) as string;
+      setStatus(rawStatus === "doing" ? "in_progress" : (rawStatus as "todo" | "in_progress" | "blocked" | "done"));
+      setBlockedReason(((task as any)?.blocked_reason ?? "") as string);
       setRoleId(task?.role_id ?? null);
       const initialProjectId = ((task as any)?.project_id ?? defaultProjectId ?? null) as string | null;
       setProjectId(initialProjectId);
@@ -290,7 +301,9 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           description: description.trim() || null,
           category,
           duration_minutes: Math.max(5, Math.min(600, duration)),
-          scheduled_date: date,
+          scheduled_date: noDate ? null : date,
+          status,
+          blocked_reason: status === "blocked" ? blockedReason.trim() || null : null,
           role_id: delegatedToOther ? null : roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           assignee_id: assigneeId ?? user?.id ?? null,
@@ -435,6 +448,9 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             {task?.id && !isSeed && user?.id ? (
               <div className="rounded-xl border border-border/60 bg-muted/20 p-3 shrink-0">
                 <SubtasksList taskId={task.id} userId={user.id} />
+                <div className="mt-3 border-t border-border/50 pt-3">
+                  <TaskComments taskId={task.id} userId={user.id} />
+                </div>
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground shrink-0">
@@ -770,8 +786,54 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Data</Label>
-              <DatePickerField value={date} onChange={setDate} />
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">A fazer</SelectItem>
+                  <SelectItem value="in_progress">Em andamento</SelectItem>
+                  <SelectItem value="blocked">Bloqueada</SelectItem>
+                  <SelectItem value="done">Concluída</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {status === "blocked" && (
+              <div>
+                <Label>Motivo do bloqueio</Label>
+                <Input
+                  value={blockedReason}
+                  onChange={(e) => setBlockedReason(e.target.value)}
+                  placeholder="Ex: aguardando aprovação do cliente"
+                  className="mt-1.5"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="flex items-center justify-between">
+                <Label>Data</Label>
+                <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={noDate}
+                    onChange={(e) => {
+                      setNoDate(e.target.checked);
+                      if (e.target.checked) setRecurrence("none");
+                    }}
+                    className="h-3 w-3 accent-current"
+                  />
+                  Sem data (backlog)
+                </label>
+              </div>
+              {noDate ? (
+                <div className="mt-1.5 rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                  No backlog do projeto. Quem é responsável escolhe o dia.
+                </div>
+              ) : (
+                <DatePickerField value={date} onChange={setDate} />
+              )}
             </div>
             <div>
               <Label>Recorrência</Label>
