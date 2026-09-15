@@ -302,7 +302,7 @@ function InboxPage() {
               task: {
                 title: d.title,
                 description: d.description,
-                scheduled_date: d.scheduled_date ?? undefined,
+                scheduled_date: d.scheduled_date,
                 duration_minutes: d.duration_minutes,
                 category: d.category,
                 project_id: d.project_id,
