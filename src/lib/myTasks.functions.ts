@@ -48,15 +48,55 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { userId } = context;
 
+    const TASK_COLS =
+      "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable,priority";
+    const PAGE = 1000;
+
+    type TaskRowRaw = {
+      id: string;
+      title: string;
+      description: string | null;
+      category: MyTaskRow["category"];
+      status: MyTaskRow["status"];
+      completed: boolean;
+      scheduled_date: string | null;
+      duration_minutes: number;
+      assignee_id: string | null;
+      user_id: string;
+      project_id: string | null;
+      role_id: string | null;
+      non_negotiable: boolean | null;
+      priority: number;
+    };
+
+    // PostgREST caps each response at 1000 rows, so page through everything.
+    // Without this, users with >1000 tasks lost the tail of the list — and since
+    // rows are ordered by scheduled_date, undated (backlog) tasks sort last and
+    // were exactly the ones being cut off.
+    async function fetchAllPages(
+      build: () => ReturnType<typeof supabaseAdmin.from<"tasks">>,
+    ): Promise<TaskRowRaw[]> {
+      const out: TaskRowRaw[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await build().range(from, from + PAGE - 1);
+        if (error) throw new Error(error.message);
+        const rows = (data ?? []) as unknown as TaskRowRaw[];
+        out.push(...rows);
+        if (rows.length < PAGE) break;
+      }
+      return out;
+    }
+
     // ---- 1. My own + delegated tasks ----
-    const { data: mineRows, error: mineErr } = await supabaseAdmin
-      .from("tasks")
-      .select(
-        "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable,priority",
-      )
-      .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
-      .order("scheduled_date", { ascending: true });
-    if (mineErr) throw new Error(mineErr.message);
+    const mineRows = await fetchAllPages(
+      () =>
+        supabaseAdmin
+          .from("tasks")
+          .select(TASK_COLS)
+          .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
+          .order("scheduled_date", { ascending: true, nullsFirst: false })
+          .order("id", { ascending: true }) as never,
+    );
 
     // ---- 2. Shared projects (project_members + team membership) ----
     const [{ data: pmRows }, { data: tmRows }, { data: tOwnedRows }] = await Promise.all([
