@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/hooks/useRoles";
 import { useProjects, type Project } from "@/hooks/useProjects";
+import { useProfiles } from "@/hooks/useProfiles";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "duration" | "priority";
+type SortKey = "title" | "kind" | "project" | "role" | "assignee" | "scheduled_date" | "status" | "duration" | "priority";
 type SortDir = "asc" | "desc";
 
 
@@ -63,6 +64,13 @@ function MyTasksPage() {
 
   const today = todayISO();
   const tasks = data?.tasks ?? [];
+  const assigneeProfiles = useProfiles(tasks.map((t) => t.assignee_id));
+  const assigneeName = (id: string | null | undefined): string | null => {
+    if (!id) return null;
+    if (id === userId) return "Eu";
+    const p = assigneeProfiles.get(id);
+    return p?.display_name ?? p?.email ?? "Outro usuário";
+  };
   const { deps } = useTaskDependencies(userId);
   const blockedByMap = useMemo(() => {
     const taskMap = new Map(tasks.map((t) => [t.id, { title: t.title, completed: t.completed }]));
@@ -175,6 +183,7 @@ function MyTasksPage() {
   >("mt.projectStatus", "all", P);
   const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
   const [priorityFilter, setPriorityFilter] = useStickyState<string>("mt.priority", "all", P);
+  const [assigneeFilter, setAssigneeFilter] = useStickyState<string>("mt.assignee", "all", P);
   const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
   const [dateRange, setDateRange] = useStickyState<
     "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
@@ -235,6 +244,17 @@ function MyTasksPage() {
     return Array.from(m.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [tasks]);
 
+  const assigneeOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of tasks) {
+      if (!t.assignee_id || t.assignee_id === userId) continue;
+      m.set(t.assignee_id, assigneeName(t.assignee_id) ?? "Outro usuário");
+    }
+    return Array.from(m.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks, userId, assigneeProfiles]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tasks.filter((t) => {
@@ -256,6 +276,13 @@ function MyTasksPage() {
         } else {
           if (ps !== projectStatusFilter) return false;
         }
+      }
+      if (assigneeFilter !== "all") {
+        if (assigneeFilter === "__none") {
+          if (t.assignee_id) return false;
+        } else if (assigneeFilter === "__me") {
+          if (t.assignee_id !== userId) return false;
+        } else if (t.assignee_id !== assigneeFilter) return false;
       }
       if (roleFilter !== "all") {
         if (roleFilter === "__none" ? !!t.role_id : t.role?.id !== roleFilter) return false;
@@ -303,7 +330,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [tasks, search, statusFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, assigneeFilter, userId, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -319,6 +346,8 @@ function MyTasksPage() {
             return (a.project?.name ?? "~").localeCompare(b.project?.name ?? "~");
           case "role":
             return (a.role?.name ?? "~").localeCompare(b.role?.name ?? "~");
+          case "assignee":
+            return (assigneeName(a.assignee_id) ?? "~").localeCompare(assigneeName(b.assignee_id) ?? "~");
           case "scheduled_date":
             return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~");
           case "status":
@@ -435,7 +464,7 @@ function MyTasksPage() {
 
   const headerSortKey: TaskSortKey | null =
     sortKey === "scheduled_date" ? "due"
-    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "status" || sortKey === "duration" || sortKey === "priority"
+    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "assignee" || sortKey === "status" || sortKey === "duration" || sortKey === "priority"
       ? sortKey
       : null;
 
@@ -544,6 +573,18 @@ function MyTasksPage() {
             <SelectItem value="__none">Sem papel</SelectItem>
             {roleOptions.map((r) => (
               <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+          <SelectTrigger className="h-9 w-44 text-xs"><SelectValue placeholder="Responsável" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos responsáveis</SelectItem>
+            <SelectItem value="__me">Responsável: eu</SelectItem>
+            <SelectItem value="__none">Sem responsável</SelectItem>
+            {assigneeOptions.map((a) => (
+              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -741,6 +782,7 @@ function MyTasksPage() {
                         selected={selected.has(t.id)}
                         onSelectToggle={() => toggleOne(t.id)}
                         blockedBy={blockedByMap.get(t.id)}
+                        assigneeName={assigneeName(t.assignee_id)}
                         columns={taskColumns.columns}
                         gridTemplate={taskColumns.gridTemplate}
                       />

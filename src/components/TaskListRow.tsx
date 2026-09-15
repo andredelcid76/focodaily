@@ -63,6 +63,8 @@ type Props = {
   selected?: boolean;
   onSelectToggle?: () => void;
   subtaskCount?: { total: number; completed: number };
+  /** Display name (or e-mail) of the task's assignee, when known. */
+  assigneeName?: string | null;
   blockedBy?: string[];
   /** Custom column config (order + visibility). Defaults to all default columns visible. */
   columns?: TaskColumnDef[];
@@ -80,7 +82,7 @@ export function TaskListRow({
   onStart, onPause, onResume, onStop,
   onPostpone, onDuplicate, onFollowUp,
   selected, onSelectToggle,
-  subtaskCount, blockedBy,
+  subtaskCount, blockedBy, assigneeName,
   columns, gridTemplate,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -295,6 +297,19 @@ export function TaskListRow({
                 )}
               </div>
             );
+          case "assignee":
+            return (
+              <div key="assignee" className="min-w-0 truncate text-[11px]">
+                {assigneeName ? (
+                  <span className="inline-flex max-w-full items-center gap-1 truncate rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 text-muted-foreground">
+                    <UserSquare2 className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{assigneeName}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/60">Sem responsável</span>
+                )}
+              </div>
+            );
           case "priority":
             return (
               <div key="priority" className="min-w-0">
@@ -405,7 +420,7 @@ export function TaskListRow({
   );
 }
 
-export type TaskSortKey = "position" | "title" | "project" | "role" | "priority" | "duration" | "due" | "status";
+export type TaskSortKey = "position" | "title" | "project" | "role" | "assignee" | "priority" | "duration" | "due" | "status";
 export type TaskSortDir = "asc" | "desc";
 
 /** Header row matching TaskListRow's grid template. */
