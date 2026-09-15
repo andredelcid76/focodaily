@@ -21,7 +21,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
 const SCOPES =
-  "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
+  "offline_access openid profile User.Read User.ReadBasic.All Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All Chat.Create ChatMessage.Send";
 const EXPIRY_MARGIN_MS = 120_000;
 
 export class OutlookReauthError extends Error {

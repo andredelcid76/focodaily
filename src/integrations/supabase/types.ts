@@ -494,11 +494,14 @@ export type Database = {
           actor_id: string | null
           body: string | null
           created_at: string
+          delivery_error: string | null
+          emailed_at: string | null
           id: string
           link: string | null
           project_id: string | null
           read_at: string | null
           task_id: string | null
+          teams_sent_at: string | null
           title: string
           type: string
           user_id: string
@@ -507,11 +510,14 @@ export type Database = {
           actor_id?: string | null
           body?: string | null
           created_at?: string
+          delivery_error?: string | null
+          emailed_at?: string | null
           id?: string
           link?: string | null
           project_id?: string | null
           read_at?: string | null
           task_id?: string | null
+          teams_sent_at?: string | null
           title: string
           type: string
           user_id: string
@@ -520,11 +526,14 @@ export type Database = {
           actor_id?: string | null
           body?: string | null
           created_at?: string
+          delivery_error?: string | null
+          emailed_at?: string | null
           id?: string
           link?: string | null
           project_id?: string | null
           read_at?: string | null
           task_id?: string | null
+          teams_sent_at?: string | null
           title?: string
           type?: string
           user_id?: string

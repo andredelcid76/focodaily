@@ -6,7 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { getValidOutlookAccessToken, OutlookReauthError } from "@/lib/outlook-token";
 
 const TENANT = "common";
-const SCOPES = "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
+const SCOPES = "offline_access openid profile User.Read User.ReadBasic.All Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All Chat.Create ChatMessage.Send";
 const LOVABLE_PROJECT_ID = "0f679b02-63a6-46ee-ae66-8b953bfe9f15";
 
 function getPreferredCallbackOrigin(origin: string) {

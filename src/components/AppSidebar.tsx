@@ -9,6 +9,7 @@ import {
   LogOut,
   Search,
   Settings,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -47,6 +48,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { title: "Minha semana", url: "/semana", icon: CalendarRange, shortcut: "G S" },
       { title: "Agenda", url: "/agenda", icon: CalendarDays, shortcut: "G D" },
       { title: "Tarefas", url: "/minhas-tarefas", icon: ListTodo, shortcut: "G M" },
+      { title: "Delegadas", url: "/delegadas", icon: UserCheck },
     ],
   },
   {
