@@ -708,7 +708,6 @@ function TaskRow({
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
           <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
-          <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
           {(task as any).non_negotiable && !task.completed && <Lock className="h-3 w-3 text-overdue shrink-0" />}
           <span className={`truncate text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>
             {task.title}
@@ -721,6 +720,10 @@ function TaskRow({
           </div>
         )}
       </button>
+
+      <div className="min-w-0">
+        <PriorityBadge priority={(task as any).priority} size="xs" />
+      </div>
 
       <div className="relative">
         <input
