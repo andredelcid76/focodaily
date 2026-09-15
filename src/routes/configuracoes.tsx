@@ -216,9 +216,10 @@ function OutlookCard({
               <Mail className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle>Microsoft Outlook</CardTitle>
+              <CardTitle>Microsoft Outlook e Teams</CardTitle>
               <CardDescription>
-                E-mails, calendário e tarefas. Usado para varrer a caixa de entrada e sincronizar a agenda.
+                E-mails, calendário e tarefas. Usado para varrer a caixa de entrada, sincronizar a
+                agenda e enviar aviso no Teams quando você delega uma tarefa.
               </CardDescription>
             </div>
           </div>
