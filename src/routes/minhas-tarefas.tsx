@@ -136,6 +136,14 @@ function MyTasksPage() {
       return;
     }
     toast.success("Tarefa atualizada");
+    // Delegação: dispara os avisos externos (e-mail/Teams) na hora
+    const nextAssignee =
+      patch.assignee_id !== undefined ? patch.assignee_id : editingTask.assignee_id;
+    if (nextAssignee && nextAssignee !== editingTask.user_id) {
+      import("@/lib/notifications.functions")
+        .then((m) => m.flushNotificationDelivery())
+        .catch(() => {});
+    }
     refetch();
   };
 

@@ -45,6 +45,8 @@ type Props = {
       duration_minutes: number;
       scheduled_date: string | null;
       status?: "todo" | "doing" | "in_progress" | "blocked" | "done";
+      completed?: boolean;
+      completed_at?: string | null;
       blocked_reason?: string | null;
       recurrence?: TaskRecurrence;
       role_id: string | null;
@@ -306,6 +308,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           duration_minutes: Math.max(5, Math.min(600, duration)),
           scheduled_date: noDate ? null : date,
           status,
+          // Mantém a marcação de concluída em sincronia com o status escolhido
+          completed: status === "done",
+          completed_at:
+            status === "done" ? task?.completed_at ?? new Date().toISOString() : null,
           blocked_reason: status === "blocked" ? blockedReason.trim() || null : null,
           role_id: delegatedToOther ? null : roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
