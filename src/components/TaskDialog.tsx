@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
+import { PriorityIcon, PRIORITY_LABEL, PRIORITY_LEVELS, toPriority, type PriorityLevel } from "@/components/PriorityBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { FolderKanban, Lock, CheckCircle2, RotateCcw, User, Link2, X } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
