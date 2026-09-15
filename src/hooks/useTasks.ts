@@ -350,9 +350,16 @@ export function useTasks(userId: string | undefined) {
 
   const updateTask = async (id: string, patch: Partial<Task>) => {
     // Optimistic update
+    const target = tasks.find((t) => t.id === id);
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
     const { error } = await supabase.from("tasks").update(patch).eq("id", id);
     if (error) throw error;
+    // Se a tarefa é delegada, avisa quem delegou pelos canais externos.
+    if (target?.assignee_id && target.assignee_id !== target.user_id) {
+      import("@/lib/notifications.functions")
+        .then((m) => m.flushNotificationDelivery())
+        .catch(() => {});
+    }
   };
 
   const deleteTask = async (id: string) => {
