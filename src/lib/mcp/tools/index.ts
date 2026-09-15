@@ -756,7 +756,13 @@ export const updateTask = defineTool({
       .optional()
       .describe("Motivo curto do bloqueio. Obrigatório ao mudar status para blocked."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
-    priority: z.coerce.number().int().min(1).max(5).optional().describe("Prioridade 1=Muito baixa, 2=Baixa, 3=Média (padrão), 4=Alta, 5=Crítica."),
+    priority: z.coerce.number().int().min(1).max(5).optional().describe(PRIORITY_DOC),
+    backlog_position: z.coerce
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .describe("Ordem manual dentro do backlog (menor = mais no topo). Só se aplica a tarefas sem data."),
     completed: z.boolean().optional(),
     project_id: z.string().nullable().optional(),
     recurrence: recurrenceEnum.optional(),
