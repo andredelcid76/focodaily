@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2, Circle, Clock, Table as TableIcon, KanbanSquare, GanttChart,
   Plus, Lock, AlertCircle, Layers, Pencil, Trash2, X,
-  ArrowUp, ArrowDown, ArrowUpDown, Filter as FilterIcon,
+  ArrowUp, ArrowDown, ArrowUpDown, Filter as FilterIcon, Inbox, GripVertical, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,11 +106,26 @@ export function ProjectTaskBoard({
   const memberById = useMemo(() => new Map(members.map((m) => [m.user_id, m])), [members]);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
-  const filtered = useMemo(() => {
+  const searched = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return tasks;
     return tasks.filter((t) => t.title.toLowerCase().includes(q));
   }, [tasks, search]);
+
+  // Backlog = sem data. Nunca entra nas visões por data (tabela/kanban/cronograma);
+  // vive numa lista própria com ordenação manual.
+  const filtered = useMemo(() => searched.filter((t) => !!t.scheduled_date), [searched]);
+  const backlog = useMemo(
+    () =>
+      searched
+        .filter((t) => !t.scheduled_date)
+        .sort(
+          (a, b) =>
+            ((a as any).backlog_position ?? 0) - ((b as any).backlog_position ?? 0) ||
+            a.title.localeCompare(b.title, "pt-BR"),
+        ),
+    [searched],
+  );
 
   return (
     <div className="space-y-3">
@@ -148,7 +163,7 @@ export function ProjectTaskBoard({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && backlog.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border/60 bg-card/30 p-10 text-center">
           <p className="text-sm text-muted-foreground">Nenhuma subtarefa.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={onAdd}>
@@ -190,6 +205,110 @@ export function ProjectTaskBoard({
           onUpdate={onUpdate}
         />
       )}
+
+      <BacklogList
+        tasks={backlog}
+        members={members}
+        memberById={memberById}
+        onEdit={onEdit}
+        onUpdate={onUpdate}
+      />
+    </div>
+  );
+}
+
+/* ============================================================
+   Backlog (tarefas sem data) — ordenação manual por arrastar
+============================================================ */
+function BacklogList({
+  tasks, members, memberById, onEdit, onUpdate,
+}: {
+  tasks: Task[];
+  members: Member[];
+  memberById: Map<string, Member>;
+  onEdit: (t: Task) => void;
+  onUpdate: (id: string, patch: Partial<Task>) => Promise<void> | void;
+}) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  if (tasks.length === 0) return null;
+
+  const reorder = async (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    const ids = tasks.map((t) => t.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    await Promise.all(ids.map((id, i) => onUpdate(id, { backlog_position: i } as any)));
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/30 p-3">
+      <div className="mb-2 flex items-center gap-2">
+        <Inbox className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Backlog</h3>
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+          {tasks.length}
+        </span>
+        <span className="ml-auto text-[11px] text-muted-foreground">
+          Sem data. Arraste para ordenar; o responsável escolhe o dia.
+        </span>
+      </div>
+      <div className="space-y-1">
+        {tasks.map((t) => {
+          const assignee = t.assignee_id ? memberById.get(t.assignee_id) : undefined;
+          return (
+            <div
+              key={t.id}
+              draggable
+              onDragStart={() => setDragId(t.id)}
+              onDragEnd={() => { setDragId(null); setOverId(null); }}
+              onDragOver={(e) => { e.preventDefault(); setOverId(t.id); }}
+              onDrop={(e) => { e.preventDefault(); reorder(t.id); setDragId(null); setOverId(null); }}
+              className={`flex items-center gap-2 rounded-lg border bg-background/60 px-2 py-1.5 ${
+                overId === t.id && dragId !== t.id ? "border-primary/60" : "border-border/50"
+              } ${dragId === t.id ? "opacity-50" : ""}`}
+            >
+              <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
+              <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+              <button onClick={() => onEdit(t)} className="min-w-0 flex-1 truncate text-left text-sm">
+                {t.title}
+              </button>
+              {(t as any).blocked_reason && (
+                <span className="hidden shrink-0 rounded border border-overdue/40 bg-overdue/10 px-1.5 py-0.5 text-[10px] text-overdue sm:inline">
+                  Bloqueada: {(t as any).blocked_reason}
+                </span>
+              )}
+              <span className="hidden w-32 shrink-0 truncate text-[11px] text-muted-foreground sm:block">
+                {assignee ? assignee.display_name ?? assignee.email : "Sem responsável"}
+              </span>
+              <Select
+                value={t.assignee_id ?? ""}
+                onValueChange={(v) => onUpdate(t.id, { assignee_id: v || null } as any)}
+              >
+                <SelectTrigger className="h-7 w-8 shrink-0 justify-center px-0 text-xs [&>svg:last-child]:hidden">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.display_name ?? m.email}{m.is_me ? " (você)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                type="date"
+                value=""
+                onChange={(e) => e.target.value && onUpdate(t.id, { scheduled_date: e.target.value } as any)}
+                title="Agendar para um dia"
+                className="date-input h-7 w-[8.5rem] shrink-0 rounded border border-border/50 bg-transparent px-1.5 text-xs tabular-nums"
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
