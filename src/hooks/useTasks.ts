@@ -360,8 +360,11 @@ export function useTasks(userId: string | undefined) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
     const { error } = await supabase.from("tasks").update(patch).eq("id", id);
     if (error) throw error;
-    // Se a tarefa é delegada, avisa quem delegou pelos canais externos.
-    if (target?.assignee_id && target.assignee_id !== target.user_id) {
+    // Considera o responsável DEPOIS do patch: uma delegação feita agora também avisa.
+    const nextAssignee =
+      patch.assignee_id !== undefined ? patch.assignee_id : target?.assignee_id ?? null;
+    const owner = patch.user_id ?? target?.user_id ?? null;
+    if (nextAssignee && nextAssignee !== owner) {
       import("@/lib/notifications.functions")
         .then((m) => m.flushNotificationDelivery())
         .catch(() => {});
