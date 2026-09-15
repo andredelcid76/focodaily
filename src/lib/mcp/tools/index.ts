@@ -654,6 +654,20 @@ export const createTask = defineTool({
       role_id: args.role_id ?? null,
       recurrence: args.recurrence ?? "none",
     };
+    if (args.status !== undefined) {
+      insert.status = args.status;
+      insert.completed = args.status === "done";
+      insert.completed_at = args.status === "done" ? new Date().toISOString() : null;
+      if (args.status === "blocked") {
+        if (!args.blocked_reason || !args.blocked_reason.trim()) {
+          throw new Error("Informe blocked_reason (motivo curto) ao criar a tarefa como blocked.");
+        }
+        insert.blocked_reason = args.blocked_reason.trim();
+      }
+    } else if (args.blocked_reason) {
+      insert.blocked_reason = args.blocked_reason.trim();
+    }
+    if (args.backlog_position !== undefined) insert.backlog_position = args.backlog_position;
     if (args.assignee_id) {
       await assertCanAssign(ctx.auth, userId, args.project_id ?? null, userId);
       await assertAssigneeAllowed(ctx.auth, args.assignee_id, args.project_id ?? null, userId);
