@@ -59,10 +59,12 @@ function DelegatedPage() {
     enabled: !!user,
   });
 
-  const delegated = useMemo(
-    () => ((data ?? []) as MyTaskRow[]).filter((t) => t.kind === "delegated" && !t.completed),
-    [data],
-  );
+  const delegated = useMemo(() => {
+    const rows: MyTaskRow[] = Array.isArray(data)
+      ? (data as MyTaskRow[])
+      : ((data as { tasks?: MyTaskRow[] } | undefined)?.tasks ?? []);
+    return rows.filter((t) => t.kind === "delegated" && !t.completed);
+  }, [data]);
 
   const backlog = delegated.filter((t) => !t.scheduled_date);
   const scheduled = delegated.filter((t) => t.scheduled_date);
