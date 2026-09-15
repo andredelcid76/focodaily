@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export type TaskColumnKey = "title" | "project" | "role" | "priority" | "duration" | "due" | "status";
+export type TaskColumnKey = "title" | "project" | "role" | "assignee" | "priority" | "duration" | "due" | "status";
 
 export type TaskColumnDef = {
   key: TaskColumnKey;
