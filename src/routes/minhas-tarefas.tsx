@@ -250,7 +250,9 @@ function MyTasksPage() {
       if (!t.assignee_id || t.assignee_id === userId) continue;
       m.set(t.assignee_id, assigneeName(t.assignee_id) ?? "Outro usuário");
     }
-    return Array.from(.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)));
+    return Array.from(m.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [tasks, userId, assigneeProfiles]);
 
   const filtered = useMemo(() => {
