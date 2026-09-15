@@ -112,6 +112,8 @@ const CATEGORY_COLOR: Record<TaskCategory, string> = {
 const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "A fazer",
   doing: "Fazendo",
+  in_progress: "Fazendo",
+  blocked: "Bloqueada",
   done: "Feita",
 };
 
