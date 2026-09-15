@@ -380,7 +380,6 @@ function MiniTaskRow({
         }`}
         aria-label="Concluir"
       />
-      <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
       <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
       {nonNeg && <Lock className="h-2.5 w-2.5 text-overdue shrink-0" aria-label="Inegociável" />}
       {(task.recurrence !== "none" || task.recurrence_parent_id) && (

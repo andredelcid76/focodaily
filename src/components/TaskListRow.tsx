@@ -177,7 +177,6 @@ export function TaskListRow({
                       {index}
                     </span>
                   )}
-                  <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
                   {(task as any).non_negotiable && !task.completed && (
                     <Lock className="h-3 w-3 text-overdue shrink-0" aria-label="Inegociável hoje" />
                   )}

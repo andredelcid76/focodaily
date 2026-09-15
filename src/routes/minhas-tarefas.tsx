@@ -45,7 +45,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration" | "priority";
+type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "duration" | "priority";
 type SortDir = "asc" | "desc";
 
 
@@ -325,8 +325,6 @@ function MyTasksPage() {
             return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~");
           case "status":
             return a.status.localeCompare(b.status);
-          case "category":
-            return a.category.localeCompare(b.category);
           case "duration":
             return a.duration_minutes - b.duration_minutes;
           case "priority":
@@ -562,16 +560,6 @@ function MyTasksPage() {
           </SelectContent>
         </Select>
 
-        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as typeof categoryFilter)}>
-          <SelectTrigger className="h-9 w-36 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            <SelectItem value="urgent">Urgente</SelectItem>
-            <SelectItem value="important">Importante</SelectItem>
-            <SelectItem value="circumstantial">Circunstancial</SelectItem>
-          </SelectContent>
-        </Select>
-
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
           <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Prioridade" /></SelectTrigger>
           <SelectContent>
@@ -669,14 +657,6 @@ function MyTasksPage() {
                 {roles.map((r) => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={(v) => bulkPatch({ category: v as Task["category"] }, "Categoria")}>
-              <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Categoria…" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="urgent">Urgente</SelectItem>
-                <SelectItem value="important">Importante</SelectItem>
-                <SelectItem value="circumstantial">Circunstancial</SelectItem>
               </SelectContent>
             </Select>
             <Select onValueChange={(v) => bulkPatch({ priority: Number(v) } as any, "Prioridade")}>

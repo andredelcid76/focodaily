@@ -216,18 +216,6 @@ export function TaskFiltersBar({
             {visibleProjects.length === 0 && <Empty text="Nenhum projeto" />}
           </FilterSection>
 
-          <FilterSection title="Categoria">
-            {(Object.keys(CATEGORY_LABEL) as TaskCategory[]).map((c) => (
-              <Chip
-                key={c}
-                active={filters.categories.has(c)}
-                onClick={() => toggle("categories", c)}
-                label={CATEGORY_LABEL[c]}
-                className={CATEGORY_COLOR[c]}
-              />
-            ))}
-          </FilterSection>
-
           <FilterSection title="Origem">
             {(Object.keys(ORIGIN_LABEL) as TaskOrigin[]).map((o) => (
               <Chip

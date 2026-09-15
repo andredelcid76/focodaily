@@ -591,30 +591,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
           {/* RIGHT — Metadata */}
           <div className="flex flex-col lg:min-h-0 lg:overflow-y-auto p-6 gap-4 bg-muted/10 min-w-0">
-          <div className={`grid gap-3 ${delegatedToOther ? "grid-cols-1" : "grid-cols-2"}`}>
-            <div>
-              <Label>Categoria</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urgent">
-                    <span className="inline-flex items-center gap-2">
-                      <CategoryIcon category="urgent" /> Urgente
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="important">
-                    <span className="inline-flex items-center gap-2">
-                      <CategoryIcon category="important" /> Importante
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="circumstantial">
-                    <span className="inline-flex items-center gap-2">
-                      <CategoryIcon category="circumstantial" /> Circunstancial
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid gap-3 grid-cols-1">
             <div>
               <Label>Prioridade</Label>
               <Select value={String(priority)} onValueChange={(v) => setPriority(toPriority(v))}>

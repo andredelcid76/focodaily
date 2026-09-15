@@ -146,7 +146,6 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                 ) : (
                   <Circle className="h-4 w-4 text-muted-foreground" />
                 )}
-                <CategoryIcon category={t.category} className="h-3.5 w-3.5" />
                 <PriorityIcon priority={(t as any).priority} className="h-3.5 w-3.5" />
                 <span className={t.completed ? "line-through text-muted-foreground" : ""}>
                   {t.title}

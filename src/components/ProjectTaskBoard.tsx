@@ -272,7 +272,6 @@ function BacklogList({
               } ${dragId === t.id ? "opacity-50" : ""}`}
             >
               <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
-              <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
               <PriorityIcon priority={(t as any).priority} className="h-3 w-3" />
               <button onClick={() => onEdit(t)} className="min-w-0 flex-1 truncate text-left text-sm">
                 {t.title}
@@ -707,7 +706,6 @@ function TaskRow({
 
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
-          <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
           {(task as any).non_negotiable && !task.completed && <Lock className="h-3 w-3 text-overdue shrink-0" />}
           <span className={`truncate text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>
             {task.title}
@@ -857,7 +855,6 @@ function KanbanCard({
         />
         <button onClick={onEdit} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
-            <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
           <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
             <span className={`text-sm font-medium leading-snug ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
           </div>
@@ -1165,7 +1162,6 @@ function TimelineView({
                   className="flex h-9 w-full items-center gap-1.5 border-b border-border/30 px-3 text-left text-xs hover:bg-accent/20"
                   title={t.title}
                 >
-                  <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
               <PriorityIcon priority={(t as any).priority} className="h-3 w-3" />
                   <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>
                 </button>
