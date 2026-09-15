@@ -466,10 +466,6 @@ export const listProjects = defineTool({
       .in("id", ids)
       .order("name", { ascending: true })
       .range(offset, offset + limit - 1);
-    if (args.priority !== undefined) {
-      const prios = Array.isArray(args.priority) ? args.priority : [args.priority];
-      q = q.in("priority", prios);
-    }
     if (args.status) {
       const statuses = Array.isArray(args.status) ? args.status : [args.status];
       q = q.in("status", statuses);
