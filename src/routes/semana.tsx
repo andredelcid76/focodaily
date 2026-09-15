@@ -8,6 +8,7 @@ import { useRoles, type Role } from "@/hooks/useRoles";
 import { useProjects, type Project } from "@/hooks/useProjects";
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import { CategoryIcon } from "@/components/CategoryBadge";
+import { PriorityIcon } from "@/components/PriorityBadge";
 import { Lock, Repeat } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -380,6 +381,7 @@ function MiniTaskRow({
         aria-label="Concluir"
       />
       <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+      <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
       {nonNeg && <Lock className="h-2.5 w-2.5 text-overdue shrink-0" aria-label="Inegociável" />}
       {(task.recurrence !== "none" || task.recurrence_parent_id) && (
         <Repeat className="h-2.5 w-2.5 text-muted-foreground/60 shrink-0" />
