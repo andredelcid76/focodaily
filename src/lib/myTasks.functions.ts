@@ -74,7 +74,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
     // rows are ordered by scheduled_date, undated (backlog) tasks sort last and
     // were exactly the ones being cut off.
     async function fetchAllPages(
-      build: () => ReturnType<typeof supabaseAdmin.from<"tasks">>,
+      build: () => { range: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }> },
     ): Promise<TaskRowRaw[]> {
       const out: TaskRowRaw[] = [];
       for (let from = 0; ; from += PAGE) {
