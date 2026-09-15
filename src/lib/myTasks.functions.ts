@@ -120,18 +120,19 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
       new Set([...(pmRows ?? []).map((r) => r.project_id), ...teamProjectIds]),
     );
 
-    let sharedRows: typeof mineRows = [];
+    let sharedRows: TaskRowRaw[] = [];
     if (sharedProjectIds.length) {
-      const { data, error } = await supabaseAdmin
-        .from("tasks")
-        .select(
-          "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable,priority",
-        )
-        .in("project_id", sharedProjectIds)
-        .neq("user_id", userId)
-        .order("scheduled_date", { ascending: true });
-      if (error) throw new Error(error.message);
-      sharedRows = (data ?? []).filter((t) => t.assignee_id !== userId);
+      const rows = await fetchAllPages(
+        () =>
+          supabaseAdmin
+            .from("tasks")
+            .select(TASK_COLS)
+            .in("project_id", sharedProjectIds)
+            .neq("user_id", userId)
+            .order("scheduled_date", { ascending: true, nullsFirst: false })
+            .order("id", { ascending: true }) as never,
+      );
+      sharedRows = rows.filter((t) => t.assignee_id !== userId);
     }
 
     // Merge (avoid duplicates) and mark kind
