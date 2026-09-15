@@ -1387,6 +1387,7 @@ export type Database = {
           planner_task_id: string | null
           position: number
           postpone_count: number
+          priority: number
           project_id: string | null
           recurrence: Database["public"]["Enums"]["task_recurrence"]
           recurrence_interval: number | null
@@ -1426,6 +1427,7 @@ export type Database = {
           planner_task_id?: string | null
           position?: number
           postpone_count?: number
+          priority?: number
           project_id?: string | null
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
           recurrence_interval?: number | null
@@ -1465,6 +1467,7 @@ export type Database = {
           planner_task_id?: string | null
           position?: number
           postpone_count?: number
+          priority?: number
           project_id?: string | null
           recurrence?: Database["public"]["Enums"]["task_recurrence"]
           recurrence_interval?: number | null
