@@ -45,6 +45,7 @@ import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/publi
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
+import { Route as ApiPublicNotificationsDispatchRouteImport } from './routes/api/public/notifications/dispatch'
 import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
 import { Route as ApiPublicInboxScanAllRouteImport } from './routes/api/public/inbox/scan-all'
 import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
@@ -235,6 +236,12 @@ const ApiPublicOauthAuthorizeRoute = ApiPublicOauthAuthorizeRouteImport.update({
   path: '/api/public/oauth/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNotificationsDispatchRoute =
+  ApiPublicNotificationsDispatchRouteImport.update({
+    id: '/api/public/notifications/dispatch',
+    path: '/api/public/notifications/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
   id: '/api/public/inbox/tag-email',
   path: '/api/public/inbox/tag-email',
@@ -282,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
@@ -323,6 +331,7 @@ export interface FileRoutesByTo {
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
@@ -365,6 +374,7 @@ export interface FileRoutesById {
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
+  '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
@@ -408,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
+    | '/api/public/notifications/dispatch'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
+    | '/api/public/notifications/dispatch'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
@@ -490,6 +502,7 @@ export interface FileRouteTypes {
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
+    | '/api/public/notifications/dispatch'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
@@ -532,6 +545,7 @@ export interface RootRouteChildren {
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
   ApiPublicInboxScanAllRoute: typeof ApiPublicInboxScanAllRoute
   ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
+  ApiPublicNotificationsDispatchRoute: typeof ApiPublicNotificationsDispatchRoute
   ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
   ApiPublicOauthTokenRoute: typeof ApiPublicOauthTokenRoute
@@ -796,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOauthAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/notifications/dispatch': {
+      id: '/api/public/notifications/dispatch'
+      path: '/api/public/notifications/dispatch'
+      fullPath: '/api/public/notifications/dispatch'
+      preLoaderRoute: typeof ApiPublicNotificationsDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inbox/tag-email': {
       id: '/api/public/inbox/tag-email'
       path: '/api/public/inbox/tag-email'
@@ -864,6 +885,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
   ApiPublicInboxScanAllRoute: ApiPublicInboxScanAllRoute,
   ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
+  ApiPublicNotificationsDispatchRoute: ApiPublicNotificationsDispatchRoute,
   ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
   ApiPublicOauthTokenRoute: ApiPublicOauthTokenRoute,
