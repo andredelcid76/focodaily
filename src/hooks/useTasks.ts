@@ -825,7 +825,7 @@ export function useTasks(userId: string | undefined) {
   const tasksByDay = (date: string) => tasks.filter((t) => t.scheduled_date === date);
 
   // Position helper to insert a new task at the TOP of a given day
-  const topPositionForDay = (date: string) => {
+  const topPositionForDay = (date: string | null) => {
     const dayList = tasks.filter((t) => t.scheduled_date === date);
     if (dayList.length === 0) return 0;
     const min = Math.min(...dayList.map((t) => t.position ?? 0));
