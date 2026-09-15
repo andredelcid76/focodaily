@@ -340,6 +340,12 @@ export function useTasks(userId: string | undefined) {
     if (error) throw error;
     if (inserted) {
       setTasks((prev) => (prev.some((t) => t.id === inserted.id) ? prev : [...prev, inserted]));
+      // Tarefa já criada delegada: dispara os avisos externos na hora
+      if (inserted.assignee_id && inserted.assignee_id !== inserted.user_id) {
+        import("@/lib/notifications.functions")
+          .then((m) => m.flushNotificationDelivery())
+          .catch(() => {});
+      }
       // If it's a recurring parent, materialize future instances
       if (inserted.recurrence !== "none" && !inserted.recurrence_parent_id) {
         ensureRecurring().then(refresh);
