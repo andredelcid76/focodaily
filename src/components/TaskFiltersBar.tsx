@@ -5,6 +5,7 @@ import { CheckCircle2, Filter, Lock, X, Mail, Video, Briefcase, Pencil } from "l
 import type { TaskCategory, TaskStatus } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
+import { PriorityIcon, PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "@/components/PriorityBadge";
 
 export type TaskOrigin = "manual" | "pipedrive" | "email" | "meeting";
 
@@ -16,6 +17,7 @@ export type TaskFilters = {
   categories: Set<TaskCategory>;
   statuses: Set<TaskStatus>;
   origins: Set<TaskOrigin>;
+  priorities: Set<number>;
   nonNegotiableOnly: boolean;
   assigneeMode: AssigneeMode;
 };
@@ -26,6 +28,7 @@ export const emptyFilters = (): TaskFilters => ({
   categories: new Set(),
   statuses: new Set(),
   origins: new Set(),
+  priorities: new Set(),
   nonNegotiableOnly: false,
   assigneeMode: "all",
 });
@@ -37,6 +40,7 @@ export function countActiveFilters(f: TaskFilters): number {
     f.categories.size +
     f.statuses.size +
     f.origins.size +
+    f.priorities.size +
     (f.nonNegotiableOnly ? 1 : 0) +
     (f.assigneeMode !== "all" ? 1 : 0)
   );
@@ -48,6 +52,7 @@ export function applyTaskFilters<T extends {
   category: TaskCategory;
   status: TaskStatus;
   non_negotiable: boolean;
+  priority?: number | null;
   origin_source?: string | null;
   user_id?: string;
   assignee_id?: string | null;
@@ -69,6 +74,7 @@ export function applyTaskFilters<T extends {
       const origin: TaskOrigin = src === "pipedrive" || src === "email" || src === "meeting" ? src : "manual";
       if (!f.origins.has(origin)) return false;
     }
+    if (f.priorities.size > 0 && !f.priorities.has(toPriority(t.priority))) return false;
     if (f.nonNegotiableOnly && !t.non_negotiable) return false;
     if (f.assigneeMode !== "all" && currentUserId) {
       const a = t.assignee_id ?? null;
@@ -230,6 +236,18 @@ export function TaskFiltersBar({
                 onClick={() => toggle("origins", o)}
                 label={ORIGIN_LABEL[o]}
                 icon={ORIGIN_ICON[o]}
+              />
+            ))}
+          </FilterSection>
+
+          <FilterSection title="Prioridade">
+            {PRIORITY_LEVELS.map((p) => (
+              <Chip
+                key={p}
+                active={filters.priorities.has(p)}
+                onClick={() => toggle("priorities", p)}
+                label={PRIORITY_LABEL[p]}
+                icon={<PriorityIcon priority={p} className="h-3 w-3" />}
               />
             ))}
           </FilterSection>
