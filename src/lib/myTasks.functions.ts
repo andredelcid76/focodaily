@@ -16,6 +16,7 @@ export type MyTaskRow = {
   project_id: string | null;
   role_id: string | null;
   non_negotiable: boolean | null;
+  priority: number;
   /**
    * own      = criada por mim (sou user_id)
    * delegated= delegada para mim (sou assignee_id, mas não user_id)
@@ -51,7 +52,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
     const { data: mineRows, error: mineErr } = await supabaseAdmin
       .from("tasks")
       .select(
-        "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable",
+        "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable,priority",
       )
       .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
       .order("scheduled_date", { ascending: true });
@@ -84,7 +85,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
       const { data, error } = await supabaseAdmin
         .from("tasks")
         .select(
-          "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable",
+          "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable,priority",
         )
         .in("project_id", sharedProjectIds)
         .neq("user_id", userId)
@@ -151,6 +152,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
         project_id: t.project_id,
         role_id: t.role_id,
         non_negotiable: (t as { non_negotiable?: boolean | null }).non_negotiable ?? null,
+        priority: (t as { priority?: number | null }).priority ?? 3,
         kind,
         project: p ? { id: p.id, name: p.name, color: p.color, icon: p.icon, status: (p as { status?: string | null }).status ?? null } : null,
         role: r ? { id: r.id, name: r.name, color: r.color } : null,

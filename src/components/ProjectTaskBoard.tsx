@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
 import { CategoryIcon } from "./CategoryBadge";
+import { PriorityIcon, PriorityBadge, PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "./PriorityBadge";
 import { TaskCompleteButton } from "./TaskCompleteButton";
 import { formatShort, todayISO, addDays } from "@/lib/date";
 import { listProjectMembers } from "@/lib/team.functions";
@@ -272,6 +273,7 @@ function BacklogList({
             >
               <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
               <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+              <PriorityIcon priority={(t as any).priority} className="h-3 w-3" />
               <button onClick={() => onEdit(t)} className="min-w-0 flex-1 truncate text-left text-sm">
                 {t.title}
               </button>
@@ -690,6 +692,7 @@ function TaskRow({
       <button onClick={onEdit} className="min-w-0 text-left">
         <div className="flex items-center gap-1.5">
           <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+          <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
           {(task as any).non_negotiable && !task.completed && <Lock className="h-3 w-3 text-overdue shrink-0" />}
           <span className={`truncate text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>
             {task.title}
@@ -836,6 +839,7 @@ function KanbanCard({
         <button onClick={onEdit} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
             <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+          <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
             <span className={`text-sm font-medium leading-snug ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
           </div>
         </button>
@@ -1143,6 +1147,7 @@ function TimelineView({
                   title={t.title}
                 >
                   <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+              <PriorityIcon priority={(t as any).priority} className="h-3 w-3" />
                   <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>
                 </button>
               ))}
