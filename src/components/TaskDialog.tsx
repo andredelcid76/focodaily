@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { formatMinutes } from "@/lib/date";
 import { Link } from "@tanstack/react-router";
 import { CategoryIcon } from "@/components/CategoryBadge";
+import { PriorityIcon, PRIORITY_LABEL, PRIORITY_LEVELS, toPriority, type PriorityLevel } from "@/components/PriorityBadge";
 import { DatePickerField } from "@/components/DatePickerField";
 import { FolderKanban, Lock, CheckCircle2, RotateCcw, User, Link2, X } from "lucide-react";
 import { SubtasksList } from "@/components/SubtasksList";
@@ -51,6 +52,7 @@ type Props = {
       project_id: string | null;
       assignee_id: string | null;
       non_negotiable: boolean;
+      priority?: number;
       recurrence_interval?: number | null;
       recurrence_weekdays?: number[] | null;
       recurrence_week_interval?: number | null;
@@ -92,6 +94,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
   const [projectId, setProjectId] = useState<string | null>(null);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [nonNegotiable, setNonNegotiable] = useState(false);
+  const [priority, setPriority] = useState<PriorityLevel>(3);
   const [interval, setIntervalDays] = useState(2);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekInterval, setWeekInterval] = useState(1);
@@ -169,6 +172,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           : user?.id ?? null;
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
+      setPriority(task ? toPriority((task as any)?.priority) : 3);
       if (!isFreshInit) return;
       setRecurrence(task?.recurrence ?? "none");
       setIntervalDays(task?.recurrence_interval ?? 2);
@@ -308,6 +312,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
           assignee_id: assigneeId ?? user?.id ?? null,
           non_negotiable: nonNegotiable,
+          priority,
           ...rulePatch,
         },
         scope
@@ -607,6 +612,21 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                       <CategoryIcon category="circumstantial" /> Circunstancial
                     </span>
                   </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prioridade</Label>
+              <Select value={String(priority)} onValueChange={(v) => setPriority(toPriority(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_LEVELS.map((p) => (
+                    <SelectItem key={p} value={String(p)}>
+                      <span className="inline-flex items-center gap-2">
+                        <PriorityIcon priority={p} /> {PRIORITY_LABEL[p]}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

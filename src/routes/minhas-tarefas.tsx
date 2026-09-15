@@ -29,6 +29,7 @@ import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
 import type { Task } from "@/hooks/useTasks";
 import { useTaskDependencies, blockingPredecessorTitles } from "@/hooks/useTaskDependencies";
 import { TaskListRow, TaskListHeader, type TaskSortKey } from "@/components/TaskListRow";
+import { PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "@/components/PriorityBadge";
 import { useTaskColumns } from "@/hooks/useTaskColumns";
 import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
 import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Focou" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration";
+type SortKey = "title" | "kind" | "project" | "role" | "scheduled_date" | "status" | "category" | "duration" | "priority";
 type SortDir = "asc" | "desc";
 
 
@@ -173,6 +174,7 @@ function MyTasksPage() {
     "all" | "active_only" | "in_progress" | "active" | "paused" | "not_started" | "finished"
   >("mt.projectStatus", "all", P);
   const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
+  const [priorityFilter, setPriorityFilter] = useStickyState<string>("mt.priority", "all", P);
   const [categoryFilter, setCategoryFilter] = useStickyState<"all" | MyTaskRow["category"]>("mt.category", "all", P);
   const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
   const [dateRange, setDateRange] = useStickyState<
@@ -240,6 +242,7 @@ function MyTasksPage() {
       if (hideDone && t.completed) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+      if (priorityFilter !== "all" && toPriority(t.priority) !== Number(priorityFilter)) return false;
       // Owner-based primary toggle: minhas = own/delegated; outros = shared
       if (ownerFilter === "mine" && t.kind === "shared") return false;
       if (ownerFilter === "others" && t.kind !== "shared") return false;
@@ -302,7 +305,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, categoryFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [tasks, search, statusFilter, categoryFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -326,6 +329,8 @@ function MyTasksPage() {
             return a.category.localeCompare(b.category);
           case "duration":
             return a.duration_minutes - b.duration_minutes;
+          case "priority":
+            return toPriority(b.priority) - toPriority(a.priority);
         }
       })();
       return v * dir;
@@ -434,7 +439,7 @@ function MyTasksPage() {
 
   const headerSortKey: TaskSortKey | null =
     sortKey === "scheduled_date" ? "due"
-    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "status" || sortKey === "duration"
+    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "status" || sortKey === "duration" || sortKey === "priority"
       ? sortKey
       : null;
 
@@ -567,6 +572,16 @@ function MyTasksPage() {
           </SelectContent>
         </Select>
 
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Prioridade" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer prioridade</SelectItem>
+            {PRIORITY_LEVELS.map((p) => (
+              <SelectItem key={p} value={String(p)}>{PRIORITY_LABEL[p]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={dateRange} onValueChange={(v) => setDateRange(v as typeof dateRange)}>
           <SelectTrigger className="h-9 w-40 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
           <SelectContent>
@@ -662,6 +677,14 @@ function MyTasksPage() {
                 <SelectItem value="urgent">Urgente</SelectItem>
                 <SelectItem value="important">Importante</SelectItem>
                 <SelectItem value="circumstantial">Circunstancial</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select onValueChange={(v) => bulkPatch({ priority: Number(v) } as any, "Prioridade")}>
+              <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Prioridade…" /></SelectTrigger>
+              <SelectContent>
+                {PRIORITY_LEVELS.map((p) => (
+                  <SelectItem key={p} value={String(p)}>{PRIORITY_LABEL[p]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">

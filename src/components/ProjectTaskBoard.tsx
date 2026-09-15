@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RoleBadge } from "./RoleBadge";
 import { CategoryIcon } from "./CategoryBadge";
+import { PriorityIcon, PriorityBadge, PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "./PriorityBadge";
 import { TaskCompleteButton } from "./TaskCompleteButton";
 import { formatShort, todayISO, addDays } from "@/lib/date";
 import { listProjectMembers } from "@/lib/team.functions";
@@ -272,6 +273,7 @@ function BacklogList({
             >
               <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
               <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+              <PriorityIcon priority={(t as any).priority} className="h-3 w-3" />
               <button onClick={() => onEdit(t)} className="min-w-0 flex-1 truncate text-left text-sm">
                 {t.title}
               </button>
@@ -338,13 +340,14 @@ function TableView({
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // ---- Column filters & sort -------------------------------------------------
-  type SortKey = "title" | "scheduled_date" | "assignee" | "status";
+  type SortKey = "title" | "scheduled_date" | "assignee" | "status" | "priority";
   type SortDir = "asc" | "desc";
   type DueFilter = "all" | "overdue" | "today" | "week" | "later" | "no_date" | "done";
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all"); // "all" | "__none" | uid
   const [roleFilter, setRoleFilter] = useState<string>("all"); // "all" | "__none" | rid
   const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("scheduled_date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -357,12 +360,14 @@ function TableView({
     setAssigneeFilter("all");
     setRoleFilter("all");
     setDueFilter("all");
+    setPriorityFilter("all");
   };
   const activeFilterCount =
     (statusFilter !== "all" ? 1 : 0) +
     (assigneeFilter !== "all" ? 1 : 0) +
     (roleFilter !== "all" ? 1 : 0) +
-    (dueFilter !== "all" ? 1 : 0);
+    (dueFilter !== "all" ? 1 : 0) +
+    (priorityFilter !== "all" ? 1 : 0);
 
   const in7 = useMemo(() => addDays(today, 7), [today]);
 
@@ -375,6 +380,7 @@ function TableView({
     if (roleFilter !== "all") {
       if (roleFilter === "__none" ? !!t.role_id : t.role_id !== roleFilter) return false;
     }
+    if (priorityFilter !== "all" && toPriority((t as any).priority) !== Number(priorityFilter)) return false;
     if (dueFilter !== "all") {
       const sd = t.scheduled_date;
       switch (dueFilter) {
@@ -402,6 +408,8 @@ function TableView({
           const bn = b.assignee_id ? nameOf(memberById.get(b.assignee_id)) : "~";
           return an.localeCompare(bn) * dir;
         }
+        case "priority":
+          return (toPriority((b as any).priority) - toPriority((a as any).priority)) * dir;
         case "status": {
           const as = (a.status ?? (a.completed ? "done" : "todo")) as TaskStatus;
           const bs = (b.status ?? (b.completed ? "done" : "todo")) as TaskStatus;
@@ -601,6 +609,15 @@ function TableView({
             <SelectItem value="done">Concluídas</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Prioridade" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Qualquer prioridade</SelectItem>
+            {PRIORITY_LEVELS.map((p) => (
+              <SelectItem key={p} value={String(p)}>{PRIORITY_LABEL[p]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {activeFilterCount > 0 && (
           <Button size="sm" variant="ghost" onClick={clearFilters} className="h-7 text-xs">
             <X className="h-3 w-3 mr-1" /> Limpar ({activeFilterCount})
@@ -612,10 +629,11 @@ function TableView({
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
-        <div className="grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_7rem_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
           <span />
           <SortColHeader label="Tarefa" k="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+          <SortColHeader label="Prioridade" k="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
           <SortColHeader label="Vencimento" k="scheduled_date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
           <SortColHeader label="Responsável" k="assignee" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
           <SortColHeader label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -678,7 +696,7 @@ function TaskRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const isOverdue = !task.completed && sd(task.scheduled_date) < today;
   return (
-    <div className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
+    <div className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_7rem_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
       <Checkbox
         checked={!!selected}
         onCheckedChange={() => onSelectToggle?.()}
@@ -702,6 +720,10 @@ function TaskRow({
           </div>
         )}
       </button>
+
+      <div className="min-w-0">
+        <PriorityBadge priority={(task as any).priority} size="xs" />
+      </div>
 
       <div className="relative">
         <input
@@ -836,6 +858,7 @@ function KanbanCard({
         <button onClick={onEdit} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
             <CategoryIcon category={task.category} className="h-3 w-3 shrink-0" />
+          <PriorityIcon priority={(task as any).priority} className="h-3 w-3" />
             <span className={`text-sm font-medium leading-snug ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
           </div>
         </button>
@@ -1143,6 +1166,7 @@ function TimelineView({
                   title={t.title}
                 >
                   <CategoryIcon category={t.category} className="h-3 w-3 shrink-0" />
+              <PriorityIcon priority={(t as any).priority} className="h-3 w-3" />
                   <span className={`truncate ${t.completed ? "line-through text-muted-foreground" : ""}`}>{t.title}</span>
                 </button>
               ))}

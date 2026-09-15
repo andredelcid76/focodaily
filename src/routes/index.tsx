@@ -257,6 +257,10 @@ function TodayInner({ userId }: { userId: string }) {
           const bn = b.role_id ? rolesById.get(b.role_id)?.name ?? "" : "";
           return an.localeCompare(bn, "pt-BR", { sensitivity: "base" }) * dir;
         }
+        case "priority":
+          return ((b as any).priority ?? 3) - ((a as any).priority ?? 3) === 0
+            ? 0
+            : ((((b as any).priority ?? 3) - ((a as any).priority ?? 3)) as number) * dir;
         case "duration":
           return (a.duration_minutes - b.duration_minutes) * dir;
         case "due":
