@@ -54,6 +54,21 @@ export const CollaborationNoticeEmail = ({
 
 export default CollaborationNoticeEmail
 
+export const template = {
+  component: CollaborationNoticeEmail,
+  subject: (data: Record<string, any>) =>
+    (data.subject as string) ?? (data.title as string) ?? 'Atualização no Focou',
+  displayName: 'Aviso de colaboração',
+  previewData: {
+    siteName: 'Focou',
+    subject: 'Convite para o projeto Lançamento',
+    title: 'Você foi convidado para Lançamento',
+    body: 'Abra o convite para entrar no projeto Lançamento no Focou.',
+    ctaLabel: 'Abrir convite',
+    ctaUrl: 'https://focodaily.lovable.app/convite/exemplo',
+  },
+} satisfies TemplateEntry
+
 const main = {
   backgroundColor: '#f5f5f7',
   fontFamily: 'Arial, sans-serif',
