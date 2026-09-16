@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react'
 
+import { template as collaborationNoticeTemplate } from './collaboration-notice'
+
 export interface TemplateEntry {
   component: ComponentType<any>
   subject: string | ((data: Record<string, any>) => string)
