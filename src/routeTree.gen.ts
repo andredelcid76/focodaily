@@ -26,21 +26,17 @@ import { Route as EquipesIndexRouteImport } from './routes/equipes.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as EquipesIdRouteImport } from './routes/equipes.$id'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as ConviteEquipeTokenRouteImport } from './routes/convite-equipe.$token'
 import { Route as ConviteContatoTokenRouteImport } from './routes/convite-contato.$token'
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
@@ -137,11 +133,6 @@ const EquipesIdRoute = EquipesIdRouteImport.update({
   path: '/equipes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ConviteTokenRoute = ConviteTokenRouteImport.update({
   id: '/convite/$token',
   path: '/convite/$token',
@@ -169,11 +160,6 @@ const DotwellKnownOauthAuthorizationServerRoute =
     path: '/.well-known/oauth-authorization-server',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   id: '/lovable/email/events',
   path: '/lovable/email/events',
@@ -199,22 +185,10 @@ const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
   path: '/api/public/maya',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
     path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
 const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
@@ -288,7 +262,6 @@ export interface FileRoutesByFullPath {
   '/convite-contato/$token': typeof ConviteContatoTokenRoute
   '/convite-equipe/$token': typeof ConviteEquipeTokenRoute
   '/convite/$token': typeof ConviteTokenRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/equipes/$id': typeof EquipesIdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -299,7 +272,6 @@ export interface FileRoutesByFullPath {
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
@@ -310,9 +282,7 @@ export interface FileRoutesByFullPath {
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -332,7 +302,6 @@ export interface FileRoutesByTo {
   '/convite-contato/$token': typeof ConviteContatoTokenRoute
   '/convite-equipe/$token': typeof ConviteEquipeTokenRoute
   '/convite/$token': typeof ConviteTokenRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/equipes/$id': typeof EquipesIdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -343,7 +312,6 @@ export interface FileRoutesByTo {
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
@@ -354,9 +322,7 @@ export interface FileRoutesByTo {
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -377,7 +343,6 @@ export interface FileRoutesById {
   '/convite-contato/$token': typeof ConviteContatoTokenRoute
   '/convite-equipe/$token': typeof ConviteEquipeTokenRoute
   '/convite/$token': typeof ConviteTokenRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/equipes/$id': typeof EquipesIdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projetos/$id': typeof ProjetosIdRoute
@@ -388,7 +353,6 @@ export interface FileRoutesById {
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
@@ -399,9 +363,7 @@ export interface FileRoutesById {
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -423,7 +385,6 @@ export interface FileRouteTypes {
     | '/convite-contato/$token'
     | '/convite-equipe/$token'
     | '/convite/$token'
-    | '/email/unsubscribe'
     | '/equipes/$id'
     | '/oauth/consent'
     | '/projetos/$id'
@@ -434,7 +395,6 @@ export interface FileRouteTypes {
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/lovable/email/events'
-    | '/lovable/email/suppression'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
@@ -445,9 +405,7 @@ export interface FileRouteTypes {
     | '/api/public/outlook/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -467,7 +425,6 @@ export interface FileRouteTypes {
     | '/convite-contato/$token'
     | '/convite-equipe/$token'
     | '/convite/$token'
-    | '/email/unsubscribe'
     | '/equipes/$id'
     | '/oauth/consent'
     | '/projetos/$id'
@@ -478,7 +435,6 @@ export interface FileRouteTypes {
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/lovable/email/events'
-    | '/lovable/email/suppression'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
@@ -489,9 +445,7 @@ export interface FileRouteTypes {
     | '/api/public/outlook/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
   id:
     | '__root__'
     | '/'
@@ -511,7 +465,6 @@ export interface FileRouteTypes {
     | '/convite-contato/$token'
     | '/convite-equipe/$token'
     | '/convite/$token'
-    | '/email/unsubscribe'
     | '/equipes/$id'
     | '/oauth/consent'
     | '/projetos/$id'
@@ -522,7 +475,6 @@ export interface FileRouteTypes {
     | '/api/public/outlook'
     | '/api/public/planner'
     | '/lovable/email/events'
-    | '/lovable/email/suppression'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
@@ -533,9 +485,7 @@ export interface FileRouteTypes {
     | '/api/public/outlook/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -556,7 +506,6 @@ export interface RootRouteChildren {
   ConviteContatoTokenRoute: typeof ConviteContatoTokenRoute
   ConviteEquipeTokenRoute: typeof ConviteEquipeTokenRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
-  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EquipesIdRoute: typeof EquipesIdRoute
   OauthConsentRoute: typeof OauthConsentRoute
   ProjetosIdRoute: typeof ProjetosIdRoute
@@ -567,7 +516,6 @@ export interface RootRouteChildren {
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
-  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
   ApiPublicInboxScanAllRoute: typeof ApiPublicInboxScanAllRoute
   ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
@@ -577,9 +525,7 @@ export interface RootRouteChildren {
   ApiPublicOauthTokenRoute: typeof ApiPublicOauthTokenRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
-  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
-  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -703,13 +649,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EquipesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/convite/$token': {
       id: '/convite/$token'
       path: '/convite/$token'
@@ -743,13 +682,6 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-authorization-server'
       fullPath: '/.well-known/oauth-authorization-server'
       preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/events': {
@@ -787,25 +719,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMayaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
       fullPath: '/lovable/email/transactional/preview'
       preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/webhook': {
@@ -912,7 +830,6 @@ const rootRouteChildren: RootRouteChildren = {
   ConviteContatoTokenRoute: ConviteContatoTokenRoute,
   ConviteEquipeTokenRoute: ConviteEquipeTokenRoute,
   ConviteTokenRoute: ConviteTokenRoute,
-  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EquipesIdRoute: EquipesIdRoute,
   OauthConsentRoute: OauthConsentRoute,
   ProjetosIdRoute: ProjetosIdRoute,
@@ -923,7 +840,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
-  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
   ApiPublicInboxScanAllRoute: ApiPublicInboxScanAllRoute,
   ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
@@ -933,9 +849,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOauthTokenRoute: ApiPublicOauthTokenRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
-  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
-  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
