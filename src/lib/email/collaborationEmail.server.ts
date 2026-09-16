@@ -1,16 +1,30 @@
-import * as React from "react";
-import { render } from "@react-email/components";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { CollaborationNoticeEmail } from "@/lib/email-templates/collaboration-notice";
-import { getOrCreateUnsubscribeToken } from "@/lib/email/unsubscribeToken.server";
+import { sendTemplateEmail } from "@/lib/email-templates/send-email";
 
 const SITE_NAME = "Focou";
-const FROM_DOMAIN = "anpla.com.br";
-const SENDER_DOMAIN = "notify.anpla.com.br";
+const TEMPLATE_NAME = "collaboration-notice";
+
+async function logSend(input: {
+  label: string;
+  to: string;
+  status: "sent" | "suppressed" | "failed";
+  errorMessage?: string;
+}) {
+  const { error } = await supabaseAdmin.from("email_send_log").insert({
+    message_id: null,
+    template_name: input.label,
+    recipient_email: input.to,
+    status: input.status,
+    ...(input.errorMessage ? { error_message: input.errorMessage.slice(0, 1000) } : {}),
+  });
+  if (error) {
+    console.error("Failed to write email_send_log", { code: error.code, message: error.message });
+  }
+}
 
 /**
- * Enfileira um e-mail de colaboração (convites, delegação de tarefa, etc.).
- * Mesmo payload usado pelos convites de equipe/projeto.
+ * Envia um e-mail de colaboração (convites, delegação de tarefa, etc.)
+ * pela entrega de e-mail gerenciada pela Lovable.
  */
 export async function enqueueCollaborationEmail(input: {
   to: string;
@@ -20,73 +34,32 @@ export async function enqueueCollaborationEmail(input: {
   body: string;
   ctaLabel: string;
   ctaUrl: string;
+  idempotencyKey?: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const messageId = crypto.randomUUID();
-
   try {
-    const element = React.createElement(CollaborationNoticeEmail, {
-      siteName: SITE_NAME,
-      title: input.title,
-      body: input.body,
-      ctaLabel: input.ctaLabel,
-      ctaUrl: input.ctaUrl,
-    });
-
-    const html = await render(element);
-    const text = await render(element, { plainText: true });
-
-    await supabaseAdmin.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: input.label,
-      recipient_email: input.to,
-      status: "pending",
-    });
-
-    const unsubscribeToken = await getOrCreateUnsubscribeToken(input.to);
-    if (!unsubscribeToken) {
-      await supabaseAdmin.from("email_send_log").insert({
-        message_id: messageId,
-        template_name: input.label,
-        recipient_email: input.to,
-        status: "failed",
-        error_message: "Failed to prepare unsubscribe token",
-      });
-      return { ok: false, error: "unsubscribe_token" };
-    }
-
-    const { error } = await supabaseAdmin.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
-        message_id: messageId,
-        to: input.to,
-        from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-        sender_domain: SENDER_DOMAIN,
+    const result = await sendTemplateEmail(TEMPLATE_NAME, input.to, {
+      idempotencyKey: input.idempotencyKey,
+      templateData: {
+        siteName: SITE_NAME,
         subject: input.subject,
-        html,
-        text,
-        purpose: "transactional",
-        label: input.label,
-        idempotency_key: messageId,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
+        title: input.title,
+        body: input.body,
+        ctaLabel: input.ctaLabel,
+        ctaUrl: input.ctaUrl,
       },
     });
 
-    if (error) {
-      await supabaseAdmin.from("email_send_log").insert({
-        message_id: messageId,
-        template_name: input.label,
-        recipient_email: input.to,
-        status: "failed",
-        error_message: error.message,
-      });
-      return { ok: false, error: error.message };
+    if (!result.sent) {
+      await logSend({ label: input.label, to: input.to, status: "suppressed" });
+      return { ok: false, error: result.reason };
     }
 
+    await logSend({ label: input.label, to: input.to, status: "sent" });
     return { ok: true };
   } catch (error) {
     const msg = error instanceof Error ? error.message : "error";
-    console.error("Failed to enqueue collaboration email", { label: input.label, error: msg });
+    console.error("Failed to send collaboration email", { label: input.label, error: msg });
+    await logSend({ label: input.label, to: input.to, status: "failed", errorMessage: msg });
     return { ok: false, error: msg };
   }
 }
