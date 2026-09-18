@@ -11,6 +11,7 @@ import { TaskCard } from "@/components/TaskCard";
 import { TaskListRow, TaskListHeader, type TaskSortKey, type TaskSortDir } from "@/components/TaskListRow";
 import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
 import { useTaskColumns } from "@/hooks/useTaskColumns";
+import { useProfiles } from "@/hooks/useProfiles";
 import { ColumnSettingsPopover } from "@/components/ColumnSettingsPopover";
 
 import { TaskDialog, type RecurrenceScope } from "@/components/TaskDialog";
@@ -71,6 +72,14 @@ import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
+  head: () => ({ meta: [
+    { title: "Hoje | Foco Daily Planner" },
+    { name: "description", content: "Organize suas tarefas e acompanhe os responsáveis no seu dia." },
+    { property: "og:title", content: "Hoje | Foco Daily Planner" },
+    { property: "og:description", content: "Organize suas tarefas e acompanhe os responsáveis no seu dia." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <AppShell>
       <TodayPage />
@@ -89,6 +98,13 @@ function TodayInner({ userId }: { userId: string }) {
   const [viewDate, setViewDate] = useState(today);
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId);
+  const assigneeProfiles = useProfiles(tasksApi.tasks.map((t) => t.assignee_id));
+  const assigneeName = (id: string | null | undefined): string | null => {
+    if (!id) return null;
+    if (id === userId) return "Eu";
+    const profile = assigneeProfiles.get(id);
+    return profile?.display_name ?? profile?.email ?? "Outro usuário";
+  };
   const depsApi = useTaskDependencies(userId);
 
   // Map taskId -> array of blocking predecessor titles (open ones only)
@@ -728,6 +744,7 @@ function TodayInner({ userId }: { userId: string }) {
                   <div className="flex-1 min-w-0">
                     <TaskListRowStatic
                       task={t}
+                      assigneeName={assigneeName(t.assignee_id)}
                       role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                       project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                       onToggle={() => toggleCompleteWithTimer(t)}
@@ -869,6 +886,7 @@ function TodayInner({ userId }: { userId: string }) {
                     <TaskListRow
                       key={t.id}
                       task={t}
+                      assigneeName={assigneeName(t.assignee_id)}
                       role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                       project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                       onToggle={() => toggleCompleteWithTimer(t)}
