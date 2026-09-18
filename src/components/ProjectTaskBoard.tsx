@@ -1,3 +1,5 @@
+import { TaskDependencyStatus } from "./TaskDependencyStatus";
+import { confirmDependencyMove } from "@/lib/dependency-check";
 import { useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -711,6 +713,7 @@ function TaskRow({
           </span>
           {role && <RoleBadge role={role} size="xs" />}
         </div>
+        <TaskDependencyStatus task={task} />
         {task.duration_minutes > 0 && (
           <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
             <Clock className="h-2.5 w-2.5" /> {task.duration_minutes}min
@@ -859,6 +862,7 @@ function KanbanCard({
           </div>
         </button>
       </div>
+      <TaskDependencyStatus task={task} />
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
         <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 tabular-nums ${isOverdue ? "border-overdue/40 bg-overdue/10 text-overdue" : "border-border/60 text-muted-foreground"}`}>
           {isOverdue && <AlertCircle className="h-2.5 w-2.5" />}
@@ -1362,6 +1366,7 @@ function TimelineRow({
       if (days !== 0) {
         const newDate = addDays(sd(task.scheduled_date), days);
         try {
+          if (!(await confirmDependencyMove(task.id, newDate))) return;
           await onUpdate(task.id, { scheduled_date: newDate } as any);
           toast.success(`Movida para ${fmtDay(newDate)}`);
         } catch (err: any) {

@@ -1,3 +1,4 @@
+import { TaskDependencyStatus } from "./TaskDependencyStatus";
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -197,6 +198,7 @@ export function TaskListRow({
                     </span>
                   </div>
                 </div>
+                <TaskDependencyStatus task={task} />
                 {(totalSpent > 0 || (subtaskCount && subtaskCount.total > 0)
                   || task.recurrence !== "none" || task.recurrence_parent_id
                   || (blockedBy && blockedBy.length > 0)

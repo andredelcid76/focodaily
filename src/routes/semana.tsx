@@ -1,3 +1,4 @@
+import { TaskDependencyStatus } from "@/components/TaskDependencyStatus";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -393,6 +394,7 @@ function MiniTaskRow({
         }
       >
         {task.title}
+        <TaskDependencyStatus task={task} />
       </span>
       {(role?.color || project?.color) && (
         <span

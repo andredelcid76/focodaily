@@ -1,3 +1,4 @@
+import { confirmDependencyMove } from "@/lib/dependency-check";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
@@ -676,6 +677,9 @@ export function useTasks(userId: string | undefined) {
   };
 
   const reorderInDay = async (date: string, orderedIds: string[]) => {
+    for (const id of orderedIds) {
+      if (tasks.find(t => t.id === id)?.scheduled_date !== date && !(await confirmDependencyMove(id, date))) return;
+    }
     setTasks((prev) => {
       const map = new Map(prev.map((t) => [t.id, t]));
       orderedIds.forEach((id, idx) => {
@@ -693,6 +697,7 @@ export function useTasks(userId: string | undefined) {
 
   const moveTaskToDay = async (taskId: string, date: string, position = 0) => {
     const task = tasks.find((t) => t.id === taskId);
+    if (task?.scheduled_date !== date && !(await confirmDependencyMove(taskId, date))) return;
     if (task?.recurrence_parent_id && task.scheduled_date !== date) {
       await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date ?? "");
       await updateTask(taskId, {
