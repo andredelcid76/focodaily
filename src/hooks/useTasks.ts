@@ -252,7 +252,7 @@ export function useTasks(userId: string | undefined) {
             category: p.category,
             role_id: p.role_id,
             project_id: p.project_id,
-            assignee_id: p.assignee_id ?? userId,
+            assignee_id: p.assignee_id ?? null,
             non_negotiable: p.non_negotiable,
             scheduled_date: dayISO,
             original_date: dayISO,
@@ -756,7 +756,7 @@ export function useTasks(userId: string | undefined) {
     if (!userId) return;
     const payload: TablesInsert<"tasks"> = {
       user_id: userId,
-      assignee_id: task.assignee_id ?? userId,
+      assignee_id: task.assignee_id ?? null,
       title: task.title,
       description: task.description,
       category: task.category,
@@ -797,7 +797,7 @@ export function useTasks(userId: string | undefined) {
 
     const payload: TablesInsert<"tasks"> = {
       user_id: userId,
-      assignee_id: task.assignee_id ?? userId,
+      assignee_id: task.assignee_id ?? null,
       title: task.title,
       description: task.description,
       category: task.category,
