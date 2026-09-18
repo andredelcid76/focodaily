@@ -49,9 +49,13 @@ async function assertAssigneeAllowed(
 ): Promise<void> {
   if (assigneeId === taskOwnerId) return;
   if (!projectId) {
-    throw new Error(
-      "Para delegar, a tarefa precisa estar em um projeto compartilhado — ou atribua ao próprio dono da tarefa.",
-    );
+    const actorId = getUserId(auth);
+    const { data, error } = await db(auth).from("contacts").select("id")
+      .or(`and(owner_id.eq.${actorId},contact_id.eq.${assigneeId}),and(owner_id.eq.${assigneeId},contact_id.eq.${actorId})`)
+      .limit(1);
+    if (error) throw new Error(error.message);
+    if (!data?.length) throw new Error("Para delegar sem projeto, adicione o responsável aos seus contatos em Pessoas.");
+    return;
   }
   const client = db(auth);
   const [memberRes, ownerRes] = await Promise.all([
@@ -609,7 +613,7 @@ export const createTask = defineTool({
     assignee_id: z
       .string()
       .optional()
-      .describe("Responsável pela tarefa. Precisa ser membro do projeto/equipe. Omitido = tarefa de quem cria."),
+      .describe("Responsável pela tarefa: contato para tarefas sem projeto, ou membro do projeto/equipe quando vinculada. Campo opcional."),
     duration_minutes: z.coerce.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
     priority: z.coerce.number().int().min(1).max(5).optional().describe(PRIORITY_DOC),
@@ -748,7 +752,7 @@ export const updateTask = defineTool({
       .string()
       .nullable()
       .optional()
-      .describe("Novo responsável (membro do projeto/equipe) ou null para remover."),
+      .describe("Novo responsável: contato para tarefas sem projeto, membro do projeto/equipe quando vinculada, ou null para remover."),
     status: taskStatusEnum.optional().describe("todo, in_progress, blocked ou done."),
     blocked_reason: z
       .string()

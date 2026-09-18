@@ -1,0 +1,2 @@
+CREATE POLICY "Assignees can view delegated tasks" ON public.tasks FOR SELECT TO authenticated USING (assignee_id = auth.uid());
+CREATE POLICY "Users can view contact profiles" ON public.profiles FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.contacts c WHERE (c.owner_id = auth.uid() AND c.contact_id = profiles.user_id) OR (c.contact_id = auth.uid() AND c.owner_id = profiles.user_id)));

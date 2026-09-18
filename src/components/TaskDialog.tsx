@@ -204,12 +204,30 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     staleTime: 60_000,
   });
   const members = membersData?.members ?? [];
-  const isShared = members.length > 1;
-  const delegatedToOther = !!(isShared && effectiveProjectId && assigneeId && assigneeId !== user?.id);
+  const { data: contactMembers = [] } = useQuery({
+    queryKey: ["task-assignee-contacts", user?.id],
+    enabled: open && !effectiveProjectId && !!user?.id,
+    queryFn: async () => {
+      if (!user) return [];
+      const { data: contacts, error } = await supabase.from("contacts")
+        .select("owner_id,contact_id").or(`owner_id.eq.${user.id},contact_id.eq.${user.id}`);
+      if (error) throw error;
+      const ids = [...new Set([user.id, ...(contacts ?? []).map(c => c.owner_id === user.id ? c.contact_id : c.owner_id)])];
+      const { data: profiles, error: profileError } = await supabase.from("profiles")
+        .select("user_id,display_name,email").in("user_id", ids);
+      if (profileError) throw profileError;
+      return (profiles ?? []).map(p => ({ ...p, is_me: p.user_id === user.id, role: "contact" }));
+    },
+    staleTime: 60_000,
+  });
+  const assigneeOptions = effectiveProjectId ? members : contactMembers;
+  const delegatedToOther = !!(assigneeId && assigneeId !== user?.id);
   const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) : null;
   const projectAllowsMemberReassign = (currentProject as any)?.members_can_reassign !== false;
   const isProjectAdminOrOwner = !!(membersData?.is_owner || membersData?.is_admin);
-  const canReassign = isProjectAdminOrOwner || projectAllowsMemberReassign;
+  const canReassign = effectiveProjectId
+    ? isProjectAdminOrOwner || projectAllowsMemberReassign
+    : !task || task.user_id === user?.id;
 
   const isRecurringInstance = !!(task && !isSeed && (task.recurrence_parent_id || task.recurrence !== "none"));
   const [scopeOpen, setScopeOpen] = useState(false);
@@ -672,7 +690,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
               </span>
             </div>
           )}
-          {effectiveProjectId && isShared && (
+          {(
             <div>
               <Label>Responsável</Label>
               <Select
@@ -696,7 +714,10 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                       <User className="h-3 w-3" /> Sem responsável
                     </span>
                   </SelectItem>
-                  {members.map((m) => (
+                   {assigneeId && !assigneeOptions.some(m => m.user_id === assigneeId) && (
+                     <SelectItem value={assigneeId}>Responsável atual</SelectItem>
+                   )}
+                   {assigneeOptions.map((m) => (
                     <SelectItem key={m.user_id} value={m.user_id}>
                       <span className="inline-flex items-center gap-2">
                         <User className="h-3 w-3" />
