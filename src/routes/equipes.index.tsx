@@ -151,8 +151,10 @@ function EquipesPage() {
   const ownedTeams = teams.filter((t) => t.is_owner);
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? "Equipe";
 
-  const unassigned = people.filter((p) => p.team_ids.length === 0);
-  const assigned = people.filter((p) => p.team_ids.length > 0);
+  const [peopleSearch, setPeopleSearch] = useState("");
+  const filteredPeople = people.filter(p => `${p.display_name ?? ""} ${p.email ?? ""}`.toLocaleLowerCase("pt-BR").includes(peopleSearch.toLocaleLowerCase("pt-BR")));
+  const unassigned = filteredPeople.filter((p) => p.team_ids.length === 0);
+  const assigned = filteredPeople.filter((p) => p.team_ids.length > 0);
 
 
   return (
@@ -161,8 +163,7 @@ function EquipesPage() {
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Equipes e pessoas</h1>
           <p className="text-sm text-muted-foreground">
-            Equipes agrupam pessoas para compartilhar projetos. Pessoas podem existir sem equipe e
-            ser adicionadas individualmente a projetos.
+            Pessoas e equipes
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>
@@ -246,13 +247,13 @@ function EquipesPage() {
           </Button>
         </div>
 
+        <Input aria-label="Buscar pessoas" placeholder="Buscar por nome ou e-mail" value={peopleSearch} onChange={e => setPeopleSearch(e.target.value)} />
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : (
           <div className="space-y-5">
             <PeopleGroup
-              title="Disponíveis para alocação (sem equipe)"
-              hint="Pessoas convidadas livremente ou que colaboram com você em projetos, sem pertencer a nenhuma equipe."
+              title="Pessoas independentes"
               people={unassigned}
               teamName={teamName}
               canAllocate={ownedTeams.length > 0}
