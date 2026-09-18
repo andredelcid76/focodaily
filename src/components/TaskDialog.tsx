@@ -313,7 +313,8 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       let saveDate = noDate ? null : date;
       const existingIds = new Set(task?.id ? depsApi.predecessorsOf(task.id) : []);
       const hasNewDependency = predecessorIds.some(id => !existingIds.has(id));
-      if (hasNewDependency && saveDate && predecessorIds.length) {
+      const dateChanged = saveDate !== (task?.scheduled_date ?? null);
+      if ((hasNewDependency || dateChanged) && saveDate && predecessorIds.length) {
         const { data: predecessors, error } = await supabase.from("tasks")
           .select("id,title,scheduled_date,completed").in("id", predecessorIds);
         if (error) throw error;
