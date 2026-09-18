@@ -803,6 +803,24 @@ export const updateTask = defineTool({
     recurrence_weekdays: z.array(z.coerce.number().int().min(0).max(6)).nullable().optional(),
     recurrence_week_interval: z.coerce.number().int().positive().nullable().optional(),
     recurrence_until: z.string().nullable().optional(),
+    role_id: z
+      .string()
+      .nullable()
+      .optional()
+      .describe("Papel (role) do usuário ao qual a tarefa pertence, ou null para remover. Use list_roles para obter os ids."),
+    non_negotiable: z.boolean().optional().describe("Marca a tarefa como não negociável no dia."),
+    planned_date: z.string().nullable().optional().describe("YYYY-MM-DD: data originalmente planejada."),
+    original_date: z.string().nullable().optional().describe("YYYY-MM-DD: primeira data em que a tarefa foi agendada."),
+    position: z.coerce.number().int().optional().describe("Ordem manual dentro do dia (menor = mais no topo)."),
+    time_spent_seconds: z.coerce.number().int().min(0).optional().describe("Tempo total registrado na tarefa, em segundos."),
+    recurrence_monthly_pattern: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .optional()
+      .describe("Regra mensal em JSON (ex: {\"day\":15} ou {\"weekday\":1,\"nth\":2})."),
+    origin_source: z.string().nullable().optional().describe("Origem da tarefa (ex: fireflies, outlook, manual)."),
+    origin_source_label: z.string().nullable().optional().describe("Rótulo legível da origem."),
+    origin_source_url: z.string().nullable().optional().describe("URL da origem da tarefa."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
