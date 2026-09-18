@@ -1,3 +1,4 @@
+import { TaskDependencyStatus } from "./TaskDependencyStatus";
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -216,6 +217,7 @@ export function TaskCard({
             >
               <span className="block truncate">{task.title}</span>
             </button>
+            <TaskDependencyStatus task={task} />
             {role && <RoleBadge role={role} size="xs" />}
             {project && <ProjectChip project={project} size="xs" />}
             {!hideAssignee && (task as any).assignee_id && (

@@ -1,3 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { dependencyStatus, dependencyDateLabel, type DependencyInfo } from "@/lib/dependency-status";
+import { askDependencyConfirmation } from "./DependencyConfirmation";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -292,6 +295,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
 
 
 
+  const dependencyQueryClient = useQueryClient();
   const doSave = async (scope?: RecurrenceScope) => {
     // Segurança: em escopo de série, só enviamos a regra de repetição se ela já foi
     // carregada do seed. Caso contrário, omitimos os campos para não gravar
@@ -313,13 +317,33 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       : {};
     setSaving(true);
     try {
+      let saveDate = noDate ? null : date;
+      const existingIds = new Set(task?.id ? depsApi.predecessorsOf(task.id) : []);
+      const hasNewDependency = predecessorIds.some(id => !existingIds.has(id));
+      if (hasNewDependency && saveDate && predecessorIds.length) {
+        const { data: predecessors, error } = await supabase.from("tasks")
+          .select("id,title,scheduled_date,completed").in("id", predecessorIds);
+        if (error) throw error;
+        const links: DependencyInfo[] = (predecessors ?? []).map(predecessor => ({
+          predecessor, successor_id: task?.id ?? "new",
+          lag_days: depsApi.deps.find(d => d.successor_id === task?.id && d.predecessor_id === predecessor.id)?.lag_days ?? 0,
+        }));
+        const state = dependencyStatus(saveDate, links);
+        if (state.conflicts.length && state.suggestedDate) {
+          const adjusted = await askDependencyConfirmation({
+            title: `Ajustar ${title.trim()} para ${dependencyDateLabel(state.suggestedDate)}?`,
+            accept: "Ajustar", cancel: "Manter como está",
+          });
+          if (adjusted) { saveDate = state.suggestedDate; setDate(saveDate); }
+        }
+      }
       const result = await onSave(
         {
           title: title.trim(),
           description: description.trim() || null,
           category,
           duration_minutes: Math.max(5, Math.min(600, duration)),
-          scheduled_date: noDate ? null : date,
+          scheduled_date: saveDate,
           status,
           // Mantém a marcação de concluída em sincronia com o status escolhido
           completed: status === "done",
@@ -345,6 +369,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           toast.error(e.message ?? "Erro ao salvar dependências");
         }
       }
+      await dependencyQueryClient.invalidateQueries({ queryKey: ["dependency-status"] });
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
@@ -594,7 +619,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
                   </Popover>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Quando a predecessora for adiada ou concluída, a data desta tarefa será ajustada automaticamente.
+                  Quando a data de uma predecessora pendente mudar, a data desta tarefa será ajustada automaticamente.
                 </p>
               </div>
             )}
