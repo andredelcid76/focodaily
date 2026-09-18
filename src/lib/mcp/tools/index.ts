@@ -838,6 +838,20 @@ export const updateTask = defineTool({
     if (args.recurrence_weekdays !== undefined) patch.recurrence_weekdays = args.recurrence_weekdays;
     if (args.recurrence_week_interval !== undefined) patch.recurrence_week_interval = args.recurrence_week_interval;
     if (args.recurrence_until !== undefined) patch.recurrence_until = args.recurrence_until;
+    if (args.recurrence_monthly_pattern !== undefined) patch.recurrence_monthly_pattern = args.recurrence_monthly_pattern;
+    if (args.non_negotiable !== undefined) patch.non_negotiable = args.non_negotiable;
+    if (args.planned_date !== undefined) patch.planned_date = args.planned_date;
+    if (args.original_date !== undefined) patch.original_date = args.original_date;
+    if (args.position !== undefined) patch.position = args.position;
+    if (args.time_spent_seconds !== undefined) patch.time_spent_seconds = args.time_spent_seconds;
+    if (args.origin_source !== undefined) patch.origin_source = args.origin_source;
+    if (args.origin_source_label !== undefined) patch.origin_source_label = args.origin_source_label;
+    if (args.origin_source_url !== undefined) patch.origin_source_url = args.origin_source_url;
+    // service_role bypassa a RLS: validar posse do papel antes de gravar.
+    if (args.role_id !== undefined) {
+      if (args.role_id) await assertRoleOwnership(ctx.auth, args.role_id, userId);
+      patch.role_id = args.role_id;
+    }
     if (args.completed !== undefined) {
       patch.completed = args.completed;
       patch.status = args.completed ? "done" : "todo";
