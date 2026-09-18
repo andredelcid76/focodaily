@@ -54,8 +54,37 @@ async function assertAssigneeAllowed(
       .or(`and(owner_id.eq.${actorId},contact_id.eq.${assigneeId}),and(owner_id.eq.${assigneeId},contact_id.eq.${actorId})`)
       .limit(1);
     if (error) throw new Error(error.message);
-    if (!data?.length) throw new Error("Para delegar sem projeto, adicione o responsável aos seus contatos em Pessoas.");
-    return;
+    if (data?.length) return;
+    // Existing collaborators are eligible even when the task has no project.
+    // Scope candidates to the actor before checking the target; never list all users.
+    const client = db(auth);
+    const [ownedTeams, memberships, ownedProjects, projectMemberships] = await Promise.all([
+      client.from("teams").select("id").eq("owner_id", actorId),
+      client.from("team_members").select("team_id").eq("user_id", actorId),
+      client.from("projects").select("id").eq("user_id", actorId),
+      client.from("project_members").select("project_id").eq("user_id", actorId),
+    ]);
+    for (const result of [ownedTeams, memberships, ownedProjects, projectMemberships]) {
+      if (result.error) throw new Error(result.error.message);
+    }
+    const teamIds = [...new Set([...(ownedTeams.data ?? []).map(t => t.id), ...(memberships.data ?? []).map(t => t.team_id)])];
+    for (const teamId of teamIds) {
+      const result = await client.rpc("is_team_member", { _team_id: teamId, _user_id: assigneeId });
+      if (result.error) throw new Error(result.error.message);
+      if (result.data) return;
+    }
+    const projectIds = new Set([...(ownedProjects.data ?? []).map(p => p.id), ...(projectMemberships.data ?? []).map(p => p.project_id)]);
+    if (teamIds.length) {
+      const result = await client.from("projects").select("id").in("team_id", teamIds);
+      if (result.error) throw new Error(result.error.message);
+      result.data?.forEach(p => projectIds.add(p.id));
+    }
+    for (const projectId of projectIds) {
+      const result = await client.rpc("is_project_member", { _project_id: projectId, _user_id: assigneeId });
+      if (result.error) throw new Error(result.error.message);
+      if (result.data) return;
+    }
+    throw new Error("Para delegar sem projeto, escolha um colaborador ou convide a pessoa em Pessoas; não é necessário criar uma equipe.");
   }
   const client = db(auth);
   const [memberRes, ownerRes] = await Promise.all([

@@ -1,3 +1,4 @@
+import { getTeamsOverview } from "@/lib/teams.functions";
 import { useQueryClient } from "@tanstack/react-query";
 import { dependencyStatus, dependencyDateLabel, type DependencyInfo } from "@/lib/dependency-status";
 import { askDependencyConfirmation } from "./DependencyConfirmation";
@@ -207,22 +208,14 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     staleTime: 60_000,
   });
   const members = membersData?.members ?? [];
-  const { data: contactMembers = [] } = useQuery({
-    queryKey: ["task-assignee-contacts", user?.id],
+  const fetchPeople = useServerFn(getTeamsOverview);
+  const { data: peopleOverview } = useQuery({
+    queryKey: ["teams-overview", user?.id],
     enabled: open && !effectiveProjectId && !!user?.id,
-    queryFn: async () => {
-      if (!user) return [];
-      const { data: contacts, error } = await supabase.from("contacts")
-        .select("owner_id,contact_id").or(`owner_id.eq.${user.id},contact_id.eq.${user.id}`);
-      if (error) throw error;
-      const ids = [...new Set([user.id, ...(contacts ?? []).map(c => c.owner_id === user.id ? c.contact_id : c.owner_id)])];
-      const { data: profiles, error: profileError } = await supabase.from("profiles")
-        .select("user_id,display_name,email").in("user_id", ids);
-      if (profileError) throw profileError;
-      return (profiles ?? []).map(p => ({ ...p, is_me: p.user_id === user.id, role: "contact" }));
-    },
-    staleTime: 60_000,
+    queryFn: () => fetchPeople(),
+    staleTime: 0,
   });
+  const contactMembers = (peopleOverview?.people ?? []).map(person => ({ ...person, role: "contact" }));
   const assigneeOptions = effectiveProjectId ? members : contactMembers;
   const delegatedToOther = !!(assigneeId && assigneeId !== user?.id);
   const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) : null;
