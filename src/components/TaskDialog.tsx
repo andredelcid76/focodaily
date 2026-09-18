@@ -676,7 +676,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             <div>
               <Label>Responsável</Label>
               <Select
-                value={assigneeId ?? user?.id ?? "__none"}
+                value={assigneeId ?? "__none"}
                 onValueChange={(v) => setAssigneeId(v === "__none" ? null : v)}
                 disabled={!canReassign}
               >
