@@ -1,4 +1,4 @@
 # Delegação sem projeto
-- [ ] Disponibilizar responsável em tarefas sem projeto, usando os contatos existentes.
-- [ ] Conferir permissões, MCP e notificações para delegação independente de projeto.
-- [ ] Validar seleção e persistência do responsável.
+- [x] Disponibilizar responsável em tarefas sem projeto, usando os contatos existentes.
+- [x] Conferir permissões, MCP e notificações para delegação independente de projeto.
+- [x] Validar seletor no navegador e payload de persistência no código, sem enviar delegações de teste a contatos reais.

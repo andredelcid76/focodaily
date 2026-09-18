@@ -613,7 +613,7 @@ export const createTask = defineTool({
     assignee_id: z
       .string()
       .optional()
-      .describe("Responsável pela tarefa. Precisa ser membro do projeto/equipe. Omitido = tarefa de quem cria."),
+      .describe("Responsável pela tarefa: contato para tarefas sem projeto, ou membro do projeto/equipe quando vinculada. Campo opcional."),
     duration_minutes: z.coerce.number().optional().describe("5, 15, 30, 60, 90 ou 120. Padrão 30."),
     category: z.enum(["urgent", "important", "circumstantial"]).optional(),
     priority: z.coerce.number().int().min(1).max(5).optional().describe(PRIORITY_DOC),
