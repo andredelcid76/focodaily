@@ -164,13 +164,8 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
       const initialProject = effectiveInitialProjectId
         ? projects.find((p) => p.id === effectiveInitialProjectId)
         : null;
-      // Padrão: o criador é o responsável. Em projetos pessoais (sem equipe), usa o dono do projeto.
-      const isPersonalProject = !!initialProject && !(initialProject as any).team_id;
-      const defaultAssignee = task
-        ? (((task as any)?.assignee_id ?? user?.id) as string | null)
-        : isPersonalProject
-          ? ((initialProject as any).user_id as string | null) ?? user?.id ?? null
-          : user?.id ?? null;
+      // Sem responsável por padrão: só fica atribuída quando o usuário escolher alguém.
+      const defaultAssignee = task ? (((task as any)?.assignee_id ?? null) as string | null) : null;
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
       setPriority(task ? toPriority((task as any)?.priority) : 3);
@@ -315,7 +310,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
           blocked_reason: status === "blocked" ? blockedReason.trim() || null : null,
           role_id: delegatedToOther ? null : roleId,
           project_id: lockedProjectId !== undefined ? lockedProjectId : projectId,
-          assignee_id: assigneeId ?? user?.id ?? null,
+          assignee_id: assigneeId ?? null,
           non_negotiable: nonNegotiable,
           priority,
           ...rulePatch,
@@ -681,7 +676,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
             <div>
               <Label>Responsável</Label>
               <Select
-                value={assigneeId ?? user?.id ?? "__none"}
+                value={assigneeId ?? "__none"}
                 onValueChange={(v) => setAssigneeId(v === "__none" ? null : v)}
                 disabled={!canReassign}
               >

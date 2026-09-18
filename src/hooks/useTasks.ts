@@ -252,7 +252,7 @@ export function useTasks(userId: string | undefined) {
             category: p.category,
             role_id: p.role_id,
             project_id: p.project_id,
-            assignee_id: p.assignee_id ?? userId,
+            assignee_id: p.assignee_id ?? null,
             non_negotiable: p.non_negotiable,
             scheduled_date: dayISO,
             original_date: dayISO,
@@ -330,8 +330,8 @@ export function useTasks(userId: string | undefined) {
 
   const createTask = async (data: Omit<TablesInsert<"tasks">, "user_id">) => {
     if (!userId) return;
-    // Padrão: criador é o responsável quando nenhum responsável for informado
-    const payload = { ...data, user_id: userId, assignee_id: data.assignee_id ?? userId };
+    // Sem responsável informado, a tarefa fica sem responsável (não auto-atribui ao criador)
+    const payload = { ...data, user_id: userId, assignee_id: data.assignee_id ?? null };
     const { data: inserted, error } = await supabase
       .from("tasks")
       .insert(payload)
@@ -756,7 +756,7 @@ export function useTasks(userId: string | undefined) {
     if (!userId) return;
     const payload: TablesInsert<"tasks"> = {
       user_id: userId,
-      assignee_id: task.assignee_id ?? userId,
+      assignee_id: task.assignee_id ?? null,
       title: task.title,
       description: task.description,
       category: task.category,
@@ -797,7 +797,7 @@ export function useTasks(userId: string | undefined) {
 
     const payload: TablesInsert<"tasks"> = {
       user_id: userId,
-      assignee_id: task.assignee_id ?? userId,
+      assignee_id: task.assignee_id ?? null,
       title: task.title,
       description: task.description,
       category: task.category,
