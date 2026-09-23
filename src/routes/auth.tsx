@@ -99,6 +99,19 @@ function AuthPage() {
             >
               Continuar com Apple
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                const r = await lovable.auth.signInWithOAuth("microsoft", { redirect_uri: window.location.origin });
+                if (r.error) { toast.error(r.error.message ?? "Falha no login Microsoft"); setBusy(false); }
+              }}
+            >
+              Continuar com Microsoft
+            </Button>
           </div>
           <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
             <div className="h-px flex-1 bg-border/60" /> ou e-mail <div className="h-px flex-1 bg-border/60" />
