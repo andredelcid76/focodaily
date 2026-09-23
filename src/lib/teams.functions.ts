@@ -470,6 +470,13 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
       .is("accepted_at", null)
       .order("created_at", { ascending: false });
 
+    // Colleagues with a verified e-mail on the same company domain.
+    const { data: colleagues } = await (supabase as any).rpc("company_colleague_ids");
+    ((colleagues ?? []) as any[]).forEach((c) => {
+      const id = typeof c === "string" ? c : c?.company_colleague_ids;
+      if (id) peopleIds.add(id);
+    });
+
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id,display_name,email,avatar_url")

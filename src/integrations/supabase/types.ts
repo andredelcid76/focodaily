@@ -1704,6 +1704,12 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      company_colleague_ids: { Args: never; Returns: string[] }
+      company_domain_of: { Args: { _user_id: string }; Returns: string }
+      is_company_colleague: {
+        Args: { _a: string; _b: string }
+        Returns: boolean
+      }
       is_project_admin: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean

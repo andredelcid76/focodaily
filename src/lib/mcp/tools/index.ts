@@ -55,6 +55,8 @@ async function assertAssigneeAllowed(
       .limit(1);
     if (error) throw new Error(error.message);
     if (data?.length) return;
+    const colleague = await (db(auth) as any).rpc("is_company_colleague", { _a: actorId, _b: assigneeId });
+    if (colleague.data === true) return;
     // Existing collaborators are eligible even when the task has no project.
     // Scope candidates to the actor before checking the target; never list all users.
     const client = db(auth);
