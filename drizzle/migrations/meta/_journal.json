@@ -43,6 +43,13 @@
       "when": 1789744114560,
       "tag": "0005_bidirectional_task_dependency_cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790187171331,
+      "tag": "0006_company_domain_colleagues",
+      "breakpoints": true
     }
   ]
 }
