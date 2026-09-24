@@ -1,6 +1,6 @@
 import { useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 import { GlobalSearch, useGlobalSearchHotkey } from "@/components/GlobalSearch";
@@ -169,18 +169,15 @@ function Shell({ children }: { children: ReactNode }) {
           <ActiveTaskBanner />
 
           <main className="flex-1">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0.6 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.12, ease: "easeOut" }}
+              className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
+            >
+              {children}
+            </motion.div>
           </main>
         </div>
 
