@@ -20,12 +20,12 @@ export default defineConfig({
           name: "Foco",
           short_name: "Foco",
           description:
-            "Organize suas tarefas diárias com arrastar e soltar, planejamento semanal e categorização por urgência e importância.",
+            "Tarefas, projetos, delegação e agenda da equipe em um só lugar, com Outlook, Teams e Fireflies.",
           start_url: "/",
           scope: "/",
           display: "standalone",
-          background_color: "#0b1f19",
-          theme_color: "#0b1f19",
+          background_color: "#0f141b",
+          theme_color: "#0f141b",
           lang: "pt-BR",
           icons: [
             { src: "/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
