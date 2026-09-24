@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { pendingHighlights, markVisited } from "@/lib/changelog";
 import { useEffect, useState } from "react";
 import {
   Sidebar,
@@ -158,6 +159,14 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const inboxCount = useInboxCount(user?.id);
+  const [highlights, setHighlights] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const refresh = () => setHighlights(pendingHighlights());
+    if (pendingHighlights().has(location.pathname)) markVisited(location.pathname);
+    refresh();
+    window.addEventListener("foco:highlights", refresh);
+    return () => window.removeEventListener("foco:highlights", refresh);
+  }, [location.pathname]);
   useNavHotkeys();
 
   const profiles = useProfiles(user?.id ? [user.id] : []);
