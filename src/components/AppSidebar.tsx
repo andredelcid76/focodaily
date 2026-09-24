@@ -10,6 +10,7 @@ import {
   LogOut,
   Search,
   Settings,
+  Sparkles,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -70,6 +71,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Sistema",
     items: [
       { title: "Notificações", url: "/notificacoes", icon: Bell },
+      { title: "Novidades", url: "/novidades", icon: Sparkles },
       { title: "Configurações", url: "/configuracoes", icon: Settings },
     ],
   },
@@ -224,7 +226,15 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                               {inboxCount > 99 ? "99+" : inboxCount}
                             </span>
                           )}
-                          {!showBadge && !collapsed && null}
+                          {!showBadge && highlights.has(item.url) && (
+                            collapsed ? (
+                              <span className="absolute left-5 top-1 h-2 w-2 rounded-full bg-primary" />
+                            ) : (
+                              <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                                Novo
+                              </span>
+                            )
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
