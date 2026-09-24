@@ -175,12 +175,7 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
             <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-circumstantial ring-2 ring-sidebar" />
           </div>
           {!collapsed && (
-            <div className="flex flex-col leading-tight">
-              <span className="font-display text-lg font-semibold tracking-tight">Foco</span>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                Daily
-              </span>
-            </div>
+            <span className="font-display text-lg font-semibold tracking-tight">Foco</span>
           )}
         </Link>
       </SidebarHeader>
