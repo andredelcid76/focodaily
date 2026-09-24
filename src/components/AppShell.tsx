@@ -42,6 +42,7 @@ const BREADCRUMBS: BreadcrumbEntry[] = [
   { match: (p) => p.startsWith("/inbox"), group: "Trabalho", groupHref: "/projetos", title: "Caixa de entrada" },
   { match: (p) => p.startsWith("/analise"), group: "Insights", groupHref: "/analise", title: "Análise estratégica" },
   { match: (p) => p.startsWith("/notificacoes"), group: "Sistema", groupHref: "/configuracoes", title: "Notificações" },
+  { match: (p) => p.startsWith("/novidades"), group: "Sistema", groupHref: "/configuracoes", title: "Novidades" },
   { match: (p) => p.startsWith("/configuracoes"), group: "Sistema", groupHref: "/configuracoes", title: "Configurações" },
   { match: (p) => p.startsWith("/onboarding"), group: "Sistema", groupHref: "/configuracoes", title: "Boas-vindas" },
   { match: (p) => p.startsWith("/bem-vindo"), group: "Sistema", groupHref: "/configuracoes", title: "Bem-vindo" },
