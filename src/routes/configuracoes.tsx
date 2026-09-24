@@ -19,6 +19,7 @@ import {
   Plug,
   Settings2,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 import { RolesInner } from "@/routes/papeis";
 import { useAuth } from "@/lib/auth";
