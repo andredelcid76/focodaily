@@ -78,7 +78,7 @@ function Welcome() {
           className="space-y-3 text-center"
         >
           <Logo size={48} className="shadow-glow" />
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Boas-vindas ao Focou</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Boas-vindas ao Foco</h1>
           <p className="text-muted-foreground">Por onde você quer começar?</p>
         </motion.div>
 

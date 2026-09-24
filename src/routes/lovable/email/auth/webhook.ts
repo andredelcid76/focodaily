@@ -9,7 +9,7 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
-const SITE_NAME = "Foco Daily Planner"
+const SITE_NAME = "Foco"
 const SENDER_DOMAIN = "notify.anpla.com.br"
 const ROOT_DOMAIN = "anpla.com.br"
 const FROM_DOMAIN = "anpla.com.br"

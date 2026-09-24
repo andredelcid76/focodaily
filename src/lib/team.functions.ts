@@ -194,7 +194,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
       label: "project_invite",
       subject: `Convite para o projeto ${project.name}`,
       title: `Você foi convidado para ${project.name}`,
-      body: `Abra o convite para entrar no projeto ${project.name} no Focou.`,
+      body: `Abra o convite para entrar no projeto ${project.name} no Foco.`,
       ctaLabel: "Abrir convite",
       ctaUrl: inviteUrl,
     });

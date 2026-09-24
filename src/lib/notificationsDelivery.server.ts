@@ -112,8 +112,8 @@ export async function deliverPendingNotifications(): Promise<
 
     const recipientEmail = (profile?.email as string | null) ?? null;
     const link = absLink(n.link as string | null);
-    const title = (n.title as string) || "Atualização no Focou";
-    const bodyText = (n.body as string | null) ?? FALLBACK_BODY[type] ?? "Atualização no Focou";
+    const title = (n.title as string) || "Atualização no Foco";
+    const bodyText = (n.body as string | null) ?? FALLBACK_BODY[type] ?? "Atualização no Foco";
 
     if (skipBurst) {
       errors.push("email:grouped");
@@ -128,7 +128,7 @@ export async function deliverPendingNotifications(): Promise<
         subject: title,
         title,
         body: bodyText,
-        ctaLabel: n.task_id ? "Abrir a tarefa" : "Abrir no Focou",
+        ctaLabel: n.task_id ? "Abrir a tarefa" : "Abrir no Foco",
         ctaUrl: link,
         idempotencyKey: `notif-${n.id}`,
       });
@@ -142,7 +142,7 @@ export async function deliverPendingNotifications(): Promise<
       const teams = await sendTeamsDirectMessage({
         senderUserId: n.actor_id as string,
         recipientEmail,
-        html: `<p><strong>${escapeHtml(title)}</strong></p><p>${escapeHtml(bodyText)}</p><p><a href="${link}">Abrir no Focou</a></p>`,
+        html: `<p><strong>${escapeHtml(title)}</strong></p><p>${escapeHtml(bodyText)}</p><p><a href="${link}">Abrir no Foco</a></p>`,
       });
       teamsOk = teams.ok;
       if (!teams.ok && teams.error) errors.push(`teams:${teams.error}`);
@@ -195,7 +195,7 @@ export async function sendDailyDigests(): Promise<{ sent: number }> {
       const res = await enqueueCollaborationEmail({
         to: profile.email as string,
         label: "notifications-digest",
-        subject: `Seu resumo do Focou: ${items.length} novidade${items.length > 1 ? "s" : ""}`,
+        subject: `Seu resumo do Foco: ${items.length} novidade${items.length > 1 ? "s" : ""}`,
         title: "Resumo do dia",
         body: lines.join("\n"),
         ctaLabel: "Ver notificações",

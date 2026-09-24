@@ -33,6 +33,7 @@ import { Route as ConviteContatoTokenRouteImport } from './routes/convite-contat
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
+import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
@@ -172,6 +173,11 @@ const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicVersionRoute = ApiPublicVersionRouteImport.update({
+  id: '/api/public/version',
+  path: '/api/public/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPlannerRoute = ApiPublicPlannerRouteImport.update({
   id: '/api/public/planner',
   path: '/api/public/planner',
@@ -285,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
+  '/api/public/version': typeof ApiPublicVersionRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
@@ -327,6 +334,7 @@ export interface FileRoutesByTo {
   '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
+  '/api/public/version': typeof ApiPublicVersionRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
@@ -370,6 +378,7 @@ export interface FileRoutesById {
   '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
   '/api/public/planner': typeof ApiPublicPlannerRoute
+  '/api/public/version': typeof ApiPublicVersionRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
@@ -414,6 +423,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/outlook'
     | '/api/public/planner'
+    | '/api/public/version'
     | '/lovable/email/events'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/outlook'
     | '/api/public/planner'
+    | '/api/public/version'
     | '/lovable/email/events'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
@@ -498,6 +509,7 @@ export interface FileRouteTypes {
     | '/api/public/mcp'
     | '/api/public/outlook'
     | '/api/public/planner'
+    | '/api/public/version'
     | '/lovable/email/events'
     | '/api/public/inbox/scan'
     | '/api/public/inbox/scan-all'
@@ -541,6 +553,7 @@ export interface RootRouteChildren {
   ApiPublicMcpRoute: typeof ApiPublicMcpRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
+  ApiPublicVersionRoute: typeof ApiPublicVersionRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
   ApiPublicInboxScanAllRoute: typeof ApiPublicInboxScanAllRoute
@@ -725,6 +738,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/version': {
+      id: '/api/public/version'
+      path: '/api/public/version'
+      fullPath: '/api/public/version'
+      preLoaderRoute: typeof ApiPublicVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/planner': {
       id: '/api/public/planner'
       path: '/api/public/planner'
@@ -881,6 +901,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMcpRoute: ApiPublicMcpRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
+  ApiPublicVersionRoute: ApiPublicVersionRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
   ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
   ApiPublicInboxScanAllRoute: ApiPublicInboxScanAllRoute,

@@ -73,9 +73,9 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
-    { title: "Hoje | Foco Daily Planner" },
+    { title: "Hoje | Foco" },
     { name: "description", content: "Organize suas tarefas e acompanhe os responsáveis no seu dia." },
-    { property: "og:title", content: "Hoje | Foco Daily Planner" },
+    { property: "og:title", content: "Hoje | Foco" },
     { property: "og:description", content: "Organize suas tarefas e acompanhe os responsáveis no seu dia." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },

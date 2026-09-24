@@ -15,10 +15,10 @@ import { FILTER_GROUPS, NOTIFICATION_SELECT, type NotificationRow } from "@/lib/
 export const Route = createFileRoute("/notificacoes")({
   head: () => ({
     meta: [
-      { title: "Notificações | Focou" },
+      { title: "Notificações | Foco" },
       { name: "description", content: "Histórico completo dos seus avisos de tarefas, comentários e menções, com preferências de entrega." },
-      { property: "og:title", content: "Notificações | Focou" },
-      { property: "og:description", content: "Todos os seus avisos do Focou em um só lugar." },
+      { property: "og:title", content: "Notificações | Foco" },
+      { property: "og:description", content: "Todos os seus avisos do Foco em um só lugar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendTemplateEmail } from "@/lib/email-templates/send-email";
 
-const SITE_NAME = "Focou";
+const SITE_NAME = "Foco";
 const TEMPLATE_NAME = "collaboration-notice";
 
 async function logSend(input: {

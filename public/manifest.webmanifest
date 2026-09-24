@@ -1,12 +1,12 @@
 {
   "name": "Foco",
   "short_name": "Foco",
-  "description": "Gestão de tarefas, projetos e agenda, com integrações de Outlook, Fireflies e Pipedrive.",
+  "description": "Tarefas, projetos, delegação e agenda da equipe em um só lugar, com Outlook, Teams e Fireflies.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f1a16",
-  "theme_color": "#2a3358",
+  "background_color": "#0f141b",
+  "theme_color": "#0f141b",
   "icons": [
     { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
     { "src": "/pwa-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },

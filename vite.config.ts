@@ -9,6 +9,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   vite: {
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(String(Date.now())),
+    },
     plugins: [
       VitePWA({
         registerType: "autoUpdate",
@@ -17,15 +20,15 @@ export default defineConfig({
         devOptions: { enabled: false },
         includeAssets: ["favicon.svg", "pwa-192.png", "pwa-512.png"],
         manifest: {
-          name: "Foco Daily Planner",
+          name: "Foco",
           short_name: "Foco",
           description:
-            "Organize suas tarefas diárias com arrastar e soltar, planejamento semanal e categorização por urgência e importância.",
+            "Tarefas, projetos, delegação e agenda da equipe em um só lugar, com Outlook, Teams e Fireflies.",
           start_url: "/",
           scope: "/",
           display: "standalone",
-          background_color: "#0b1f19",
-          theme_color: "#0b1f19",
+          background_color: "#0f141b",
+          theme_color: "#0f141b",
           lang: "pt-BR",
           icons: [
             { src: "/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

@@ -263,7 +263,7 @@ export const inviteToTeam = createServerFn({ method: "POST" })
       label: "team_invite",
       subject: `Convite para a equipe ${team.name}`,
       title: `Você foi convidado para a equipe ${team.name}`,
-      body: `Abra o convite para entrar na equipe ${team.name} no Focou.`,
+      body: `Abra o convite para entrar na equipe ${team.name} no Foco.`,
       ctaLabel: "Abrir convite",
       ctaUrl: `${data.origin}/convite-equipe/${token}`,
     });
@@ -619,7 +619,7 @@ export const inviteContact = createServerFn({ method: "POST" })
         user_id: existing.user_id,
         type: "contact_invite",
         title: "Você recebeu um convite de colaboração",
-        body: `${inviterName} quer colaborar com você no Focou.`,
+        body: `${inviterName} quer colaborar com você no Foco.`,
         actor_id: userId,
         link: `/convite-contato/${token}`,
       });
@@ -628,9 +628,9 @@ export const inviteContact = createServerFn({ method: "POST" })
     await enqueueCollaborationEmail({
       to: email,
       label: "contact_invite",
-      subject: `${inviterName} quer colaborar com você no Focou`,
+      subject: `${inviterName} quer colaborar com você no Foco`,
       title: "Convite de colaboração",
-      body: `${inviterName} te convidou para colaborar no Focou. Depois de aceitar, você poderá ser adicionado a projetos e equipes.`,
+      body: `${inviterName} te convidou para colaborar no Foco. Depois de aceitar, você poderá ser adicionado a projetos e equipes.`,
       ctaLabel: "Aceitar convite",
       ctaUrl: `${data.origin}/convite-contato/${token}`,
     });

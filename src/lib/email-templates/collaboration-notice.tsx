@@ -59,13 +59,13 @@ export default CollaborationNoticeEmail
 export const template = {
   component: CollaborationNoticeEmail,
   subject: (data: Record<string, any>) =>
-    (data.subject as string) ?? (data.title as string) ?? 'Atualização no Focou',
+    (data.subject as string) ?? (data.title as string) ?? 'Atualização no Foco',
   displayName: 'Aviso de colaboração',
   previewData: {
-    siteName: 'Focou',
+    siteName: 'Foco',
     subject: 'Convite para o projeto Lançamento',
     title: 'Você foi convidado para Lançamento',
-    body: 'Abra o convite para entrar no projeto Lançamento no Focou.',
+    body: 'Abra o convite para entrar no projeto Lançamento no Foco.',
     ctaLabel: 'Abrir convite',
     ctaUrl: 'https://focodaily.lovable.app/convite/exemplo',
   },
