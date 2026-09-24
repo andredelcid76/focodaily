@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppBadge } from "@/hooks/useAppBadge";
 import { useAccentColor } from "@/hooks/useAccentColor";
 import { useTheme } from "@/hooks/useTheme";
+import { WhatsNewDialog } from "@/components/WhatsNewDialog";
 
 // Single source of truth for breadcrumb groups. The eyebrow link goes to the
 // first item of the group, so e.g. clicking "Trabalho" from /inbox returns to
@@ -41,6 +42,7 @@ const BREADCRUMBS: BreadcrumbEntry[] = [
   { match: (p) => p.startsWith("/inbox"), group: "Trabalho", groupHref: "/projetos", title: "Caixa de entrada" },
   { match: (p) => p.startsWith("/analise"), group: "Insights", groupHref: "/analise", title: "Análise estratégica" },
   { match: (p) => p.startsWith("/notificacoes"), group: "Sistema", groupHref: "/configuracoes", title: "Notificações" },
+  { match: (p) => p.startsWith("/novidades"), group: "Sistema", groupHref: "/configuracoes", title: "Novidades" },
   { match: (p) => p.startsWith("/configuracoes"), group: "Sistema", groupHref: "/configuracoes", title: "Configurações" },
   { match: (p) => p.startsWith("/onboarding"), group: "Sistema", groupHref: "/configuracoes", title: "Boas-vindas" },
   { match: (p) => p.startsWith("/bem-vindo"), group: "Sistema", groupHref: "/configuracoes", title: "Bem-vindo" },
@@ -184,6 +186,7 @@ function Shell({ children }: { children: ReactNode }) {
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <MayaChat />
         <QuickAddTaskButton />
+        <WhatsNewDialog />
       </div>
     </SidebarProvider>
   );

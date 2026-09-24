@@ -10,10 +10,12 @@ import {
   LogOut,
   Search,
   Settings,
+  Sparkles,
   UserCheck,
   Users,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { pendingHighlights, markVisited } from "@/lib/changelog";
 import { useEffect, useState } from "react";
 import {
   Sidebar,
@@ -70,6 +72,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Sistema",
     items: [
       { title: "Notificações", url: "/notificacoes", icon: Bell },
+      { title: "Novidades", url: "/novidades", icon: Sparkles },
       { title: "Configurações", url: "/configuracoes", icon: Settings },
     ],
   },
@@ -156,6 +159,14 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const inboxCount = useInboxCount(user?.id);
+  const [highlights, setHighlights] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const refresh = () => setHighlights(pendingHighlights());
+    if (pendingHighlights().has(location.pathname)) markVisited(location.pathname);
+    refresh();
+    window.addEventListener("foco:highlights", refresh);
+    return () => window.removeEventListener("foco:highlights", refresh);
+  }, [location.pathname]);
   useNavHotkeys();
 
   const profiles = useProfiles(user?.id ? [user.id] : []);
@@ -224,7 +235,15 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                               {inboxCount > 99 ? "99+" : inboxCount}
                             </span>
                           )}
-                          {!showBadge && !collapsed && null}
+                          {!showBadge && highlights.has(item.url) && (
+                            collapsed ? (
+                              <span className="absolute left-5 top-1 h-2 w-2 rounded-full bg-primary" />
+                            ) : (
+                              <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                                Novo
+                              </span>
+                            )
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

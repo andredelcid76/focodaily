@@ -29,11 +29,18 @@ export function useUpdateNotice() {
       try {
         const res = await fetch(`/api/public/version?t=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) return;
-        const { id } = (await res.json()) as { id?: string };
+        const { id, notes } = (await res.json()) as {
+          id?: string;
+          notes?: { title: string; items: string[] } | null;
+        };
         if (!id || id === current) return;
         shown.current = true;
+        const summary = notes?.items?.length
+          ? notes.items.map((i) => `• ${i}`).join("\n")
+          : "Atualize para receber as melhorias. Leva só um segundo.";
         toast("Nova versão do Foco disponível", {
-          description: "Atualize para receber as melhorias. Leva só um segundo.",
+          description: summary,
+          classNames: { description: "whitespace-pre-line" },
           duration: Infinity,
           action: { label: "Atualizar", onClick: () => applyUpdate() },
           onDismiss: () => {
