@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { GlobalTaskOpener } from "@/components/GlobalTaskOpener";
 import { BackButton } from "@/components/BackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppBadge } from "@/hooks/useAppBadge";
@@ -38,6 +39,7 @@ const BREADCRUMBS: BreadcrumbEntry[] = [
   { match: (p) => p.startsWith("/papeis"), group: "Trabalho", groupHref: "/projetos", title: "Papéis" },
   { match: (p) => p.startsWith("/inbox"), group: "Trabalho", groupHref: "/projetos", title: "Caixa de entrada" },
   { match: (p) => p.startsWith("/analise"), group: "Insights", groupHref: "/analise", title: "Análise estratégica" },
+  { match: (p) => p.startsWith("/notificacoes"), group: "Sistema", groupHref: "/configuracoes", title: "Notificações" },
   { match: (p) => p.startsWith("/configuracoes"), group: "Sistema", groupHref: "/configuracoes", title: "Configurações" },
   { match: (p) => p.startsWith("/onboarding"), group: "Sistema", groupHref: "/configuracoes", title: "Boas-vindas" },
   { match: (p) => p.startsWith("/bem-vindo"), group: "Sistema", groupHref: "/configuracoes", title: "Bem-vindo" },
@@ -111,6 +113,7 @@ function Shell({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="min-h-dvh flex w-full">
         <AppSidebar onOpenSearch={() => setSearchOpen(true)} />
+        <GlobalTaskOpener />
 
         <div className="flex-1 flex flex-col min-w-0">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 glass-strong px-3 sm:px-4">

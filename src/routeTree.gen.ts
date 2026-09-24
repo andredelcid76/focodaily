@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as NotificacoesRouteImport } from './routes/notificacoes'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DelegadasRouteImport } from './routes/delegadas'
@@ -62,6 +63,11 @@ const PapeisRoute = PapeisRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificacoesRoute = NotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
@@ -387,6 +396,7 @@ export interface FileRouteTypes {
     | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/notificacoes'
     | '/onboarding'
     | '/papeis'
     | '/semana'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/notificacoes'
     | '/onboarding'
     | '/papeis'
     | '/semana'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/notificacoes'
     | '/onboarding'
     | '/papeis'
     | '/semana'
@@ -511,6 +523,7 @@ export interface RootRouteChildren {
   DelegadasRoute: typeof DelegadasRoute
   InboxRoute: typeof InboxRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
+  NotificacoesRoute: typeof NotificacoesRoute
   OnboardingRoute: typeof OnboardingRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
@@ -563,6 +576,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notificacoes': {
+      id: '/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/notificacoes'
+      preLoaderRoute: typeof NotificacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/minhas-tarefas': {
@@ -841,6 +861,7 @@ const rootRouteChildren: RootRouteChildren = {
   DelegadasRoute: DelegadasRoute,
   InboxRoute: InboxRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
+  NotificacoesRoute: NotificacoesRoute,
   OnboardingRoute: OnboardingRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
