@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { PriorityBadge, toPriority } from "@/components/PriorityBadge";
 import { useAuth } from "@/lib/auth";
+import { useProfiles } from "@/hooks/useProfiles";
 
 export const Route = createFileRoute("/delegadas")({
   head: () => ({
@@ -59,15 +60,61 @@ function DelegatedPage() {
     enabled: !!user,
   });
 
-  const delegated = useMemo(() => {
-    const rows: MyTaskRow[] = Array.isArray(data)
-      ? (data as MyTaskRow[])
-      : ((data as { tasks?: MyTaskRow[] } | undefined)?.tasks ?? []);
-    return rows.filter((t) => t.kind === "delegated" && !t.completed);
-  }, [data]);
+  const [tab, setTab] = useState<"mine" | "byme">("mine");
+  const allRows = useMemo<MyTaskRow[]>(
+    () =>
+      Array.isArray(data)
+        ? (data as MyTaskRow[])
+        : ((data as { tasks?: MyTaskRow[] } | undefined)?.tasks ?? []),
+    [data],
+  );
+  const delegated = useMemo(
+    () => allRows.filter((t) => t.kind === "delegated" && !t.completed),
+    [allRows],
+  );
+  const byMe = useMemo(
+    () =>
+      allRows.filter(
+        (t) =>
+          t.user_id === user?.id && !!t.assignee_id && t.assignee_id !== user?.id && !t.completed,
+      ),
+    [allRows, user?.id],
+  );
+  const assigneeProfiles = useProfiles(byMe.map((t) => t.assignee_id));
 
   const backlog = delegated.filter((t) => !t.scheduled_date);
   const scheduled = delegated.filter((t) => t.scheduled_date);
+  const byMeBacklog = byMe.filter((t) => !t.scheduled_date);
+  const byMeScheduled = byMe.filter((t) => t.scheduled_date);
+
+  const renderByMe = (t: MyTaskRow) => {
+    const p = t.assignee_id ? assigneeProfiles.get(t.assignee_id) : undefined;
+    return (
+      <Card key={t.id} className="p-4 space-y-2">
+        <div className="font-medium">{t.title}</div>
+        {t.description && (
+          <p className="text-sm text-muted-foreground line-clamp-2">{t.description}</p>
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>Para {p?.display_name ?? p?.email ?? "—"}</span>
+          {t.project && (
+            <Badge variant="outline" className="text-[10px]">
+              {t.project.name}
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-[10px]">
+            {STATUS_LABEL[t.status] ?? t.status}
+          </Badge>
+          <PriorityBadge priority={toPriority(t.priority)} size="xs" />
+          {t.scheduled_date && (
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="h-3 w-3" /> {t.scheduled_date}
+            </span>
+          )}
+        </div>
+      </Card>
+    );
+  };
 
   const scheduleMut = useMutation({
     mutationFn: async ({ id, date }: { id: string; date: string }) => {
@@ -172,18 +219,52 @@ function DelegatedPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <UserCheck className="h-6 w-6" /> Delegadas para mim
+          <UserCheck className="h-6 w-6" /> Delegadas
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Tarefas que outras pessoas atribuíram a você. Você decide quando fazer: escolha a data para
-          ela entrar no seu dia.
+          {tab === "mine"
+            ? "Tarefas que outras pessoas atribuíram a você. Escolha a data para ela entrar no seu dia."
+            : "Tarefas que você atribuiu a outras pessoas e ainda não foram concluídas."}
         </p>
+        <div className="mt-3 inline-flex rounded-lg border border-border/60 p-0.5">
+          <Button size="sm" variant={tab === "mine" ? "secondary" : "ghost"} onClick={() => setTab("mine")}>
+            Para mim · {delegated.length}
+          </Button>
+          <Button size="sm" variant={tab === "byme" ? "secondary" : "ghost"} onClick={() => setTab("byme")}>
+            Que eu deleguei · {byMe.length}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
         </div>
+      ) : tab === "byme" ? (
+        byMe.length === 0 ? (
+          <Card className="p-12 text-center">
+            <p className="text-muted-foreground">Você não tem tarefas delegadas em aberto.</p>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {byMeBacklog.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium text-muted-foreground">
+                  Ainda sem data · {byMeBacklog.length}
+                </h2>
+                <div className="space-y-3">{byMeBacklog.map(renderByMe)}</div>
+              </section>
+            )}
+            {byMeScheduled.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium text-muted-foreground">
+                  Já agendadas · {byMeScheduled.length}
+                </h2>
+                <div className="space-y-3">{byMeScheduled.map(renderByMe)}</div>
+              </section>
+            )}
+          </div>
+        )
       ) : delegated.length === 0 ? (
         <Card className="p-12 text-center">
           <UserCheck className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
