@@ -31,16 +31,16 @@ import { PROJECT_COLORS } from "@/hooks/useProjects";
 export const Route = createFileRoute("/equipes/")({
   head: () => ({
     meta: [
-      { title: "Equipes e pessoas — Focou" },
+      { title: "Equipes e pessoas — Foco" },
       {
         name: "description",
         content:
           "Gerencie suas equipes e veja todas as pessoas disponíveis para alocar em equipes ou projetos individuais.",
       },
-      { property: "og:title", content: "Equipes e pessoas — Focou" },
+      { property: "og:title", content: "Equipes e pessoas — Foco" },
       {
         property: "og:description",
-        content: "Equipes, membros e pessoas disponíveis para alocação no Focou.",
+        content: "Equipes, membros e pessoas disponíveis para alocação no Foco.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

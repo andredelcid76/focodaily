@@ -17,7 +17,7 @@ export default defineConfig({
         devOptions: { enabled: false },
         includeAssets: ["favicon.svg", "pwa-192.png", "pwa-512.png"],
         manifest: {
-          name: "Foco Daily Planner",
+          name: "Foco",
           short_name: "Foco",
           description:
             "Organize suas tarefas diárias com arrastar e soltar, planejamento semanal e categorização por urgência e importância.",

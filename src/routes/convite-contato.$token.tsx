@@ -12,15 +12,15 @@ import { getContactInvitePreview, acceptContactInvite } from "@/lib/teams.functi
 export const Route = createFileRoute("/convite-contato/$token")({
   head: () => ({
     meta: [
-      { title: "Convite de colaboração — Focou" },
+      { title: "Convite de colaboração — Foco" },
       {
         name: "description",
-        content: "Aceite o convite para colaborar no Focou e participar de projetos e equipes.",
+        content: "Aceite o convite para colaborar no Foco e participar de projetos e equipes.",
       },
-      { property: "og:title", content: "Convite de colaboração — Focou" },
+      { property: "og:title", content: "Convite de colaboração — Foco" },
       {
         property: "og:description",
-        content: "Aceite o convite para colaborar no Focou.",
+        content: "Aceite o convite para colaborar no Foco.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -17,13 +17,13 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/delegadas")({
   head: () => ({
     meta: [
-      { title: "Tarefas delegadas para mim | Focou" },
+      { title: "Tarefas delegadas para mim | Foco" },
       {
         name: "description",
         content:
           "Veja as tarefas que outras pessoas atribuíram a você, aceite escolhendo a data e acompanhe o que está em andamento.",
       },
-      { property: "og:title", content: "Tarefas delegadas para mim | Focou" },
+      { property: "og:title", content: "Tarefas delegadas para mim | Foco" },
       {
         property: "og:description",
         content: "Tarefas atribuídas a você por colegas, com data e prioridade em um só lugar.",
