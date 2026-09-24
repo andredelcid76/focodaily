@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   BarChart3,
+  Bell,
   CalendarDays,
   CalendarRange,
   FolderKanban,
@@ -67,7 +68,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Sistema",
-    items: [{ title: "Configurações", url: "/configuracoes", icon: Settings }],
+    items: [
+      { title: "Notificações", url: "/notificacoes", icon: Bell },
+      { title: "Configurações", url: "/configuracoes", icon: Settings },
+    ],
   },
 ];
 
