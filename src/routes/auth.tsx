@@ -67,7 +67,7 @@ function AuthPage() {
           <Logo size={56} className="mx-auto mb-4 shadow-[var(--shadow-glow)]" />
           <h1 className="font-display text-3xl font-bold">Foco</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua jornada diária, organizada por urgência e importância.
+            Suas tarefas e as da equipe, com foco no que importa.
           </p>
         </div>
 

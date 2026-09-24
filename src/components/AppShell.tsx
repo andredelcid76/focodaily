@@ -13,6 +13,7 @@ import { Search } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { GlobalTaskOpener } from "@/components/GlobalTaskOpener";
+import { useUpdateNotice } from "@/hooks/useUpdateNotice";
 import { BackButton } from "@/components/BackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppBadge } from "@/hooks/useAppBadge";
@@ -63,6 +64,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
   useAppBadge();
+  useUpdateNotice();
   useAccentColor();
   useTheme(); // ensures the class stays synced when OS theme changes
 

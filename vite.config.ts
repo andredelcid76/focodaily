@@ -9,6 +9,9 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   vite: {
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(String(Date.now())),
+    },
     plugins: [
       VitePWA({
         registerType: "autoUpdate",
