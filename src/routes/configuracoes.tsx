@@ -19,12 +19,14 @@ import {
   Plug,
   Settings2,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 import { RolesInner } from "@/routes/papeis";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { NotificationPreferencesCard } from "@/components/NotificationPreferencesCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,6 +108,7 @@ function IntegracoesInner() {
   const tabs = [
     { value: "perfil", label: "Perfil", icon: UserCircle },
     { value: "papeis", label: "Papéis", icon: ShieldCheck },
+    { value: "avisos", label: "Avisos", icon: Bell },
     { value: "integracoes", label: "Integrações", icon: Plug },
     { value: "avancado", label: "Avançado", icon: Settings2 },
   ];
@@ -120,7 +123,7 @@ function IntegracoesInner() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-5">
-          <TabsList className="grid w-full grid-cols-4 sm:w-auto sm:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 sm:w-auto sm:inline-grid">
             {tabs.map((t) => {
               const Icon = t.icon;
               return (
@@ -148,6 +151,10 @@ function IntegracoesInner() {
 
               <TabsContent value="papeis" className="mt-0 space-y-5">
                 {user ? <RolesInner userId={user.id} /> : null}
+              </TabsContent>
+
+              <TabsContent value="avisos" className="mt-0 space-y-5">
+                <NotificationPreferencesCard />
               </TabsContent>
 
               <TabsContent value="integracoes" className="mt-0 space-y-5">

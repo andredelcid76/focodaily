@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as PapeisRouteImport } from './routes/papeis'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as NotificacoesRouteImport } from './routes/notificacoes'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DelegadasRouteImport } from './routes/delegadas'
@@ -43,6 +44,7 @@ import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/publi
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
+import { Route as ApiPublicNotificationsTickRouteImport } from './routes/api/public/notifications/tick'
 import { Route as ApiPublicNotificationsDispatchRouteImport } from './routes/api/public/notifications/dispatch'
 import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
 import { Route as ApiPublicInboxScanAllRouteImport } from './routes/api/public/inbox/scan-all'
@@ -61,6 +63,11 @@ const PapeisRoute = PapeisRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificacoesRoute = NotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
@@ -222,6 +229,12 @@ const ApiPublicOauthAuthorizeRoute = ApiPublicOauthAuthorizeRouteImport.update({
   path: '/api/public/oauth/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNotificationsTickRoute =
+  ApiPublicNotificationsTickRouteImport.update({
+    id: '/api/public/notifications/tick',
+    path: '/api/public/notifications/tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicNotificationsDispatchRoute =
   ApiPublicNotificationsDispatchRouteImport.update({
     id: '/api/public/notifications/dispatch',
@@ -254,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
@@ -276,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
+  '/api/public/notifications/tick': typeof ApiPublicNotificationsTickRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
@@ -294,6 +309,7 @@ export interface FileRoutesByTo {
   '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
@@ -316,6 +332,7 @@ export interface FileRoutesByTo {
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
+  '/api/public/notifications/tick': typeof ApiPublicNotificationsTickRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
@@ -335,6 +352,7 @@ export interface FileRoutesById {
   '/delegadas': typeof DelegadasRoute
   '/inbox': typeof InboxRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/notificacoes': typeof NotificacoesRoute
   '/onboarding': typeof OnboardingRoute
   '/papeis': typeof PapeisRoute
   '/semana': typeof SemanaRoute
@@ -357,6 +375,7 @@ export interface FileRoutesById {
   '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
   '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
+  '/api/public/notifications/tick': typeof ApiPublicNotificationsTickRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
@@ -377,6 +396,7 @@ export interface FileRouteTypes {
     | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/notificacoes'
     | '/onboarding'
     | '/papeis'
     | '/semana'
@@ -399,6 +419,7 @@ export interface FileRouteTypes {
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
     | '/api/public/notifications/dispatch'
+    | '/api/public/notifications/tick'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
@@ -417,6 +438,7 @@ export interface FileRouteTypes {
     | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/notificacoes'
     | '/onboarding'
     | '/papeis'
     | '/semana'
@@ -439,6 +461,7 @@ export interface FileRouteTypes {
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
     | '/api/public/notifications/dispatch'
+    | '/api/public/notifications/tick'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
@@ -457,6 +480,7 @@ export interface FileRouteTypes {
     | '/delegadas'
     | '/inbox'
     | '/minhas-tarefas'
+    | '/notificacoes'
     | '/onboarding'
     | '/papeis'
     | '/semana'
@@ -479,6 +503,7 @@ export interface FileRouteTypes {
     | '/api/public/inbox/scan-all'
     | '/api/public/inbox/tag-email'
     | '/api/public/notifications/dispatch'
+    | '/api/public/notifications/tick'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
@@ -498,6 +523,7 @@ export interface RootRouteChildren {
   DelegadasRoute: typeof DelegadasRoute
   InboxRoute: typeof InboxRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
+  NotificacoesRoute: typeof NotificacoesRoute
   OnboardingRoute: typeof OnboardingRoute
   PapeisRoute: typeof PapeisRoute
   SemanaRoute: typeof SemanaRoute
@@ -520,6 +546,7 @@ export interface RootRouteChildren {
   ApiPublicInboxScanAllRoute: typeof ApiPublicInboxScanAllRoute
   ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
   ApiPublicNotificationsDispatchRoute: typeof ApiPublicNotificationsDispatchRoute
+  ApiPublicNotificationsTickRoute: typeof ApiPublicNotificationsTickRoute
   ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
   ApiPublicOauthTokenRoute: typeof ApiPublicOauthTokenRoute
@@ -549,6 +576,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notificacoes': {
+      id: '/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/notificacoes'
+      preLoaderRoute: typeof NotificacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/minhas-tarefas': {
@@ -768,6 +802,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOauthAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/notifications/tick': {
+      id: '/api/public/notifications/tick'
+      path: '/api/public/notifications/tick'
+      fullPath: '/api/public/notifications/tick'
+      preLoaderRoute: typeof ApiPublicNotificationsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/notifications/dispatch': {
       id: '/api/public/notifications/dispatch'
       path: '/api/public/notifications/dispatch'
@@ -820,6 +861,7 @@ const rootRouteChildren: RootRouteChildren = {
   DelegadasRoute: DelegadasRoute,
   InboxRoute: InboxRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
+  NotificacoesRoute: NotificacoesRoute,
   OnboardingRoute: OnboardingRoute,
   PapeisRoute: PapeisRoute,
   SemanaRoute: SemanaRoute,
@@ -844,6 +886,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicInboxScanAllRoute: ApiPublicInboxScanAllRoute,
   ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
   ApiPublicNotificationsDispatchRoute: ApiPublicNotificationsDispatchRoute,
+  ApiPublicNotificationsTickRoute: ApiPublicNotificationsTickRoute,
   ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
   ApiPublicOauthTokenRoute: ApiPublicOauthTokenRoute,

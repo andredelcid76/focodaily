@@ -50,6 +50,13 @@
       "when": 1790187171331,
       "tag": "0006_company_domain_colleagues",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790214635932,
+      "tag": "0007_notifications_upgrade",
+      "breakpoints": true
     }
   ]
 }

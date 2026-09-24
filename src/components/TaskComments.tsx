@@ -32,6 +32,39 @@ export function TaskComments({ taskId, userId }: { taskId: string; userId: strin
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [people, setPeople] = useState<Profile[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("user_id,display_name,email")
+      .neq("user_id", userId)
+      .not("display_name", "is", null)
+      .order("display_name")
+      .limit(300)
+      .then(({ data }) => setPeople((data ?? []) as Profile[]));
+  }, [userId]);
+
+  const mentionOptions = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return people
+      .filter((p) => (p.display_name ?? "").toLowerCase().includes(q) || (p.email ?? "").toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [people, mentionQuery]);
+
+  const onDraftChange = (value: string) => {
+    setDraft(value);
+    const m = /(?:^|\s)@([^@\n]{0,30})$/.exec(value);
+    setMentionQuery(m ? m[1] : null);
+  };
+
+  const pickMention = (p: Profile) => {
+    const name = p.display_name ?? p.email ?? "";
+    setDraft((d) => d.replace(/@([^@\n]{0,30})$/, `@${name} `));
+    setMentionQuery(null);
+  };
 
   const refresh = useCallback(async () => {
     const { data } = await supabase
@@ -86,6 +119,7 @@ export function TaskComments({ taskId, userId }: { taskId: string; userId: strin
       return;
     }
     setDraft("");
+    setMentionQuery(null);
     refresh();
     import("@/lib/notifications.functions")
       .then((m) => m.flushNotificationDelivery())
@@ -99,7 +133,7 @@ export function TaskComments({ taskId, userId }: { taskId: string; userId: strin
   };
 
   return (
-    <div>
+    <div id="task-comments">
       <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <MessageSquare className="h-3.5 w-3.5" />
         Comentários
@@ -147,11 +181,29 @@ export function TaskComments({ taskId, userId }: { taskId: string; userId: strin
         })}
       </div>
 
+      {mentionOptions.length > 0 && (
+        <div className="mt-2 overflow-hidden rounded-lg border border-border/60 bg-popover">
+          {mentionOptions.map((p) => (
+            <button
+              key={p.user_id}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pickMention(p);
+              }}
+              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-muted"
+            >
+              <span className="font-medium">{p.display_name}</span>
+              <span className="truncate text-muted-foreground">{p.email}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="mt-2 flex items-end gap-2">
         <Textarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Escreva um comentário…"
+          onChange={(e) => onDraftChange(e.target.value)}
+          placeholder="Escreva um comentário… use @ para mencionar alguém"
           rows={2}
           className="min-h-[38px] text-xs"
           onKeyDown={(e) => {
