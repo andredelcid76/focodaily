@@ -38,7 +38,7 @@ export const CollaborationNoticeEmail = ({
       <Container style={container}>
         <Text style={eyebrow}>{siteName}</Text>
         <Heading style={heading}>{title}</Heading>
-        <Text style={paragraph}>{body}</Text>
+        <Text style={{ ...paragraph, whiteSpace: "pre-line" }}>{body}</Text>
 
         <Section style={actions}>
           <Button href={ctaUrl} style={button}>
