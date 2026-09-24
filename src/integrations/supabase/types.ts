@@ -489,15 +489,42 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_mode: string
+          prefs: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_mode?: string
+          prefs?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_mode?: string
+          prefs?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           actor_id: string | null
           body: string | null
           created_at: string
           delivery_error: string | null
+          digest_pending: boolean
           emailed_at: string | null
+          group_count: number
           id: string
           link: string | null
+          meta: Json
           project_id: string | null
           read_at: string | null
           task_id: string | null
@@ -511,9 +538,12 @@ export type Database = {
           body?: string | null
           created_at?: string
           delivery_error?: string | null
+          digest_pending?: boolean
           emailed_at?: string | null
+          group_count?: number
           id?: string
           link?: string | null
+          meta?: Json
           project_id?: string | null
           read_at?: string | null
           task_id?: string | null
@@ -527,9 +557,12 @@ export type Database = {
           body?: string | null
           created_at?: string
           delivery_error?: string | null
+          digest_pending?: boolean
           emailed_at?: string | null
+          group_count?: number
           id?: string
           link?: string | null
+          meta?: Json
           project_id?: string | null
           read_at?: string | null
           task_id?: string | null
@@ -1734,6 +1767,7 @@ export type Database = {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
+      notify_due_tasks: { Args: never; Returns: undefined }
       reorder_projects: {
         Args: { p_ordered_ids: string[] }
         Returns: undefined
