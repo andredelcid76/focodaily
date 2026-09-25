@@ -16,6 +16,6 @@
 - [x] Manter menu, cabeçalho e avisos montados durante toda a navegação interna.
 - [x] Excluir o histórico concluído da busca inicial de Hoje.
 - [x] Medir a abertura rápida no navegador autenticado.
-- [ ] Impedir tarefas de projetos pausados de aparecerem antes da leitura dos projetos terminar.
-- [ ] Corrigir a reinicialização causada pelo canal duplicado do contador de avisos.
-- [ ] Validar a volta para Hoje quadro a quadro, sem tarefas fantasmas.
+- [x] Impedir tarefas de projetos pausados de aparecerem antes da leitura dos projetos terminar.
+- [x] Corrigir a reinicialização causada pelo canal duplicado do contador de avisos.
+- [x] Validar a volta para Hoje quadro a quadro, sem tarefas fantasmas.
