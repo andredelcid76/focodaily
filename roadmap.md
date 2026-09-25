@@ -12,4 +12,5 @@
 - [x] Validar a troca de telas no navegador autenticado.
 - [x] Abrir Hoje com uma busca enxuta de tarefas atuais e atrasadas.
 - [x] Manter a conta carregada durante a troca entre páginas.
+- [x] Deixar a tela Hoje pronta em segundo plano antes do clique no menu.
 - [ ] Medir a abertura rápida no navegador autenticado.
