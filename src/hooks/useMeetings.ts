@@ -30,16 +30,21 @@ export function useMeetings(userId: string) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("meetings")
-      .select("*")
-      .eq("user_id", userId)
-      .order("starts_at", { ascending: true });
-    if (error) {
+    try {
+      const { fetchAllRows } = await import("@/lib/fetchAll");
+      const data = await fetchAllRows<Meeting>(
+        () =>
+          supabase
+            .from("meetings")
+            .select("*")
+            .eq("user_id", userId)
+            .order("starts_at", { ascending: true })
+            .order("id", { ascending: true }) as never,
+      );
+      setMeetings(data);
+    } catch (error) {
       console.error(error);
-      return;
     }
-    setMeetings((data ?? []) as Meeting[]);
   }, [userId]);
 
   useEffect(() => {

@@ -58,10 +58,10 @@ export function ProjectHistoryPanel({ projectId }: { projectId: string }) {
     let cancelled = false;
     (async () => {
       // 1. Tasks in project
-      const { data: tasks } = await supabase
-        .from("tasks")
-        .select("id, title")
-        .eq("project_id", projectId);
+      const { fetchAllRows } = await import("@/lib/fetchAll");
+      const tasks = await fetchAllRows<{ id: string; title: string }>(
+        () => supabase.from("tasks").select("id, title").eq("project_id", projectId).order("id") as never,
+      ).catch(() => [] as { id: string; title: string }[]);
 
       const taskMap = new Map<string, string>();
       (tasks ?? []).forEach((t: any) => taskMap.set(t.id, t.title));
