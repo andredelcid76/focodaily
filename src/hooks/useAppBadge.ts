@@ -41,7 +41,7 @@ export function useAppBadge() {
     load();
 
     const channel = supabase
-      .channel(`app-badge:${user.id}`)
+      .channel(`app-badge:${user.id}:${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {

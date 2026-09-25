@@ -118,7 +118,7 @@ function TodayInner({ userId }: { userId: string }) {
   }, [tasksApi.tasks, depsApi.deps]);
   const { roles } = useRoles(userId);
   const subtaskCounts = useSubtaskCounts(userId);
-  const { projects } = useProjects(userId);
+  const { projects, loading: projectsLoading } = useProjects(userId);
   const meetingsApi = useMeetings(userId);
   const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -568,7 +568,7 @@ function TodayInner({ userId }: { userId: string }) {
     ? `Amanhã · ${formatHuman(viewDate)}`
     : formatHuman(viewDate);
 
-  if (tasksApi.loading) {
+  if (tasksApi.loading || projectsLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Carregando" />
