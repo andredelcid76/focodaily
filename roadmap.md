@@ -7,3 +7,6 @@
 - [x] Oferecer Ajustar / Manter como está ao criar vínculos inconsistentes.
 - [x] Confirmar reagendamentos por arrasto antes do limite sem bloqueio obrigatório.
 - [x] Validar regras e interação dos avisos.
+# Atualização da tela Hoje
+- [x] Impedir que a tela Hoje reutilize uma lista antiga de tarefas ao voltar para ela.
+- [x] Validar a troca de telas no navegador autenticado.
