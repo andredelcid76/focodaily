@@ -1,10 +1,11 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useLocation } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { DependencyConfirmation } from "@/components/DependencyConfirmation";
 import { Toaster } from "@/components/ui/sonner";
 import { registerPWA } from "@/lib/pwa";
 import { AuthProvider } from "@/lib/auth";
+import { AppShell } from "@/components/AppShell";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -76,11 +77,18 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const [queryClient] = useState(() => new QueryClient());
+  const location = useLocation();
+  const standalonePage =
+    location.pathname === "/auth" ||
+    location.pathname === "/onboarding" ||
+    location.pathname === "/bem-vindo" ||
+    location.pathname.startsWith("/convite") ||
+    location.pathname.startsWith("/oauth/");
   useEffect(() => { registerPWA(); }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
+        {standalonePage ? <Outlet /> : <AppShell><Outlet /></AppShell>}
         <Toaster position="top-right" />
         <DependencyConfirmation />
       </AuthProvider>
