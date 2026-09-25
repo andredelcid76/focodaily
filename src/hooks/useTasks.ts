@@ -93,14 +93,26 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .order("scheduled_date", { ascending: true })
-      .order("position", { ascending: true });
-    if (!error && data) {
-      tasksCache.set(userId, data);
-      setTasks(data);
+    // PostgREST caps each response at 1000 rows — page through everything,
+    // otherwise later-dated tasks get silently cut off.
+    const PAGE = 1000;
+    const all: Task[] = [];
+    let failed = false;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("scheduled_date", { ascending: true })
+        .order("position", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error || !data) { failed = true; break; }
+      all.push(...(data as Task[]));
+      if (data.length < PAGE) break;
+    }
+    if (!failed) {
+      tasksCache.set(userId, all);
+      setTasks(all);
     }
     setLoading(false);
   }, [userId]);
