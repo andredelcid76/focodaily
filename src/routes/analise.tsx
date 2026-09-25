@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "@/components/PriorityBadge";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
@@ -31,11 +30,7 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/analise")({
-  component: () => (
-    <AppShell>
-      <AnalisePage />
-    </AppShell>
-  ),
+  component: AnalisePage,
 });
 
 type Period = "today" | "yesterday" | "7d" | "30d" | "90d" | "all";

@@ -1,7 +1,6 @@
 import { TaskDependencyStatus } from "@/components/TaskDependencyStatus";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { useMeetings, meetingDurationMinutes, type Meeting } from "@/hooks/useMeetings";
@@ -30,11 +29,7 @@ import { todayISO, addDays, startOfWeek, weekDays, formatShort, formatMinutes } 
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/semana")({
-  component: () => (
-    <AppShell>
-      <WeekPage />
-    </AppShell>
-  ),
+  component: WeekPage,
 });
 
 function WeekPage() {

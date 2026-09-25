@@ -81,9 +81,10 @@ const tasksCache = new Map<string, Task[]>();
 const ensureDoneAt = new Map<string, number>();
 const ENSURE_TTL_MS = 5 * 60 * 1000;
 
-export function useTasks(userId: string | undefined) {
+export function useTasks(userId: string | undefined, options?: { fastInitialDay?: string }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const fastInitialDay = options?.fastInitialDay;
 
   // Mantém a memória sempre igual ao que está na tela (edições e tempo real)
   useEffect(() => {
@@ -103,6 +104,24 @@ export function useTasks(userId: string | undefined) {
     }
     setLoading(false);
   }, [userId]);
+
+  const refreshInitialDay = useCallback(async () => {
+    if (!userId || !fastInitialDay) return false;
+    const dayStart = `${fastInitialDay}T00:00:00.000Z`;
+    const nextDayStart = `${addDays(fastInitialDay, 1)}T00:00:00.000Z`;
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .or(
+        `scheduled_date.eq.${fastInitialDay},and(scheduled_date.lt.${fastInitialDay},completed.eq.false),and(scheduled_date.gt.${fastInitialDay},completed_at.gte.${dayStart},completed_at.lt.${nextDayStart})`,
+      )
+      .order("scheduled_date", { ascending: true })
+      .order("position", { ascending: true });
+    if (error || !data) return false;
+    setTasks(data);
+    setLoading(false);
+    return true;
+  }, [fastInitialDay, userId]);
 
   // Generate recurring task instances from today through FUTURE_DAYS ahead
   const ensureRecurring = useCallback(async () => {
@@ -296,8 +315,11 @@ export function useTasks(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return;
     (async () => {
-      // 1) Mostra as tarefas o quanto antes
-      await refresh();
+      // Hoje opens from a small authoritative slice first. The complete task
+      // collection is synchronized immediately afterwards for dialogs/actions.
+      const openedFast = fastInitialDay ? await refreshInitialDay() : false;
+      if (!openedFast) await refresh();
+      else void refresh();
       // 2) Materializa recorrências em segundo plano (no máximo 1x a cada 5 min)
       const last = ensureDoneAt.get(userId) ?? 0;
       if (Date.now() - last < ENSURE_TTL_MS) return;
@@ -334,7 +356,7 @@ export function useTasks(userId: string | undefined) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, refresh, ensureRecurring]);
+  }, [userId, fastInitialDay, refresh, refreshInitialDay, ensureRecurring]);
 
   const createTask = async (data: Omit<TablesInsert<"tasks">, "user_id">) => {
     if (!userId) return;

@@ -1,7 +1,7 @@
 import { useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
 import { GlobalSearch, useGlobalSearchHotkey } from "@/components/GlobalSearch";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -193,9 +193,5 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  return (
-    <AuthProvider>
-      <Shell>{children}</Shell>
-    </AuthProvider>
-  );
+  return <Shell>{children}</Shell>;
 }

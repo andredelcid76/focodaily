@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AppShell } from "@/components/AppShell";
 import { todayISO } from "@/lib/date";
 import { listMyAssignedTasks, type MyTaskRow } from "@/lib/myTasks.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,11 +37,7 @@ import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 
 export const Route = createFileRoute("/minhas-tarefas")({
-  component: () => (
-    <AppShell>
-      <MyTasksPage />
-    </AppShell>
-  ),
+  component: MyTasksPage,
   head: () => ({ meta: [{ title: "Tarefas · Foco" }] }),
 });
 

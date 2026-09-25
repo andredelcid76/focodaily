@@ -213,6 +213,7 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                       <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
                         <Link
                           to={item.url}
+                          preload={item.url === "/" ? "render" : "intent"}
                           className="group/nav relative flex items-center gap-2.5"
                           onClick={() => {
                             if (item.url === "/") {

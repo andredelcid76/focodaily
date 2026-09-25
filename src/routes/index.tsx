@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
 import { useTaskDependencies } from "@/hooks/useTaskDependencies";
@@ -80,11 +79,7 @@ export const Route = createFileRoute("/")({
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
-  component: () => (
-    <AppShell>
-      <TodayPage />
-    </AppShell>
-  ),
+  component: TodayPage,
 });
 
 function TodayPage() {
@@ -97,7 +92,7 @@ function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
   const [includeMeetings, setIncludeMeetings] = useState(true);
-  const tasksApi = useTasks(userId);
+  const tasksApi = useTasks(userId, { fastInitialDay: today });
   const assigneeProfiles = useProfiles(tasksApi.tasks.map((t) => t.assignee_id));
   const assigneeName = (id: string | null | undefined): string | null => {
     if (!id) return null;

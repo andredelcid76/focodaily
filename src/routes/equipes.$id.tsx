@@ -28,7 +28,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AppShell } from "@/components/AppShell";
 import {
   getTeamDetail,
   inviteToTeam,
@@ -40,11 +39,7 @@ import {
 import { PROJECT_COLORS } from "@/hooks/useProjects";
 
 export const Route = createFileRoute("/equipes/$id")({
-  component: () => (
-    <AppShell>
-      <TeamDetailPage />
-    </AppShell>
-  ),
+  component: TeamDetailPage,
 });
 
 function TeamDetailPage() {
