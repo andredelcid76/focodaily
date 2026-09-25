@@ -12,6 +12,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-09-25",
+    date: "2026-09-25",
+    title: "Hoje mais rápido",
+    items: [
+      "A tela Hoje abre bem mais rápido ao voltar para ela.",
+      "Fim das tarefas atrasadas \"fantasmas\" que apareciam por um instante antes da lista certa.",
+      "Menu e cabeçalho não recarregam mais a cada troca de tela.",
+      "Avisos por e-mail passam a ir para o e-mail atual da conta.",
+    ],
+  },
+  {
     id: "2026-09-24",
     date: "2026-09-24",
     title: "Delegadas, notificações e novidades",
