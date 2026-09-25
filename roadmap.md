@@ -11,4 +11,5 @@
 - [x] Impedir que a tela Hoje reutilize uma lista antiga de tarefas ao voltar para ela.
 - [x] Validar a troca de telas no navegador autenticado.
 - [x] Abrir Hoje com uma busca enxuta de tarefas atuais e atrasadas.
+- [x] Manter a conta carregada durante a troca entre páginas.
 - [ ] Medir a abertura rápida no navegador autenticado.

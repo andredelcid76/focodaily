@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { DependencyConfirmation } from "@/components/DependencyConfirmation";
 import { Toaster } from "@/components/ui/sonner";
 import { registerPWA } from "@/lib/pwa";
+import { AuthProvider } from "@/lib/auth";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -78,9 +79,11 @@ function RootComponent() {
   useEffect(() => { registerPWA(); }, []);
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster position="top-right" />
-      <DependencyConfirmation />
+      <AuthProvider>
+        <Outlet />
+        <Toaster position="top-right" />
+        <DependencyConfirmation />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
