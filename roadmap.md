@@ -9,4 +9,4 @@
 - [x] Validar regras e interação dos avisos.
 # Atualização da tela Hoje
 - [x] Impedir que a tela Hoje reutilize uma lista antiga de tarefas ao voltar para ela.
-- [ ] Validar a troca de telas no navegador autenticado.
+- [x] Validar a troca de telas no navegador autenticado.
