@@ -75,13 +75,25 @@ function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
 // Cache em memória por usuário: ao navegar entre telas as tarefas aparecem
 // instantaneamente e a atualização acontece em segundo plano.
 const tasksCache = new Map<string, Task[]>();
+const tasksCacheAt = new Map<string, number>();
+const CACHE_FRESH_MS = 15 * 1000;
+function freshCache(userId: string | undefined) {
+  if (!userId) return undefined;
+  const at = tasksCacheAt.get(userId) ?? 0;
+  return Date.now() - at < CACHE_FRESH_MS ? tasksCache.get(userId) : undefined;
+}
 // Evita repetir o trabalho de materializar recorrências a cada navegação
 const ensureDoneAt = new Map<string, number>();
 const ENSURE_TTL_MS = 5 * 60 * 1000;
 
 export function useTasks(userId: string | undefined) {
-  const [tasks, setTasks] = useState<Task[]>(() => (userId ? tasksCache.get(userId) ?? [] : []));
-  const [loading, setLoading] = useState(() => !(userId && tasksCache.has(userId)));
+  const [tasks, setTasks] = useState<Task[]>(() => freshCache(userId) ?? []);
+  const [loading, setLoading] = useState(() => !freshCache(userId));
+
+  // Mantém a memória sempre igual ao que está na tela (edições e tempo real)
+  useEffect(() => {
+    if (userId && !loading) tasksCache.set(userId, tasks);
+  }, [userId, tasks, loading]);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -92,6 +104,7 @@ export function useTasks(userId: string | undefined) {
       .order("position", { ascending: true });
     if (!error && data) {
       tasksCache.set(userId, data);
+      tasksCacheAt.set(userId, Date.now());
       setTasks(data);
     }
     setLoading(false);
