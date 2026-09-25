@@ -113,7 +113,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       .from("tasks")
       .select("*")
       .or(
-        `scheduled_date.lte.${fastInitialDay},and(completed_at.gte.${dayStart},completed_at.lt.${nextDayStart})`,
+        `scheduled_date.eq.${fastInitialDay},and(scheduled_date.lt.${fastInitialDay},completed.eq.false),and(scheduled_date.gt.${fastInitialDay},completed_at.gte.${dayStart},completed_at.lt.${nextDayStart})`,
       )
       .order("scheduled_date", { ascending: true })
       .order("position", { ascending: true });
