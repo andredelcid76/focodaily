@@ -10,3 +10,5 @@
 # Atualização da tela Hoje
 - [x] Impedir que a tela Hoje reutilize uma lista antiga de tarefas ao voltar para ela.
 - [x] Validar a troca de telas no navegador autenticado.
+- [x] Abrir Hoje com uma busca enxuta de tarefas atuais e atrasadas.
+- [ ] Medir a abertura rápida no navegador autenticado.

@@ -97,7 +97,7 @@ function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
   const [includeMeetings, setIncludeMeetings] = useState(true);
-  const tasksApi = useTasks(userId);
+  const tasksApi = useTasks(userId, { fastInitialDay: today });
   const assigneeProfiles = useProfiles(tasksApi.tasks.map((t) => t.assignee_id));
   const assigneeName = (id: string | null | undefined): string | null => {
     if (!id) return null;
