@@ -101,9 +101,14 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
     staleTime: 15_000,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("tasks").select("*").eq("project_id", projectId);
-      if (error) return [] as Task[];
-      return (data ?? []) as Task[];
+      const { fetchAllRows } = await import("@/lib/fetchAll");
+      try {
+        return await fetchAllRows<Task>(
+          () => supabase.from("tasks").select("*").eq("project_id", projectId).order("id") as never,
+        );
+      } catch {
+        return [] as Task[];
+      }
     },
   });
 

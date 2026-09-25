@@ -33,10 +33,10 @@ export function DeleteProjectDialog({ open, onOpenChange, project, otherProjects
     setTargetId(null);
     setCounts(null);
     (async () => {
-      const { data } = await supabase
-        .from("tasks")
-        .select("id,completed")
-        .eq("project_id", project.id);
+      const { fetchAllRows } = await import("@/lib/fetchAll");
+      const data = await fetchAllRows<{ id: string; completed: boolean }>(
+        () => supabase.from("tasks").select("id,completed").eq("project_id", project.id).order("id") as never,
+      ).catch(() => null);
       if (data) {
         setCounts({ total: data.length, open: data.filter((t) => !t.completed).length });
       }
