@@ -15,4 +15,4 @@
 - [x] Deixar a tela Hoje pronta em segundo plano antes do clique no menu.
 - [x] Manter menu, cabeçalho e avisos montados durante toda a navegação interna.
 - [x] Excluir o histórico concluído da busca inicial de Hoje.
-- [ ] Medir a abertura rápida no navegador autenticado.
+- [x] Medir a abertura rápida no navegador autenticado.
