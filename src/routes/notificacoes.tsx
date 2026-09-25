@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCheck, Eraser, Loader2 } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,11 +22,7 @@ export const Route = createFileRoute("/notificacoes")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => (
-    <AppShell>
-      <NotificationsPage />
-    </AppShell>
-  ),
+  component: NotificationsPage,
 });
 
 const PAGE = 50;

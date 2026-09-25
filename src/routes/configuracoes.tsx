@@ -25,7 +25,6 @@ import { RolesInner } from "@/routes/papeis";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { AppShell } from "@/components/AppShell";
 import { NotificationPreferencesCard } from "@/components/NotificationPreferencesCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,11 +82,7 @@ export const Route = createFileRoute("/configuracoes")({
 });
 
 function IntegracoesPage() {
-  return (
-    <AppShell>
-      <IntegracoesInner />
-    </AppShell>
-  );
+  return <IntegracoesInner />;
 }
 
 function IntegracoesInner() {

@@ -5,7 +5,6 @@ import { addProjectMembers } from "@/lib/collaborators.functions";
 import { transferProjectLeadership, listMyProjectRoles } from "@/lib/team.functions";
 import { useCallback, useMemo, useState } from "react";
 
-import { AppShell } from "@/components/AppShell";
 import { useStickyState, setSerialize, setDeserialize } from "@/hooks/useStickyState";
 import { useAuth } from "@/lib/auth";
 import {
@@ -71,11 +70,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/projetos/")({
-  component: () => (
-    <AppShell>
-      <ProjectsPage />
-    </AppShell>
-  ),
+  component: ProjectsPage,
 });
 
 type ViewMode = "cards" | "list" | "kanban" | "timeline";

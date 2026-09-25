@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useRoles, ROLE_COLORS, type Role } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
@@ -9,11 +8,7 @@ import { Plus, Trash2, Check, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/papeis")({
-  component: () => (
-    <AppShell>
-      <RolesPage />
-    </AppShell>
-  ),
+  component: RolesPage,
 });
 
 function RolesPage() {

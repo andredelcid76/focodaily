@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { CHANGELOG } from "@/lib/changelog";
 
@@ -15,11 +14,7 @@ export const Route = createFileRoute("/novidades")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => (
-    <AppShell>
-      <ChangelogPage />
-    </AppShell>
-  ),
+  component: ChangelogPage,
 });
 
 function fmt(d: string) {

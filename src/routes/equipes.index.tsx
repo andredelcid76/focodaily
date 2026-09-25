@@ -17,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AppShell } from "@/components/AppShell";
 import {
   getTeamsOverview,
   createTeam,
@@ -46,11 +45,7 @@ export const Route = createFileRoute("/equipes/")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => (
-    <AppShell>
-      <EquipesPage />
-    </AppShell>
-  ),
+  component: EquipesPage,
 });
 
 type Person = {

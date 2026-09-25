@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { useMemo, useState, useEffect } from "react";
 
-import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import {
   useProjects,
@@ -45,11 +44,7 @@ import { todayISO, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projetos/$id")({
-  component: () => (
-    <AppShell>
-      <ProjectDetailPage />
-    </AppShell>
-  ),
+  component: ProjectDetailPage,
 });
 
 function ProjectDetailPage() {

@@ -3,7 +3,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { UserCheck, CalendarDays, CheckCircle2, Loader2, ExternalLink } from "lucide-react";
-import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,11 +32,7 @@ export const Route = createFileRoute("/delegadas")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => (
-    <AppShell>
-      <DelegatedPage />
-    </AppShell>
-  ),
+  component: DelegatedPage,
 });
 
 const STATUS_LABEL: Record<string, string> = {
