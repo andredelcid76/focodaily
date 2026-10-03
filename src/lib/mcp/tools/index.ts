@@ -54,6 +54,7 @@ async function assertAssigneeAllowed(
   if (!data) throw new Error("assignee_id não corresponde a nenhuma pessoa com conta no Foco.");
 }
 
+void legacyAssertAssigneeAllowed;
 /** @deprecated regra antiga (contatos/equipe/projeto), mantida só como referência. */
 async function legacyAssertAssigneeAllowed(
   auth: unknown,
@@ -721,6 +722,8 @@ export const createTask = defineTool({
       await assertCanAssign(ctx.auth, userId, args.project_id ?? null, userId);
       await assertAssigneeAllowed(ctx.auth, args.assignee_id, args.project_id ?? null, userId);
       insert.assignee_id = args.assignee_id;
+    } else {
+      insert.assignee_id = userId; // padrão: quem criou
     }
     if (args.recurrence_interval !== undefined) insert.recurrence_interval = args.recurrence_interval;
     if (args.recurrence_weekdays !== undefined) insert.recurrence_weekdays = args.recurrence_weekdays;
