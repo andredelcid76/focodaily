@@ -169,7 +169,9 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
         ? projects.find((p) => p.id === effectiveInitialProjectId)
         : null;
       // Sem responsável por padrão: só fica atribuída quando o usuário escolher alguém.
-      const defaultAssignee = task ? (((task as any)?.assignee_id ?? null) as string | null) : null;
+      const defaultAssignee = task && !isSeed
+        ? (((task as any)?.assignee_id ?? null) as string | null)
+        : (((task as any)?.assignee_id ?? user?.id ?? null) as string | null);
       setAssigneeId(defaultAssignee);
       setNonNegotiable(!!(task as any)?.non_negotiable);
       setPriority(task ? toPriority((task as any)?.priority) : 3);
@@ -216,7 +218,22 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     staleTime: 0,
   });
   const contactMembers = (peopleOverview?.people ?? []).map(person => ({ ...person, role: "contact" }));
-  const assigneeOptions = effectiveProjectId ? members : contactMembers;
+  const fetchAllPeople = useServerFn(listAllPeople);
+  const { data: allPeopleData } = useQuery({
+    queryKey: ["all-people"],
+    enabled: open && !!user?.id,
+    queryFn: () => fetchAllPeople(),
+    staleTime: 5 * 60_000,
+  });
+  // Primeiro os do contexto (projeto/contatos), depois qualquer pessoa com conta.
+  const assigneeOptions = (() => {
+    const base: any[] = effectiveProjectId ? members : contactMembers;
+    const seen = new Set(base.map((m) => m.user_id));
+    const rest = (allPeopleData?.people ?? [])
+      .filter((p) => !seen.has(p.user_id))
+      .map((p) => ({ ...p, role: "other", is_me: p.user_id === user?.id }));
+    return [...base, ...rest];
+  })();
   const delegatedToOther = !!(assigneeId && assigneeId !== user?.id);
   const currentProject = effectiveProjectId ? projects.find((p) => p.id === effectiveProjectId) : null;
   const projectAllowsMemberReassign = (currentProject as any)?.members_can_reassign !== false;
