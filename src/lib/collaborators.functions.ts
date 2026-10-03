@@ -59,6 +59,24 @@ export const listKnownCollaborators = createServerFn({ method: "POST" })
   });
 
 /**
+ * Todas as pessoas com conta no Foco — para atribuir tarefas a qualquer um,
+ * mesmo fora de equipe ou projeto. Só nome, e-mail e foto.
+ */
+export const listAllPeople = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { fetchAllRows } = await import("@/lib/fetchAll");
+    const rows = await fetchAllRows<KnownCollaborator>(
+      () => supabaseAdmin.from("profiles").select("user_id,display_name,email,avatar_url").order("user_id") as never,
+    );
+    const people = rows.sort((a, b) =>
+      (a.display_name ?? a.email ?? "").localeCompare(b.display_name ?? b.email ?? "", "pt-BR"),
+    );
+    return { people, me: context.userId };
+  });
+
+/**
  * Adiciona participantes já conhecidos (que possuem conta) diretamente a um
  * projeto, sem passar por convite por e-mail.
  */

@@ -40,8 +40,23 @@ async function assertRoleOwnership(auth: unknown, roleId: string, userId: string
   if (!data) throw new Error("Papel inexistente ou sem acesso.");
 }
 
-/** Garante que assignee_id pode receber a tarefa (dono, membro do projeto ou membro da equipe do projeto). */
+/** Qualquer pessoa com conta no Foco pode receber a tarefa. */
 async function assertAssigneeAllowed(
+  _auth: unknown,
+  assigneeId: string,
+  _projectId: string | null | undefined,
+  taskOwnerId: string,
+): Promise<void> {
+  if (assigneeId === taskOwnerId) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.from("profiles").select("user_id").eq("user_id", assigneeId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("assignee_id não corresponde a nenhuma pessoa com conta no Foco.");
+}
+
+void legacyAssertAssigneeAllowed;
+/** @deprecated regra antiga (contatos/equipe/projeto), mantida só como referência. */
+async function legacyAssertAssigneeAllowed(
   auth: unknown,
   assigneeId: string,
   projectId: string | null | undefined,
@@ -707,6 +722,8 @@ export const createTask = defineTool({
       await assertCanAssign(ctx.auth, userId, args.project_id ?? null, userId);
       await assertAssigneeAllowed(ctx.auth, args.assignee_id, args.project_id ?? null, userId);
       insert.assignee_id = args.assignee_id;
+    } else {
+      insert.assignee_id = userId; // padrão: quem criou
     }
     if (args.recurrence_interval !== undefined) insert.recurrence_interval = args.recurrence_interval;
     if (args.recurrence_weekdays !== undefined) insert.recurrence_weekdays = args.recurrence_weekdays;

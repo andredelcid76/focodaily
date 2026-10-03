@@ -373,7 +373,8 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   const createTask = async (data: Omit<TablesInsert<"tasks">, "user_id">) => {
     if (!userId) return;
     // Sem responsável informado, a tarefa fica sem responsável (não auto-atribui ao criador)
-    const payload = { ...data, user_id: userId, assignee_id: data.assignee_id ?? null };
+    // Por padrão a tarefa fica com quem criou; null explícito = sem responsável.
+    const payload = { ...data, user_id: userId, assignee_id: data.assignee_id === undefined ? userId : data.assignee_id };
     const { data: inserted, error } = await supabase
       .from("tasks")
       .insert(payload)
