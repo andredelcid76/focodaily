@@ -40,8 +40,22 @@ async function assertRoleOwnership(auth: unknown, roleId: string, userId: string
   if (!data) throw new Error("Papel inexistente ou sem acesso.");
 }
 
-/** Garante que assignee_id pode receber a tarefa (dono, membro do projeto ou membro da equipe do projeto). */
+/** Qualquer pessoa com conta no Foco pode receber a tarefa. */
 async function assertAssigneeAllowed(
+  _auth: unknown,
+  assigneeId: string,
+  _projectId: string | null | undefined,
+  taskOwnerId: string,
+): Promise<void> {
+  if (assigneeId === taskOwnerId) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.from("profiles").select("user_id").eq("user_id", assigneeId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("assignee_id não corresponde a nenhuma pessoa com conta no Foco.");
+}
+
+/** @deprecated regra antiga (contatos/equipe/projeto), mantida só como referência. */
+async function legacyAssertAssigneeAllowed(
   auth: unknown,
   assigneeId: string,
   projectId: string | null | undefined,

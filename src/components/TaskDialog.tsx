@@ -1,4 +1,5 @@
 import { getTeamsOverview } from "@/lib/teams.functions";
+import { listAllPeople } from "@/lib/collaborators.functions";
 import { useQueryClient } from "@tanstack/react-query";
 import { dependencyStatus, dependencyDateLabel, type DependencyInfo } from "@/lib/dependency-status";
 import { askDependencyConfirmation } from "./DependencyConfirmation";
