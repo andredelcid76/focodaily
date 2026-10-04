@@ -9,107 +9,52 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SemanaRouteImport } from './routes/semana'
-import { Route as PapeisRouteImport } from './routes/papeis'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as NovidadesRouteImport } from './routes/novidades'
-import { Route as NotificacoesRouteImport } from './routes/notificacoes'
-import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
-import { Route as InboxRouteImport } from './routes/inbox'
-import { Route as DelegadasRouteImport } from './routes/delegadas'
-import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
-import { Route as BemVindoRouteImport } from './routes/bem-vindo'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AnaliseRouteImport } from './routes/analise'
-import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
-import { Route as EquipesIndexRouteImport } from './routes/equipes.index'
-import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
-import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
-import { Route as EquipesIdRouteImport } from './routes/equipes.$id'
-import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
-import { Route as ConviteEquipeTokenRouteImport } from './routes/convite-equipe.$token'
-import { Route as ConviteContatoTokenRouteImport } from './routes/convite-contato.$token'
-import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
+import { Route as AgendaRouteImport } from './routes/agenda'
+import { Route as AnaliseRouteImport } from './routes/analise'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BemVindoRouteImport } from './routes/bem-vindo'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as DelegadasRouteImport } from './routes/delegadas'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
+import { Route as NotificacoesRouteImport } from './routes/notificacoes'
+import { Route as NovidadesRouteImport } from './routes/novidades'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PapeisRouteImport } from './routes/papeis'
+import { Route as SemanaRouteImport } from './routes/semana'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
-import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
-import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
-import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
-import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
-import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
+import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
+import { Route as ConviteContatoTokenRouteImport } from './routes/convite-contato.$token'
+import { Route as ConviteEquipeTokenRouteImport } from './routes/convite-equipe.$token'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
+import { Route as EquipesIndexRouteImport } from './routes/equipes.index'
+import { Route as EquipesIdRouteImport } from './routes/equipes.$id'
+import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
+import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
+import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
-import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
-import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
-import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
-import { Route as ApiPublicNotificationsTickRouteImport } from './routes/api/public/notifications/tick'
-import { Route as ApiPublicNotificationsDispatchRouteImport } from './routes/api/public/notifications/dispatch'
-import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
-import { Route as ApiPublicInboxScanAllRouteImport } from './routes/api/public/inbox/scan-all'
+import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
+import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
+import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
+import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
+import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
+import { Route as ApiPublicInboxScanAllRouteImport } from './routes/api/public/inbox/scan-all'
+import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
+import { Route as ApiPublicNotificationsDispatchRouteImport } from './routes/api/public/notifications/dispatch'
+import { Route as ApiPublicNotificationsTickRouteImport } from './routes/api/public/notifications/tick'
+import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
+import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
+import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
+import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
-const SemanaRoute = SemanaRouteImport.update({
-  id: '/semana',
-  path: '/semana',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PapeisRoute = PapeisRouteImport.update({
-  id: '/papeis',
-  path: '/papeis',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NovidadesRoute = NovidadesRouteImport.update({
-  id: '/novidades',
-  path: '/novidades',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificacoesRoute = NotificacoesRouteImport.update({
-  id: '/notificacoes',
-  path: '/notificacoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
-  id: '/minhas-tarefas',
-  path: '/minhas-tarefas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InboxRoute = InboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DelegadasRoute = DelegadasRouteImport.update({
-  id: '/delegadas',
-  path: '/delegadas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BemVindoRoute = BemVindoRouteImport.update({
-  id: '/bem-vindo',
-  path: '/bem-vindo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnaliseRoute = AnaliseRouteImport.update({
-  id: '/analise',
-  path: '/analise',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendaRoute = AgendaRouteImport.update({
@@ -117,39 +62,81 @@ const AgendaRoute = AgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AnaliseRoute = AnaliseRouteImport.update({
+  id: '/analise',
+  path: '/analise',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjetosIndexRoute = ProjetosIndexRouteImport.update({
-  id: '/projetos/',
-  path: '/projetos/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EquipesIndexRoute = EquipesIndexRouteImport.update({
-  id: '/equipes/',
-  path: '/equipes/',
+const BemVindoRoute = BemVindoRouteImport.update({
+  id: '/bem-vindo',
+  path: '/bem-vindo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjetosIdRoute = ProjetosIdRouteImport.update({
-  id: '/projetos/$id',
-  path: '/projetos/$id',
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OauthConsentRoute = OauthConsentRouteImport.update({
-  id: '/oauth/consent',
-  path: '/oauth/consent',
+const DelegadasRoute = DelegadasRouteImport.update({
+  id: '/delegadas',
+  path: '/delegadas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EquipesIdRoute = EquipesIdRouteImport.update({
-  id: '/equipes/$id',
-  path: '/equipes/$id',
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConviteTokenRoute = ConviteTokenRouteImport.update({
-  id: '/convite/$token',
-  path: '/convite/$token',
+const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
+  id: '/minhas-tarefas',
+  path: '/minhas-tarefas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificacoesRoute = NotificacoesRouteImport.update({
+  id: '/notificacoes',
+  path: '/notificacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovidadesRoute = NovidadesRouteImport.update({
+  id: '/novidades',
+  path: '/novidades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PapeisRoute = PapeisRouteImport.update({
+  id: '/papeis',
+  path: '/papeis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SemanaRoute = SemanaRouteImport.update({
+  id: '/semana',
+  path: '/semana',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownOauthAuthorizationServerRoute =
+  DotwellKnownOauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotwellKnownOauthProtectedResourceRoute =
+  DotwellKnownOauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ConviteContatoTokenRoute = ConviteContatoTokenRouteImport.update({
+  id: '/convite-contato/$token',
+  path: '/convite-contato/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConviteEquipeTokenRoute = ConviteEquipeTokenRouteImport.update({
@@ -157,46 +144,34 @@ const ConviteEquipeTokenRoute = ConviteEquipeTokenRouteImport.update({
   path: '/convite-equipe/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConviteContatoTokenRoute = ConviteContatoTokenRouteImport.update({
-  id: '/convite-contato/$token',
-  path: '/convite-contato/$token',
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DotwellKnownOauthProtectedResourceRoute =
-  DotwellKnownOauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotwellKnownOauthAuthorizationServerRoute =
-  DotwellKnownOauthAuthorizationServerRouteImport.update({
-    id: '/.well-known/oauth-authorization-server',
-    path: '/.well-known/oauth-authorization-server',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
-  id: '/lovable/email/events',
-  path: '/lovable/email/events',
+const EquipesIndexRoute = EquipesIndexRouteImport.update({
+  id: '/equipes/',
+  path: '/equipes/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicVersionRoute = ApiPublicVersionRouteImport.update({
-  id: '/api/public/version',
-  path: '/api/public/version',
+const EquipesIdRoute = EquipesIdRouteImport.update({
+  id: '/equipes/$id',
+  path: '/equipes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicPlannerRoute = ApiPublicPlannerRouteImport.update({
-  id: '/api/public/planner',
-  path: '/api/public/planner',
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
-  id: '/api/public/outlook',
-  path: '/api/public/outlook',
+const ProjetosIndexRoute = ProjetosIndexRouteImport.update({
+  id: '/projetos/',
+  path: '/projetos/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
-  id: '/api/public/mcp',
-  path: '/api/public/mcp',
+const ProjetosIdRoute = ProjetosIdRouteImport.update({
+  id: '/projetos/$id',
+  path: '/projetos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
@@ -204,20 +179,71 @@ const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
   path: '/api/public/maya',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailTransactionalPreviewRoute =
-  LovableEmailTransactionalPreviewRouteImport.update({
-    id: '/lovable/email/transactional/preview',
-    path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
+const ApiPublicMcpRoute = ApiPublicMcpRouteImport.update({
+  id: '/api/public/mcp',
+  path: '/api/public/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
+const ApiPublicOutlookRoute = ApiPublicOutlookRouteImport.update({
+  id: '/api/public/outlook',
+  path: '/api/public/outlook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPlannerRoute = ApiPublicPlannerRouteImport.update({
+  id: '/api/public/planner',
+  path: '/api/public/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicVersionRoute = ApiPublicVersionRouteImport.update({
+  id: '/api/public/version',
+  path: '/api/public/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
+  id: '/api/public/inbox/scan',
+  path: '/api/public/inbox/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicInboxScanAllRoute = ApiPublicInboxScanAllRouteImport.update({
+  id: '/api/public/inbox/scan-all',
+  path: '/api/public/inbox/scan-all',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
+  id: '/api/public/inbox/tag-email',
+  path: '/api/public/inbox/tag-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicNotificationsDispatchRoute =
+  ApiPublicNotificationsDispatchRouteImport.update({
+    id: '/api/public/notifications/dispatch',
+    path: '/api/public/notifications/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicNotificationsTickRoute =
+  ApiPublicNotificationsTickRouteImport.update({
+    id: '/api/public/notifications/tick',
+    path: '/api/public/notifications/tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicOauthAuthorizeRoute = ApiPublicOauthAuthorizeRouteImport.update({
+  id: '/api/public/oauth/authorize',
+  path: '/api/public/oauth/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOauthRegisterRoute = ApiPublicOauthRegisterRouteImport.update({
+  id: '/api/public/oauth/register',
+  path: '/api/public/oauth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOauthTokenRoute = ApiPublicOauthTokenRouteImport.update({
+  id: '/api/public/oauth/token',
+  path: '/api/public/oauth/token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicOutlookCallbackRoute =
@@ -226,48 +252,22 @@ const ApiPublicOutlookCallbackRoute =
     path: '/callback',
     getParentRoute: () => ApiPublicOutlookRoute,
   } as any)
-const ApiPublicOauthTokenRoute = ApiPublicOauthTokenRouteImport.update({
-  id: '/api/public/oauth/token',
-  path: '/api/public/oauth/token',
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicOauthRegisterRoute = ApiPublicOauthRegisterRouteImport.update({
-  id: '/api/public/oauth/register',
-  path: '/api/public/oauth/register',
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicOauthAuthorizeRoute = ApiPublicOauthAuthorizeRouteImport.update({
-  id: '/api/public/oauth/authorize',
-  path: '/api/public/oauth/authorize',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicNotificationsTickRoute =
-  ApiPublicNotificationsTickRouteImport.update({
-    id: '/api/public/notifications/tick',
-    path: '/api/public/notifications/tick',
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicNotificationsDispatchRoute =
-  ApiPublicNotificationsDispatchRouteImport.update({
-    id: '/api/public/notifications/dispatch',
-    path: '/api/public/notifications/dispatch',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
-  id: '/api/public/inbox/tag-email',
-  path: '/api/public/inbox/tag-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicInboxScanAllRoute = ApiPublicInboxScanAllRouteImport.update({
-  id: '/api/public/inbox/scan-all',
-  path: '/api/public/inbox/scan-all',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
-  id: '/api/public/inbox/scan',
-  path: '/api/public/inbox/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -583,88 +583,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/semana': {
-      id: '/semana'
-      path: '/semana'
-      fullPath: '/semana'
-      preLoaderRoute: typeof SemanaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/papeis': {
-      id: '/papeis'
-      path: '/papeis'
-      fullPath: '/papeis'
-      preLoaderRoute: typeof PapeisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/novidades': {
-      id: '/novidades'
-      path: '/novidades'
-      fullPath: '/novidades'
-      preLoaderRoute: typeof NovidadesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notificacoes': {
-      id: '/notificacoes'
-      path: '/notificacoes'
-      fullPath: '/notificacoes'
-      preLoaderRoute: typeof NotificacoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/minhas-tarefas': {
-      id: '/minhas-tarefas'
-      path: '/minhas-tarefas'
-      fullPath: '/minhas-tarefas'
-      preLoaderRoute: typeof MinhasTarefasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inbox': {
-      id: '/inbox'
-      path: '/inbox'
-      fullPath: '/inbox'
-      preLoaderRoute: typeof InboxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/delegadas': {
-      id: '/delegadas'
-      path: '/delegadas'
-      fullPath: '/delegadas'
-      preLoaderRoute: typeof DelegadasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/configuracoes': {
-      id: '/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/configuracoes'
-      preLoaderRoute: typeof ConfiguracoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bem-vindo': {
-      id: '/bem-vindo'
-      path: '/bem-vindo'
-      fullPath: '/bem-vindo'
-      preLoaderRoute: typeof BemVindoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analise': {
-      id: '/analise'
-      path: '/analise'
-      fullPath: '/analise'
-      preLoaderRoute: typeof AnaliseRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agenda': {
@@ -674,74 +597,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgendaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/analise': {
+      id: '/analise'
+      path: '/analise'
+      fullPath: '/analise'
+      preLoaderRoute: typeof AnaliseRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/projetos/': {
-      id: '/projetos/'
-      path: '/projetos'
-      fullPath: '/projetos/'
-      preLoaderRoute: typeof ProjetosIndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/equipes/': {
-      id: '/equipes/'
-      path: '/equipes'
-      fullPath: '/equipes/'
-      preLoaderRoute: typeof EquipesIndexRouteImport
+    '/bem-vindo': {
+      id: '/bem-vindo'
+      path: '/bem-vindo'
+      fullPath: '/bem-vindo'
+      preLoaderRoute: typeof BemVindoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/projetos/$id': {
-      id: '/projetos/$id'
-      path: '/projetos/$id'
-      fullPath: '/projetos/$id'
-      preLoaderRoute: typeof ProjetosIdRouteImport
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/oauth/consent': {
-      id: '/oauth/consent'
-      path: '/oauth/consent'
-      fullPath: '/oauth/consent'
-      preLoaderRoute: typeof OauthConsentRouteImport
+    '/delegadas': {
+      id: '/delegadas'
+      path: '/delegadas'
+      fullPath: '/delegadas'
+      preLoaderRoute: typeof DelegadasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/equipes/$id': {
-      id: '/equipes/$id'
-      path: '/equipes/$id'
-      fullPath: '/equipes/$id'
-      preLoaderRoute: typeof EquipesIdRouteImport
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/convite/$token': {
-      id: '/convite/$token'
-      path: '/convite/$token'
-      fullPath: '/convite/$token'
-      preLoaderRoute: typeof ConviteTokenRouteImport
+    '/minhas-tarefas': {
+      id: '/minhas-tarefas'
+      path: '/minhas-tarefas'
+      fullPath: '/minhas-tarefas'
+      preLoaderRoute: typeof MinhasTarefasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/convite-equipe/$token': {
-      id: '/convite-equipe/$token'
-      path: '/convite-equipe/$token'
-      fullPath: '/convite-equipe/$token'
-      preLoaderRoute: typeof ConviteEquipeTokenRouteImport
+    '/notificacoes': {
+      id: '/notificacoes'
+      path: '/notificacoes'
+      fullPath: '/notificacoes'
+      preLoaderRoute: typeof NotificacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/convite-contato/$token': {
-      id: '/convite-contato/$token'
-      path: '/convite-contato/$token'
-      fullPath: '/convite-contato/$token'
-      preLoaderRoute: typeof ConviteContatoTokenRouteImport
+    '/novidades': {
+      id: '/novidades'
+      path: '/novidades'
+      fullPath: '/novidades'
+      preLoaderRoute: typeof NovidadesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceRouteImport
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/papeis': {
+      id: '/papeis'
+      path: '/papeis'
+      fullPath: '/papeis'
+      preLoaderRoute: typeof PapeisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/semana': {
+      id: '/semana'
+      path: '/semana'
+      fullPath: '/semana'
+      preLoaderRoute: typeof SemanaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-authorization-server': {
@@ -751,39 +688,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/events': {
-      id: '/lovable/email/events'
-      path: '/lovable/email/events'
-      fullPath: '/lovable/email/events'
-      preLoaderRoute: typeof LovableEmailEventsRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/version': {
-      id: '/api/public/version'
-      path: '/api/public/version'
-      fullPath: '/api/public/version'
-      preLoaderRoute: typeof ApiPublicVersionRouteImport
+    '/convite-contato/$token': {
+      id: '/convite-contato/$token'
+      path: '/convite-contato/$token'
+      fullPath: '/convite-contato/$token'
+      preLoaderRoute: typeof ConviteContatoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/planner': {
-      id: '/api/public/planner'
-      path: '/api/public/planner'
-      fullPath: '/api/public/planner'
-      preLoaderRoute: typeof ApiPublicPlannerRouteImport
+    '/convite-equipe/$token': {
+      id: '/convite-equipe/$token'
+      path: '/convite-equipe/$token'
+      fullPath: '/convite-equipe/$token'
+      preLoaderRoute: typeof ConviteEquipeTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/outlook': {
-      id: '/api/public/outlook'
-      path: '/api/public/outlook'
-      fullPath: '/api/public/outlook'
-      preLoaderRoute: typeof ApiPublicOutlookRouteImport
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/mcp': {
-      id: '/api/public/mcp'
-      path: '/api/public/mcp'
-      fullPath: '/api/public/mcp'
-      preLoaderRoute: typeof ApiPublicMcpRouteImport
+    '/equipes/': {
+      id: '/equipes/'
+      path: '/equipes'
+      fullPath: '/equipes/'
+      preLoaderRoute: typeof EquipesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipes/$id': {
+      id: '/equipes/$id'
+      path: '/equipes/$id'
+      fullPath: '/equipes/$id'
+      preLoaderRoute: typeof EquipesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projetos/': {
+      id: '/projetos/'
+      path: '/projetos'
+      fullPath: '/projetos/'
+      preLoaderRoute: typeof ProjetosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projetos/$id': {
+      id: '/projetos/$id'
+      path: '/projetos/$id'
+      fullPath: '/projetos/$id'
+      preLoaderRoute: typeof ProjetosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/maya': {
@@ -793,74 +758,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMayaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+    '/api/public/mcp': {
+      id: '/api/public/mcp'
+      path: '/api/public/mcp'
+      fullPath: '/api/public/mcp'
+      preLoaderRoute: typeof ApiPublicMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/webhook': {
-      id: '/lovable/email/auth/webhook'
-      path: '/lovable/email/auth/webhook'
-      fullPath: '/lovable/email/auth/webhook'
-      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+    '/api/public/outlook': {
+      id: '/api/public/outlook'
+      path: '/api/public/outlook'
+      fullPath: '/api/public/outlook'
+      preLoaderRoute: typeof ApiPublicOutlookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+    '/api/public/planner': {
+      id: '/api/public/planner'
+      path: '/api/public/planner'
+      fullPath: '/api/public/planner'
+      preLoaderRoute: typeof ApiPublicPlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/outlook/callback': {
-      id: '/api/public/outlook/callback'
-      path: '/callback'
-      fullPath: '/api/public/outlook/callback'
-      preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
-      parentRoute: typeof ApiPublicOutlookRoute
-    }
-    '/api/public/oauth/token': {
-      id: '/api/public/oauth/token'
-      path: '/api/public/oauth/token'
-      fullPath: '/api/public/oauth/token'
-      preLoaderRoute: typeof ApiPublicOauthTokenRouteImport
+    '/api/public/version': {
+      id: '/api/public/version'
+      path: '/api/public/version'
+      fullPath: '/api/public/version'
+      preLoaderRoute: typeof ApiPublicVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/oauth/register': {
-      id: '/api/public/oauth/register'
-      path: '/api/public/oauth/register'
-      fullPath: '/api/public/oauth/register'
-      preLoaderRoute: typeof ApiPublicOauthRegisterRouteImport
+    '/lovable/email/events': {
+      id: '/lovable/email/events'
+      path: '/lovable/email/events'
+      fullPath: '/lovable/email/events'
+      preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/oauth/authorize': {
-      id: '/api/public/oauth/authorize'
-      path: '/api/public/oauth/authorize'
-      fullPath: '/api/public/oauth/authorize'
-      preLoaderRoute: typeof ApiPublicOauthAuthorizeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/notifications/tick': {
-      id: '/api/public/notifications/tick'
-      path: '/api/public/notifications/tick'
-      fullPath: '/api/public/notifications/tick'
-      preLoaderRoute: typeof ApiPublicNotificationsTickRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/notifications/dispatch': {
-      id: '/api/public/notifications/dispatch'
-      path: '/api/public/notifications/dispatch'
-      fullPath: '/api/public/notifications/dispatch'
-      preLoaderRoute: typeof ApiPublicNotificationsDispatchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/inbox/tag-email': {
-      id: '/api/public/inbox/tag-email'
-      path: '/api/public/inbox/tag-email'
-      fullPath: '/api/public/inbox/tag-email'
-      preLoaderRoute: typeof ApiPublicInboxTagEmailRouteImport
+    '/api/public/inbox/scan': {
+      id: '/api/public/inbox/scan'
+      path: '/api/public/inbox/scan'
+      fullPath: '/api/public/inbox/scan'
+      preLoaderRoute: typeof ApiPublicInboxScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/inbox/scan-all': {
@@ -870,11 +807,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInboxScanAllRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/inbox/scan': {
-      id: '/api/public/inbox/scan'
-      path: '/api/public/inbox/scan'
-      fullPath: '/api/public/inbox/scan'
-      preLoaderRoute: typeof ApiPublicInboxScanRouteImport
+    '/api/public/inbox/tag-email': {
+      id: '/api/public/inbox/tag-email'
+      path: '/api/public/inbox/tag-email'
+      fullPath: '/api/public/inbox/tag-email'
+      preLoaderRoute: typeof ApiPublicInboxTagEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/notifications/dispatch': {
+      id: '/api/public/notifications/dispatch'
+      path: '/api/public/notifications/dispatch'
+      fullPath: '/api/public/notifications/dispatch'
+      preLoaderRoute: typeof ApiPublicNotificationsDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/notifications/tick': {
+      id: '/api/public/notifications/tick'
+      path: '/api/public/notifications/tick'
+      fullPath: '/api/public/notifications/tick'
+      preLoaderRoute: typeof ApiPublicNotificationsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/authorize': {
+      id: '/api/public/oauth/authorize'
+      path: '/api/public/oauth/authorize'
+      fullPath: '/api/public/oauth/authorize'
+      preLoaderRoute: typeof ApiPublicOauthAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/register': {
+      id: '/api/public/oauth/register'
+      path: '/api/public/oauth/register'
+      fullPath: '/api/public/oauth/register'
+      preLoaderRoute: typeof ApiPublicOauthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/token': {
+      id: '/api/public/oauth/token'
+      path: '/api/public/oauth/token'
+      fullPath: '/api/public/oauth/token'
+      preLoaderRoute: typeof ApiPublicOauthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/outlook/callback': {
+      id: '/api/public/outlook/callback'
+      path: '/callback'
+      fullPath: '/api/public/outlook/callback'
+      preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
+      parentRoute: typeof ApiPublicOutlookRoute
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
