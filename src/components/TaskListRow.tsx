@@ -1,5 +1,6 @@
 import { TaskDependencyStatus } from "./TaskDependencyStatus";
 import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RoleBadge } from "./RoleBadge";
@@ -62,7 +63,7 @@ type Props = {
   onFollowUp?: (date: string) => void;
   // Bulk selection
   selected?: boolean;
-  onSelectToggle?: () => void;
+  onSelectToggle?: (e?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   subtaskCount?: { total: number; completed: number };
   /** Display name (or e-mail) of the task's assignee, when known. */
   assigneeName?: string | null;
@@ -105,9 +106,9 @@ export function TaskListRow({
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
 
-  // Click anywhere on the row toggles selection, unless clicking on interactive elements
+  // Click anywhere on the row toggles selection, unless clicking on interactive elements.
+  // Shift extends the range from the last clicked row; Ctrl/Cmd toggles one.
   const handleRowClick = (e: React.MouseEvent) => {
-    // If clicking on an interactive element or its child, don't toggle
     const target = e.target as HTMLElement;
     if (
       target.closest("button") ||
@@ -118,7 +119,8 @@ export function TaskListRow({
     ) {
       return;
     }
-    onSelectToggle?.();
+    if (e.shiftKey) window.getSelection()?.removeAllRanges();
+    onSelectToggle?.(e);
   };
 
   const dragProps = selected ? {} : { ...attributes, ...listeners };
@@ -127,7 +129,7 @@ export function TaskListRow({
   const visibleCols = cols.filter((c) => c.visible);
   const computedGridTemplate =
     gridTemplate ??
-    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 5.5rem`;
+    `2.5rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 5.5rem`;
 
   return (
     <div
@@ -135,7 +137,7 @@ export function TaskListRow({
       style={{ ...style, gridTemplateColumns: computedGridTemplate }}
       data-task-card="true"
       onClick={handleRowClick}
-      className={`group relative flex flex-wrap items-center gap-2 md:gap-3 md:grid rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer
+      className={`group relative flex flex-wrap items-center gap-2 md:gap-3 md:grid rounded-xl border bg-card/80 backdrop-blur-sm shadow-[var(--shadow-card)] transition-all touch-none cursor-pointer select-none
         px-3 py-2
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
@@ -148,16 +150,37 @@ export function TaskListRow({
         ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}
       `}
     >
-      {/* Drag handle */}
-      <span
-        {...dragProps}
-        onClick={(e) => e.stopPropagation()}
-        className={`text-muted-foreground/40 group-hover:text-muted-foreground/80 ${
-          selected ? "" : "cursor-grab active:cursor-grabbing"
-        }`}
-        aria-label="Reordenar"
-      >
-        <GripVertical className="h-4 w-4" />
+      {/* Select checkbox + drag handle */}
+      <span className="flex items-center gap-1">
+        {onSelectToggle && (
+          <span
+            data-no-select="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.shiftKey) window.getSelection()?.removeAllRanges();
+              onSelectToggle(e);
+            }}
+            className="inline-flex"
+          >
+            <Checkbox
+              checked={!!selected}
+              aria-label="Selecionar tarefa"
+              className={selected ? "" : "opacity-60 group-hover:opacity-100"}
+              tabIndex={-1}
+            />
+          </span>
+        )}
+        <span
+          {...dragProps}
+          onClick={(e) => e.stopPropagation()}
+          className={`text-muted-foreground/40 group-hover:text-muted-foreground/80 ${
+            selected ? "" : "cursor-grab active:cursor-grabbing"
+          }`}
+          aria-label="Reordenar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
       </span>
 
       {/* Complete — Notion/Linear style rounded square */}
@@ -442,6 +465,8 @@ export function TaskListHeader({
   gridTemplate,
   onResizeColumn,
   onReorderColumn,
+  allState,
+  onToggleAll,
 }: {
   sortKey?: TaskSortKey | null;
   sortDir?: TaskSortDir;
@@ -452,12 +477,15 @@ export function TaskListHeader({
   onResizeColumn?: (key: TaskColumnKey, newWidthPx: number) => void;
   /** Drag column `from` onto column `to` to swap positions. */
   onReorderColumn?: (from: TaskColumnKey, to: TaskColumnKey) => void;
+  /** Select-all checkbox state for the visible rows. */
+  allState?: boolean | "indeterminate";
+  onToggleAll?: () => void;
 }) {
   const cols = columns ?? DEFAULT_COLUMNS;
   const visibleCols = cols.filter((c) => c.visible);
   const computedGridTemplate =
     gridTemplate ??
-    `1rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 5.5rem`;
+    `2.5rem 1.75rem ${visibleCols.map((c) => `minmax(${c.minPx}px, ${c.width})`).join(" ")} 5.5rem`;
 
   const SortBtn = ({ k, label, align = "left" }: { k: TaskSortKey; label: string; align?: "left" | "center" }) => {
     const active = sortKey === k;
@@ -529,7 +557,18 @@ export function TaskListHeader({
       className="hidden md:grid items-center gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40"
       style={{ gridTemplateColumns: computedGridTemplate }}
     >
-      <span aria-hidden="true" />
+      {onToggleAll ? (
+        <span className="flex items-center justify-start" data-no-select="true">
+          <Checkbox
+            checked={allState ?? false}
+            onCheckedChange={() => onToggleAll()}
+            aria-label="Selecionar todas"
+            title="Selecionar todas"
+          />
+        </span>
+      ) : (
+        <span aria-hidden="true" />
+      )}
       {onSort ? (
         <button
           type="button"
