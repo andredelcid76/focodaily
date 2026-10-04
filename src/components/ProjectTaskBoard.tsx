@@ -421,12 +421,6 @@ function TableView({
   };
 
   const clearSel = () => setSelected(new Set());
-  const toggleSel = (id: string) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
 
   const visibleTasks = useMemo(() => tasks.filter(matchesFilters),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -434,6 +428,7 @@ function TableView({
 
   const allIds = visibleTasks.map((t) => t.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someChecked = !allChecked && allIds.some((id) => selected.has(id));
   const toggleAll = () => setSelected(allChecked ? new Set() : new Set(allIds));
 
   const ids = Array.from(selected);
