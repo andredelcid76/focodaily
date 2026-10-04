@@ -91,7 +91,7 @@ function DelegatedPage() {
           <p className="text-sm text-muted-foreground line-clamp-2">{t.description}</p>
         )}
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>Para {p?.display_name ?? p?.email ?? "—"}</span>
+          <span>Criada por você · Para {p?.display_name ?? p?.email ?? "—"}</span>
           {t.project && (
             <Badge variant="outline" className="text-[10px]">
               {t.project.name}
@@ -151,7 +151,7 @@ function DelegatedPage() {
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{t.description}</p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              {t.delegated_by_name && <span>Delegada por {t.delegated_by_name}</span>}
+              <span>Criada por {t.delegated_by_name ?? "—"}</span>
               {t.project && (
                 <Badge variant="outline" className="text-[10px]">
                   {t.project.name}

@@ -93,7 +93,7 @@ function TodayInner({ userId }: { userId: string }) {
   const [viewDate, setViewDate] = useState(today);
   const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId, { fastInitialDay: today });
-  const assigneeProfiles = useProfiles(tasksApi.tasks.map((t) => t.assignee_id));
+  const assigneeProfiles = useProfiles(tasksApi.tasks.flatMap((t) => [t.assignee_id, t.user_id]));
   const assigneeName = (id: string | null | undefined): string | null => {
     if (!id) return null;
     if (id === userId) return "Eu";
@@ -748,6 +748,7 @@ function TodayInner({ userId }: { userId: string }) {
                     <TaskListRowStatic
                       task={t}
                       assigneeName={assigneeName(t.assignee_id)}
+                      creatorName={assigneeName(t.user_id)}
                       role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                       project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                       onToggle={() => toggleCompleteWithTimer(t)}
@@ -890,6 +891,7 @@ function TodayInner({ userId }: { userId: string }) {
                       key={t.id}
                       task={t}
                       assigneeName={assigneeName(t.assignee_id)}
+                      creatorName={assigneeName(t.user_id)}
                       role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                       project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                       onToggle={() => toggleCompleteWithTimer(t)}
