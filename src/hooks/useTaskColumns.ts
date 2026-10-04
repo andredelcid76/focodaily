@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export type TaskColumnKey = "title" | "project" | "role" | "assignee" | "priority" | "duration" | "due" | "status";
+export type TaskColumnKey = "title" | "project" | "role" | "assignee" | "creator" | "priority" | "duration" | "due" | "status";
 
 export type TaskColumnDef = {
   key: TaskColumnKey;
@@ -23,6 +23,7 @@ const DEFAULT_COLUMNS: TaskColumnDef[] = [
   { key: "project",  label: "Projeto",    width: "2fr",   visible: true, minPx: 120 },
   { key: "role",     label: "Papel",      width: "7rem",  visible: true, minPx: 80 },
   { key: "assignee", label: "Responsável", width: "9rem", visible: true, minPx: 110 },
+  { key: "creator",  label: "Criada por", width: "8rem", visible: true, minPx: 96 },
   { key: "priority", label: "Prioridade", width: "7rem",  visible: true, minPx: 88 },
   { key: "duration", label: "Duração",    width: "4.5rem",visible: true, minPx: 56 },
   { key: "due",      label: "Vencimento", width: "6rem",  visible: true, minPx: 80 },

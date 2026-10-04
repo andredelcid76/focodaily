@@ -41,7 +41,7 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [{ title: "Tarefas · Foco" }] }),
 });
 
-type SortKey = "title" | "kind" | "project" | "role" | "assignee" | "scheduled_date" | "status" | "duration" | "priority";
+type SortKey = "title" | "kind" | "project" | "role" | "assignee" | "creator" | "scheduled_date" | "status" | "duration" | "priority";
 type SortDir = "asc" | "desc";
 
 
@@ -59,7 +59,7 @@ function MyTasksPage() {
 
   const today = todayISO();
   const tasks = data?.tasks ?? [];
-  const assigneeProfiles = useProfiles(tasks.map((t) => t.assignee_id));
+  const assigneeProfiles = useProfiles(tasks.flatMap((t) => [t.assignee_id, t.user_id]));
   const assigneeName = (id: string | null | undefined): string | null => {
     if (!id) return null;
     if (id === userId) return "Eu";
@@ -351,6 +351,8 @@ function MyTasksPage() {
             return (a.role?.name ?? "~").localeCompare(b.role?.name ?? "~");
           case "assignee":
             return (assigneeName(a.assignee_id) ?? "~").localeCompare(assigneeName(b.assignee_id) ?? "~");
+          case "creator":
+            return (assigneeName(a.user_id) ?? "~").localeCompare(assigneeName(b.user_id) ?? "~");
           case "scheduled_date":
             return (a.scheduled_date ?? "~").localeCompare(b.scheduled_date ?? "~");
           case "status":
@@ -467,7 +469,7 @@ function MyTasksPage() {
 
   const headerSortKey: TaskSortKey | null =
     sortKey === "scheduled_date" ? "due"
-    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "assignee" || sortKey === "status" || sortKey === "duration" || sortKey === "priority"
+    : sortKey === "title" || sortKey === "project" || sortKey === "role" || sortKey === "assignee" || sortKey === "creator" || sortKey === "status" || sortKey === "duration" || sortKey === "priority"
       ? sortKey
       : null;
 
@@ -786,6 +788,7 @@ function MyTasksPage() {
                         onSelectToggle={() => toggleOne(t.id)}
                         blockedBy={blockedByMap.get(t.id)}
                         assigneeName={assigneeName(t.assignee_id)}
+                        creatorName={assigneeName(t.user_id)}
                         columns={taskColumns.columns}
                         gridTemplate={taskColumns.gridTemplate}
                       />

@@ -66,6 +66,8 @@ type Props = {
   subtaskCount?: { total: number; completed: number };
   /** Display name (or e-mail) of the task's assignee, when known. */
   assigneeName?: string | null;
+  /** Display name of who created the task. */
+  creatorName?: string | null;
   blockedBy?: string[];
   /** Custom column config (order + visibility). Defaults to all default columns visible. */
   columns?: TaskColumnDef[];
@@ -83,7 +85,7 @@ export function TaskListRow({
   onStart, onPause, onResume, onStop,
   onPostpone, onDuplicate, onFollowUp,
   selected, onSelectToggle,
-  subtaskCount, blockedBy, assigneeName,
+  subtaskCount, blockedBy, assigneeName, creatorName,
   columns, gridTemplate,
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -312,6 +314,12 @@ export function TaskListRow({
                 )}
               </div>
             );
+          case "creator":
+            return (
+              <div key="creator" className="min-w-0 truncate text-[11px] text-muted-foreground">
+                {creatorName ?? "—"}
+              </div>
+            );
           case "priority":
             return (
               <div key="priority" className="min-w-0">
@@ -422,7 +430,7 @@ export function TaskListRow({
   );
 }
 
-export type TaskSortKey = "position" | "title" | "project" | "role" | "assignee" | "priority" | "duration" | "due" | "status";
+export type TaskSortKey = "position" | "title" | "project" | "role" | "assignee" | "creator" | "priority" | "duration" | "due" | "status";
 export type TaskSortDir = "asc" | "desc";
 
 /** Header row matching TaskListRow's grid template. */

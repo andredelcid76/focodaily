@@ -40,6 +40,7 @@ export function TaskActivityLog({ taskId }: { taskId: string }) {
   const [rows, setRows] = useState<ActivityRow[] | null>(null);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [expanded, setExpanded] = useState(false);
+  const [creator, setCreator] = useState<{ user_id: string; created_at: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,10 +51,14 @@ export function TaskActivityLog({ taskId }: { taskId: string }) {
         .eq("task_id", taskId)
         .order("created_at", { ascending: false })
         .limit(100);
+      const { data: taskRow } = await supabase
+        .from("tasks").select("user_id, created_at").eq("id", taskId).maybeSingle();
       if (cancelled || !data) return;
       setRows(data as ActivityRow[]);
+      if (taskRow) setCreator(taskRow as { user_id: string; created_at: string });
 
       const ids = new Set<string>();
+      if (taskRow?.user_id) ids.add(taskRow.user_id);
       for (const r of data) {
         if (r.actor_id) ids.add(r.actor_id);
         if (r.field === "assignee_id") {
@@ -120,9 +125,18 @@ export function TaskActivityLog({ taskId }: { taskId: string }) {
       <div className="text-xs text-muted-foreground">Carregando histórico…</div>
     );
   }
+  const creatorLine = creator ? (
+    <div className="text-xs text-muted-foreground">
+      Criada por <strong className="text-foreground">{displayName(creator.user_id)}</strong> em{" "}
+      {new Date(creator.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+    </div>
+  ) : null;
   if (rows.length === 0) {
     return (
-      <div className="text-xs text-muted-foreground">Nenhuma alteração registrada ainda.</div>
+      <div className="space-y-1">
+        {creatorLine}
+        <div className="text-xs text-muted-foreground">Nenhuma alteração registrada ainda.</div>
+      </div>
     );
   }
 
@@ -133,6 +147,7 @@ export function TaskActivityLog({ taskId }: { taskId: string }) {
       <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
         <History className="h-3.5 w-3.5" /> Histórico
       </div>
+      {creatorLine}
       <ul className="space-y-1.5">
         {visible.map((r) => (
           <li key={r.id} className="flex items-start gap-2 text-xs">
