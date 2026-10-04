@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useMultiSelect } from "@/hooks/useMultiSelect";
+import { SelectGroupMenu, type SelectGroup } from "@/components/SelectGroupMenu";
 import {
   CheckCircle2,
   ListTodo,
@@ -389,19 +391,20 @@ function MyTasksPage() {
     }
   };
 
-  const allVisibleSelected = sorted.length > 0 && sorted.every((t) => selected.has(t.id));
-
-  const toggleSelectAll = () => {
-    const next = new Set(selected);
-    if (allVisibleSelected) sorted.forEach((t) => next.delete(t.id));
-    else sorted.forEach((t) => next.add(t.id));
-    setSelected(next);
-  };
-  const toggleOne = (id: string) => {
-    const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setSelected(next);
-  };
+  const sortedIds = useMemo(() => sorted.map((t) => t.id), [sorted]);
+  const multi = useMultiSelect(sortedIds, selected, setSelected);
+  const toggleSelectAll = () => multi.toggleGroup(sortedIds);
+  const selectGroups = useMemo<SelectGroup[]>(() => {
+    const open = sorted.filter((t) => !t.completed);
+    return [
+      { key: "all", label: "Todas as visíveis", ids: sortedIds },
+      { key: "overdue", label: "Atrasadas", ids: open.filter((t) => !!t.scheduled_date && t.scheduled_date < today).map((t) => t.id) },
+      { key: "today", label: "De hoje", ids: open.filter((t) => t.scheduled_date === today).map((t) => t.id) },
+      { key: "nodate", label: "Sem data", ids: open.filter((t) => !t.scheduled_date).map((t) => t.id) },
+      { key: "open", label: "Abertas", ids: open.map((t) => t.id) },
+      { key: "done", label: "Concluídas", ids: sorted.filter((t) => t.completed).map((t) => t.id) },
+    ];
+  }, [sorted, sortedIds, today]);
 
   const updateOne = async (
     id: string,
@@ -662,7 +665,7 @@ function MyTasksPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+        <div className="sticky top-2 z-30 flex flex-col gap-2 rounded-xl border border-primary/30 bg-background/95 px-3 py-2 text-xs shadow-[var(--shadow-card)] backdrop-blur-xl">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-medium text-primary">{selected.size} selecionada(s)</span>
             <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -735,12 +738,15 @@ function MyTasksPage() {
       {/* Toolbar + list */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          Clique na linha para selecionar. Arraste a borda do cabeçalho para ajustar a largura.
+          Clique na caixinha ou na linha para selecionar · Shift + clique seleciona um intervalo · Ctrl/⌘ + clique soma.
         </p>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={toggleSelectAll}>
-            {allVisibleSelected ? "Desmarcar todas" : "Selecionar todas"}
-          </Button>
+          <SelectGroupMenu
+            groups={selectGroups}
+            selectedCount={selected.size}
+            onSelect={multi.selectMany}
+            onClear={() => setSelected(new Set())}
+          />
           <ColumnSettingsPopover
             columns={taskColumns.columns}
             onToggleVisible={taskColumns.toggleVisible}
@@ -760,6 +766,8 @@ function MyTasksPage() {
             gridTemplate={taskColumns.gridTemplate}
             onResizeColumn={(key, px) => taskColumns.setWidth(key, `${Math.round(px)}px`)}
             onReorderColumn={taskColumns.reorder}
+            allState={multi.groupState(sortedIds)}
+            onToggleAll={toggleSelectAll}
           />
           <div className="flex flex-col gap-1.5 p-2">
             {isLoading ? (
@@ -785,7 +793,7 @@ function MyTasksPage() {
                         onToggle={() => toggleComplete(t)}
                         onEdit={() => openTask(t.id)}
                         selected={selected.has(t.id)}
-                        onSelectToggle={() => toggleOne(t.id)}
+                        onSelectToggle={(e) => multi.onItemSelect(t.id, e)}
                         blockedBy={blockedByMap.get(t.id)}
                         assigneeName={assigneeName(t.assignee_id)}
                         creatorName={assigneeName(t.user_id)}

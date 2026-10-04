@@ -1,6 +1,8 @@
 import { TaskDependencyStatus } from "./TaskDependencyStatus";
 import { confirmDependencyMove } from "@/lib/dependency-check";
 import { useMemo, useRef, useState } from "react";
+import { useMultiSelect } from "@/hooks/useMultiSelect";
+import { SelectGroupMenu, type SelectGroup } from "./SelectGroupMenu";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -421,12 +423,6 @@ function TableView({
   };
 
   const clearSel = () => setSelected(new Set());
-  const toggleSel = (id: string) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
 
   const visibleTasks = useMemo(() => tasks.filter(matchesFilters),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -434,6 +430,7 @@ function TableView({
 
   const allIds = visibleTasks.map((t) => t.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someChecked = !allChecked && allIds.some((id) => selected.has(id));
   const toggleAll = () => setSelected(allChecked ? new Set() : new Set(allIds));
 
   const ids = Array.from(selected);
@@ -512,11 +509,32 @@ function TableView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleTasks, grouping, memberById, today, in7, sortKey, sortDir]);
 
+  const orderedIds = useMemo(() => groups.flatMap((g) => g.tasks.map((t) => t.id)), [groups]);
+  const multi = useMultiSelect(orderedIds, selected, setSelected);
+  const selectGroups = useMemo<SelectGroup[]>(() => {
+    const open = visibleTasks.filter((t) => !t.completed);
+    return [
+      { key: "all", label: "Todas as visíveis", ids: orderedIds },
+      { key: "overdue", label: "Atrasadas", ids: open.filter((t) => !!t.scheduled_date && t.scheduled_date < today).map((t) => t.id) },
+      { key: "nodate", label: "Sem data", ids: open.filter((t) => !t.scheduled_date).map((t) => t.id) },
+      { key: "unassigned", label: "Sem responsável", ids: open.filter((t) => !t.assignee_id).map((t) => t.id) },
+      { key: "open", label: "Abertas", ids: open.map((t) => t.id) },
+      { key: "done", label: "Concluídas", ids: visibleTasks.filter((t) => t.completed).map((t) => t.id) },
+    ];
+  }, [visibleTasks, orderedIds, today]);
 
   return (
     <div className="space-y-2">
+      <div className="flex justify-end">
+        <SelectGroupMenu
+          groups={selectGroups}
+          selectedCount={ids.length}
+          onSelect={multi.selectMany}
+          onClear={clearSel}
+        />
+      </div>
       {hasSelection && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
+        <div className="sticky top-2 z-30 flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-background/95 px-3 py-2 text-xs shadow-[var(--shadow-card)] backdrop-blur-xl">
           <span className="font-semibold text-primary">{ids.length} selecionada(s)</span>
           <span className="text-muted-foreground">·</span>
           <Select onValueChange={(v) => bulkStatus(v as TaskStatus)}>
@@ -630,7 +648,7 @@ function TableView({
 
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
         <div className="grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_7rem_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/60 bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
+          <Checkbox checked={allChecked ? true : someChecked ? "indeterminate" : false} onCheckedChange={toggleAll} aria-label="Selecionar todas" />
           <span />
           <SortColHeader label="Tarefa" k="title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
           <SortColHeader label="Prioridade" k="priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -645,6 +663,12 @@ function TableView({
           <div key={g.key}>
             {g.label && (
               <div className="flex items-center gap-2 border-b border-border/40 bg-background/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <Checkbox
+                  checked={multi.groupState(g.tasks.map((t) => t.id))}
+                  onCheckedChange={() => multi.toggleGroup(g.tasks.map((t) => t.id))}
+                  aria-label={`Selecionar grupo ${g.label}`}
+                  title="Selecionar o grupo inteiro"
+                />
                 {grouping === "assignee" && (
                   <Avatar name={g.label} />
                 )}
@@ -661,7 +685,7 @@ function TableView({
                 assignee={t.assignee_id ? memberById.get(t.assignee_id) : undefined}
                 role={t.role_id ? rolesById.get(t.role_id) ?? null : null}
                 selected={selected.has(t.id)}
-                onSelectToggle={() => toggleSel(t.id)}
+                onSelectToggle={(e) => multi.onItemSelect(t.id, e)}
                 onEdit={() => onEdit(t)}
                 onSetStatus={(s) => onSetStatus(t.id, s)}
                 onAssign={(uid) => onUpdate(t.id, { assignee_id: uid })}
@@ -686,7 +710,7 @@ function TaskRow({
   assignee?: Member;
   role: Role | null;
   selected?: boolean;
-  onSelectToggle?: () => void;
+  onSelectToggle?: (e?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   onEdit: () => void;
   onSetStatus: (s: TaskStatus) => void;
   onAssign: (uid: string | null) => void;
@@ -695,13 +719,28 @@ function TaskRow({
 }) {
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const isOverdue = !task.completed && sd(task.scheduled_date) < today;
+  const handleRowClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, [role='combobox'], [data-no-select]")) return;
+    if (e.shiftKey) window.getSelection()?.removeAllRanges();
+    onSelectToggle?.(e);
+  };
   return (
-    <div className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_7rem_8rem_10rem_8.5rem_2rem] items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/5" : ""}`}>
-      <Checkbox
-        checked={!!selected}
-        onCheckedChange={() => onSelectToggle?.()}
-        aria-label="Selecionar"
-      />
+    <div
+      onClick={handleRowClick}
+      className={`grid grid-cols-[1.25rem_1.75rem_minmax(0,1fr)_7rem_8rem_10rem_8.5rem_2rem] cursor-pointer select-none items-center gap-3 border-b border-border/40 px-3 py-2 hover:bg-accent/20 ${selected ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
+    >
+      <span
+        data-no-select="true"
+        className="inline-flex"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (e.shiftKey) window.getSelection()?.removeAllRanges();
+          onSelectToggle?.(e);
+        }}
+      >
+        <Checkbox checked={!!selected} aria-label="Selecionar" tabIndex={-1} />
+      </span>
       <TaskCompleteButton completed={!!task.completed} onToggle={onToggleComplete} size="md" />
 
 

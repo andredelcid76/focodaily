@@ -8,6 +8,8 @@ import { useProjects } from "@/hooks/useProjects";
 import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListRow, TaskListHeader, type TaskSortKey, type TaskSortDir } from "@/components/TaskListRow";
+import { useMultiSelect } from "@/hooks/useMultiSelect";
+import { SelectGroupMenu, type SelectGroup } from "@/components/SelectGroupMenu";
 import { useSubtaskCounts } from "@/hooks/useSubtaskCounts";
 import { useTaskColumns } from "@/hooks/useTaskColumns";
 import { useProfiles } from "@/hooks/useProfiles";
@@ -308,6 +310,21 @@ function TodayInner({ userId }: { userId: string }) {
       ),
     [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters, pausedProjectIds]
   );
+  const dayIds = useMemo(() => sortedVisibleDayTasks.map((t) => t.id), [sortedVisibleDayTasks]);
+  const overdueIds = useMemo(() => visibleOverdue.map((t) => t.id), [visibleOverdue]);
+  const orderedSelectIds = useMemo(() => [...overdueIds, ...dayIds], [overdueIds, dayIds]);
+  const multi = useMultiSelect(orderedSelectIds, selectedIds, setSelectedIds);
+  const selectGroups = useMemo<SelectGroup[]>(
+    () => [
+      { key: "all", label: "Todas (atrasadas + do dia)", ids: orderedSelectIds },
+      { key: "overdue", label: "Atrasadas", ids: overdueIds },
+      { key: "day", label: isViewingToday ? "De hoje" : "Do dia", ids: dayIds },
+      { key: "open", label: "Abertas do dia", ids: sortedVisibleDayTasks.filter((t) => !t.completed).map((t) => t.id) },
+      { key: "done", label: "Concluídas do dia", ids: sortedVisibleDayTasks.filter((t) => t.completed).map((t) => t.id) },
+    ],
+    [orderedSelectIds, overdueIds, dayIds, sortedVisibleDayTasks, isViewingToday],
+  );
+
 
   
 
@@ -766,7 +783,7 @@ function TodayInner({ userId }: { userId: string }) {
                       onDuplicate={(date: string) => handleDuplicate(t, date)}
                       onFollowUp={(date: string) => handleFollowUp(t, date)}
                       selected={selectedIds.has(t.id)}
-                      onSelectToggle={() => toggleSelect(t.id)}
+                      onSelectToggle={(e) => multi.onItemSelect(t.id, e)}
                       subtaskCount={subtaskCounts[t.id]}
                       blockedBy={blockedByMap.get(t.id)}
                       columns={taskColumns.columns}
@@ -844,6 +861,14 @@ function TodayInner({ userId }: { userId: string }) {
               />
             </div>
             {taskView === "list" && (
+              <SelectGroupMenu
+                groups={selectGroups}
+                selectedCount={selectedIds.size}
+                onSelect={multi.selectMany}
+                onClear={clearSelection}
+              />
+            )}
+            {taskView === "list" && (
               <ColumnSettingsPopover
                 columns={taskColumns.columns}
                 onToggleVisible={taskColumns.toggleVisible}
@@ -884,6 +909,8 @@ function TodayInner({ userId }: { userId: string }) {
                   gridTemplate={taskColumns.gridTemplate}
                   onResizeColumn={(key, px) => taskColumns.setWidth(key, `${Math.round(px)}px`)}
                   onReorderColumn={taskColumns.reorder}
+                  allState={multi.groupState(dayIds)}
+                  onToggleAll={() => multi.toggleGroup(dayIds)}
                 />
                 <div className="divide-y divide-border/40">
                   {sortedVisibleDayTasks.map((t, i) => (
@@ -908,7 +935,7 @@ function TodayInner({ userId }: { userId: string }) {
                       onDuplicate={(date) => handleDuplicate(t, date)}
                       onFollowUp={(date) => handleFollowUp(t, date)}
                       selected={selectedIds.has(t.id)}
-                      onSelectToggle={() => toggleSelect(t.id)}
+                      onSelectToggle={(e) => multi.onItemSelect(t.id, e)}
                       subtaskCount={subtaskCounts[t.id]}
                       blockedBy={blockedByMap.get(t.id)}
                       columns={taskColumns.columns}
@@ -971,8 +998,8 @@ function TodayInner({ userId }: { userId: string }) {
 
       {/* Floating bulk-action bar */}
       {selectionMode && (
-        <div data-bulk-bar="true" className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
-          <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2 shadow-[var(--shadow-glow)] backdrop-blur-xl max-w-full">
+        <div data-bulk-bar="true" className="fixed inset-x-0 top-3 z-50 flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-background/95 px-3 py-2 shadow-[var(--shadow-glow)] backdrop-blur-xl max-w-full">
             <span className="px-1 text-sm font-medium tabular-nums">
               {selectedIds.size} selecionada{selectedIds.size === 1 ? "" : "s"}
             </span>
