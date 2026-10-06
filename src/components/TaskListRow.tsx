@@ -559,7 +559,7 @@ export function TaskListHeader({
       style={{ gridTemplateColumns: computedGridTemplate }}
     >
       {onToggleAll ? (
-        <span className="flex items-center justify-start" data-no-select="true">
+        <span className="flex items-center justify-start" data-no-select="true" data-selection-toggle="true">
           <Checkbox
             checked={allState ?? false}
             onCheckedChange={() => onToggleAll()}
