@@ -17,8 +17,8 @@ type Props = {
 export function TaskCompleteButton({ completed, onToggle, size = "sm", className = "" }: Props) {
   const dims =
     size === "md"
-      ? "h-[22px] w-[22px] rounded-[5px]"
-      : "h-[18px] w-[18px] rounded-[4px]";
+      ? "h-[22px] w-[22px] rounded-full"
+      : "h-[18px] w-[18px] rounded-full";
   const iconCls = size === "md" ? "h-3.5 w-3.5" : "h-3 w-3";
   return (
     <button
@@ -27,10 +27,10 @@ export function TaskCompleteButton({ completed, onToggle, size = "sm", className
         e.stopPropagation();
         onToggle();
       }}
-      className={`flex shrink-0 items-center justify-center border transition-all ${dims} ${
+      className={`flex shrink-0 items-center justify-center border-2 transition-all ${dims} ${
         completed
-          ? "border-primary bg-primary text-white hover:bg-primary hover:border-primary"
-          : "border-muted-foreground/25 bg-transparent text-transparent hover:border-primary/60 hover:bg-primary/15"
+          ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:border-primary"
+          : "border-muted-foreground/40 bg-transparent text-transparent hover:border-primary hover:text-primary/70"
       } ${className}`}
       aria-label={completed ? "Reabrir tarefa" : "Concluir tarefa"}
       title={completed ? "Reabrir tarefa" : "Concluir tarefa"}

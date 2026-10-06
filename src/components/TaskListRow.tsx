@@ -166,7 +166,8 @@ export function TaskListRow({
             <Checkbox
               checked={!!selected}
               aria-label="Selecionar tarefa"
-              className={selected ? "" : "opacity-60 group-hover:opacity-100"}
+              title="Selecionar (Shift/Ctrl + clique para vários)"
+              className={`h-3.5 w-3.5 rounded-[3px] ${selected ? "" : "opacity-0 group-hover:opacity-70 focus-visible:opacity-100"}`}
               tabIndex={-1}
             />
           </span>
