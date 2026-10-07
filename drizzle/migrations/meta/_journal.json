@@ -64,6 +64,13 @@
       "when": 1790998686733,
       "tag": "0008_profiles_visible_via_shared_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791378978202,
+      "tag": "0009_migration",
+      "breakpoints": true
     }
   ]
 }

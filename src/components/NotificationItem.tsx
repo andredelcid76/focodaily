@@ -42,7 +42,7 @@ export function NotificationItem({
               </span>
             )}
           </div>
-          {n.body && <div className="line-clamp-3 text-xs text-muted-foreground">{n.body}</div>}
+          {n.body && <div className="line-clamp-4 whitespace-pre-line text-xs text-muted-foreground">{n.body}</div>}
           <div className="mt-0.5 text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
           </div>
