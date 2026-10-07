@@ -48,6 +48,13 @@ type SortDir = "asc" | "desc";
 
 
 function MyTasksPage() {
+  return <TaskTableView scope="all" />;
+}
+
+export type TaskTableScope = "all" | "toMe" | "byMe";
+
+export function TaskTableView({ scope, hideHeader = false }: { scope: TaskTableScope; hideHeader?: boolean }) {
+  const K = scope === "all" ? "mt" : `mt-${scope}`;
   const { user } = useAuth();
   const userId = user?.id;
   const { roles } = useRoles(userId);
@@ -177,27 +184,27 @@ function MyTasksPage() {
 
 
   const P = { storage: "local" as const };
-  const taskColumns = useTaskColumns("tasks-table-columns-v1");
-  const [search, setSearch] = useStickyState("mt.search", "", P);
-  const [statusFilter, setStatusFilter] = useStickyState<"all" | MyTaskRow["status"]>("mt.status", "all", P);
-  const [ownerFilter, setOwnerFilter] = useStickyState<"all" | "mine" | "others">("mt.owner", "all", P);
-  const [kindFilter, setKindFilter] = useStickyState<"all" | "personal" | "project">("mt.kind", "all", P);
-  const [projectFilter, setProjectFilter] = useStickyState<string>("mt.project", "all", P);
+  const taskColumns = useTaskColumns(scope === "all" ? "tasks-table-columns-v1" : `tasks-table-columns-${scope}`);
+  const [search, setSearch] = useStickyState(`${K}.search`, "", P);
+  const [statusFilter, setStatusFilter] = useStickyState<"all" | MyTaskRow["status"]>(`${K}.status`, "all", P);
+  const [ownerFilter, setOwnerFilter] = useStickyState<"all" | "mine" | "others">(`${K}.owner`, "all", P);
+  const [kindFilter, setKindFilter] = useStickyState<"all" | "personal" | "project">(`${K}.kind`, "all", P);
+  const [projectFilter, setProjectFilter] = useStickyState<string>(`${K}.project`, "all", P);
   const [projectStatusFilter, setProjectStatusFilter] = useStickyState<
     "all" | "active_only" | "in_progress" | "active" | "paused" | "not_started" | "finished"
-  >("mt.projectStatus", "all", P);
-  const [roleFilter, setRoleFilter] = useStickyState<string>("mt.role", "all", P);
-  const [priorityFilter, setPriorityFilter] = useStickyState<string>("mt.priority", "all", P);
-  const [assigneeFilter, setAssigneeFilter] = useStickyState<string>("mt.assignee", "all", P);
-  const [hideDone, setHideDone] = useStickyState("mt.hideDone", true, P);
+  >(`${K}.projectStatus`, "all", P);
+  const [roleFilter, setRoleFilter] = useStickyState<string>(`${K}.role`, "all", P);
+  const [priorityFilter, setPriorityFilter] = useStickyState<string>(`${K}.priority`, "all", P);
+  const [assigneeFilter, setAssigneeFilter] = useStickyState<string>(`${K}.assignee`, "all", P);
+  const [hideDone, setHideDone] = useStickyState(`${K}.hideDone`, true, P);
   const [dateRange, setDateRange] = useStickyState<
     "all" | "overdue" | "today" | "tomorrow" | "week" | "next7" | "month" | "next30" | "no_date" | "custom"
-  >("mt.dateRange", "all", P);
-  const [customFrom, setCustomFrom] = useStickyState<string>("mt.customFrom", "", P);
-  const [customTo, setCustomTo] = useStickyState<string>("mt.customTo", "", P);
-  const [sortKey, setSortKey] = useStickyState<SortKey>("mt.sortKey", "scheduled_date", P);
-  const [sortDir, setSortDir] = useStickyState<SortDir>("mt.sortDir", "asc", P);
-  const [selected, setSelected] = useStickyState<Set<string>>("mt.selected", new Set<string>(), {
+  >(`${K}.dateRange`, "all", P);
+  const [customFrom, setCustomFrom] = useStickyState<string>(`${K}.customFrom`, "", P);
+  const [customTo, setCustomTo] = useStickyState<string>(`${K}.customTo`, "", P);
+  const [sortKey, setSortKey] = useStickyState<SortKey>(`${K}.sortKey`, "scheduled_date", P);
+  const [sortDir, setSortDir] = useStickyState<SortDir>(`${K}.sortDir`, "asc", P);
+  const [selected, setSelected] = useStickyState<Set<string>>(`${K}.selected`, new Set<string>(), {
     serialize: setSerialize,
     deserialize: setDeserialize,
   });
@@ -263,6 +270,8 @@ function MyTasksPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tasks.filter((t) => {
+      if (scope === "toMe" && t.kind !== "delegated") return false;
+      if (scope === "byMe" && !(t.user_id === userId && !!t.assignee_id && t.assignee_id !== userId)) return false;
       if (hideDone && t.completed) return false;
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (priorityFilter !== "all" && toPriority(t.priority) !== Number(priorityFilter)) return false;
@@ -335,7 +344,7 @@ function MyTasksPage() {
       }
       return true;
     });
-  }, [tasks, search, statusFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, assigneeFilter, userId, hideDone, dateRange, customFrom, customTo, dateBounds]);
+  }, [scope, tasks, search, statusFilter, priorityFilter, ownerFilter, kindFilter, projectFilter, projectStatusFilter, roleFilter, assigneeFilter, userId, hideDone, dateRange, customFrom, customTo, dateBounds]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -496,7 +505,7 @@ function MyTasksPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1800px] space-y-4 p-4 md:p-6">
-      <header className="space-y-3">
+      {!hideHeader && <header className="space-y-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
           <ListTodo className="h-3.5 w-3.5" /> Visão macro
         </div>
@@ -515,7 +524,7 @@ function MyTasksPage() {
             <StatCard label="Delegadas" value={stats.delegated} />
           </div>
         </div>
-      </header>
+      </header>}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/40 px-3 py-2">
