@@ -365,7 +365,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
         }
       )
       .subscribe();
+    // Mudanças de outras pessoas/sistema (tarefas delegadas, projetos compartilhados).
+    const onExternal = () => void refresh();
+    window.addEventListener("foco:tasks-changed", onExternal);
     return () => {
+      window.removeEventListener("foco:tasks-changed", onExternal);
       supabase.removeChannel(channel);
     };
   }, [userId, fastInitialDay, refresh, refreshInitialDay, ensureRecurring]);
