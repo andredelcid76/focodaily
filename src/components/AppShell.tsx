@@ -17,6 +17,7 @@ import { useUpdateNotice } from "@/hooks/useUpdateNotice";
 import { BackButton } from "@/components/BackButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppBadge } from "@/hooks/useAppBadge";
+import { useLiveTaskSync } from "@/hooks/useLiveTaskSync";
 import { useAccentColor } from "@/hooks/useAccentColor";
 import { useTheme } from "@/hooks/useTheme";
 import { WhatsNewDialog } from "@/components/WhatsNewDialog";
@@ -66,6 +67,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
   useAppBadge();
+  useLiveTaskSync(user?.id);
   useUpdateNotice();
   useAccentColor();
   useTheme(); // ensures the class stays synced when OS theme changes
