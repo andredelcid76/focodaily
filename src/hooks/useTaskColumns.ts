@@ -22,8 +22,8 @@ const DEFAULT_COLUMNS: TaskColumnDef[] = [
   { key: "title",    label: "Tarefa",     width: "1.5fr", visible: true, minPx: 140 },
   { key: "project",  label: "Projeto",    width: "2fr",   visible: true, minPx: 120 },
   { key: "role",     label: "Papel",      width: "7rem",  visible: true, minPx: 80 },
-  { key: "assignee", label: "Responsável", width: "9rem", visible: true, minPx: 110 },
-  { key: "creator",  label: "Criada por", width: "8rem", visible: true, minPx: 96 },
+  { key: "assignee", label: "Responsável", width: "7rem", visible: true, minPx: 90 },
+  { key: "creator",  label: "Criada por", width: "6rem", visible: true, minPx: 80 },
   { key: "priority", label: "Prioridade", width: "7rem",  visible: true, minPx: 88 },
   { key: "duration", label: "Duração",    width: "4.5rem",visible: true, minPx: 56 },
   { key: "due",      label: "Vencimento", width: "6rem",  visible: true, minPx: 80 },
@@ -77,19 +77,24 @@ function applyPersisted(persisted: PersistedState | null): TaskColumnDef[] {
   return result;
 }
 
-export function useTaskColumns(storageKey: string = STORAGE_KEY) {
-  const [columns, setColumns] = useState<TaskColumnDef[]>(() => applyPersisted(loadFromStorage(storageKey)));
+export function useTaskColumns(storageKey: string = STORAGE_KEY, opts?: { exclude?: TaskColumnKey[] }) {
+  const excludeKey = (opts?.exclude ?? []).join(",");
+  const [allColumns, setColumns] = useState<TaskColumnDef[]>(() => applyPersisted(loadFromStorage(storageKey)));
+  const columns = useMemo(
+    () => (excludeKey ? allColumns.filter((c) => !excludeKey.split(",").includes(c.key)) : allColumns),
+    [allColumns, excludeKey],
+  );
 
   // Persist on every change.
   useEffect(() => {
     saveToStorage({
-      order: columns.map((c) => c.key),
-      hidden: columns.filter((c) => !c.visible).map((c) => c.key),
-      widths: Object.fromEntries(columns.map((c) => [c.key, c.width])) as Partial<
+      order: allColumns.map((c) => c.key),
+      hidden: allColumns.filter((c) => !c.visible).map((c) => c.key),
+      widths: Object.fromEntries(allColumns.map((c) => [c.key, c.width])) as Partial<
         Record<TaskColumnKey, string>
       >,
     }, storageKey);
-  }, [columns, storageKey]);
+  }, [allColumns, storageKey]);
 
   // Cross-tab sync.
   useEffect(() => {
