@@ -272,11 +272,15 @@ export function TaskCard({
                 <Repeat2 className="h-2.5 w-2.5" /> #{followupNumber}
               </span>
             )}
-            {fromClaude && (
+            {fromClaude ? (
               <span title="Em andamento no Claude" style={{ color: "#D97757" }} className="inline-flex">
                 <ClaudeMark className="h-3.5 w-3.5" />
               </span>
-            )}
+            ) : (task as { created_via?: string | null }).created_via === "claude" ? (
+              <span title="Criada pelo Claude" className="inline-flex text-muted-foreground opacity-60">
+                <ClaudeMark className="h-3 w-3" />
+              </span>
+            ) : null}
             {(task.postpone_count ?? 0) >= 3 && !task.completed && (
               <span
                 className="inline-flex items-center gap-1 rounded-md border border-overdue/40 bg-overdue/10 px-1.5 py-0.5 text-[10px] font-semibold text-overdue"

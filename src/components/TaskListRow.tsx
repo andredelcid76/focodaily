@@ -220,11 +220,15 @@ export function TaskListRow({
                     >
                       {task.title}
                     </span>
-                    {fromClaude && (
+                    {fromClaude ? (
                       <span className="ml-1.5 inline-flex align-middle" title="Em andamento no Claude" style={{ color: "#D97757" }}>
                         <ClaudeMark className="h-3 w-3" />
                       </span>
-                    )}
+                    ) : (task as { created_via?: string | null }).created_via === "claude" ? (
+                      <span className="ml-1.5 inline-flex align-middle text-muted-foreground opacity-60" title="Criada pelo Claude">
+                        <ClaudeMark className="h-3 w-3" />
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <TaskDependencyStatus task={task} />
