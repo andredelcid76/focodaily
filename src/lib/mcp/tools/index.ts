@@ -374,6 +374,7 @@ export const listTasks = defineTool({
           priority: r.priority ?? 3,
           claude_started_at: r.claude_started_at ?? null,
           in_progress_since: r.in_progress_since ?? null,
+          created_via: r.created_via ?? null,
           comments_count,
         };
       }
