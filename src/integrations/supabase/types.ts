@@ -1420,6 +1420,7 @@ export type Database = {
           followup_chain_id: string | null
           followup_count: number
           id: string
+          in_progress_since: string | null
           non_negotiable: boolean
           origin_source: string | null
           origin_source_label: string | null
@@ -1461,6 +1462,7 @@ export type Database = {
           followup_chain_id?: string | null
           followup_count?: number
           id?: string
+          in_progress_since?: string | null
           non_negotiable?: boolean
           origin_source?: string | null
           origin_source_label?: string | null
@@ -1502,6 +1504,7 @@ export type Database = {
           followup_chain_id?: string | null
           followup_count?: number
           id?: string
+          in_progress_since?: string | null
           non_negotiable?: boolean
           origin_source?: string | null
           origin_source_label?: string | null

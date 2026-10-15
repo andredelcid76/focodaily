@@ -2,7 +2,7 @@ import { useRouter, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
-import { ActiveTaskBanner } from "@/components/ActiveTaskBanner";
+import { migrateLegacyTimer } from "@/hooks/useInProgress";
 import { GlobalSearch, useGlobalSearchHotkey } from "@/components/GlobalSearch";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MayaChat } from "@/components/MayaChat";
@@ -68,6 +68,9 @@ function Shell({ children }: { children: ReactNode }) {
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
   useAppBadge();
   useLiveTaskSync(user?.id);
+  useEffect(() => {
+    if (user?.id) void migrateLegacyTimer();
+  }, [user?.id]);
   useUpdateNotice();
   useAccentColor();
   useTheme(); // ensures the class stays synced when OS theme changes
@@ -169,8 +172,6 @@ function Shell({ children }: { children: ReactNode }) {
               <NotificationsBell />
             </div>
           </header>
-
-          <ActiveTaskBanner />
 
           <main className="flex-1">
             <motion.div

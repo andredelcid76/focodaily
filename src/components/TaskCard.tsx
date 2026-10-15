@@ -11,13 +11,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
-import { formatTimer } from "@/hooks/useActiveTimer";
+import { formatTimer, isTaskRunning, useLiveSpent } from "@/hooks/useInProgress";
 import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
 import { ProjectChip } from "./ProjectChip";
-import { ClaudeCodeButton } from "./ClaudeCodeButton";
-import { ClaudeBadge } from "./ClaudeActivity";
+import { ClaudeCodeButton, ClaudeMark } from "./ClaudeCodeButton";
 import { useProfiles, profileInitials } from "@/hooks/useProfiles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -91,8 +90,10 @@ export function TaskCard({
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
-  const running = isActive && !isPaused;
+  void isActive; void isPaused; void liveSeconds; void onResume; void onStop;
+  const totalSpent = useLiveSpent(task as never);
+  const running = isTaskRunning(task as never);
+  const fromClaude = running && !!(task as { claude_started_at?: string | null }).claude_started_at;
 
   const today = todayISO();
   const tomorrow = addDays(today, 1);
@@ -118,11 +119,7 @@ export function TaskCard({
           ? "border-l-4 border-l-overdue"
           : ""
       } ${
-        isActive && !task.completed
-          ? running
-            ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
-            : "border-circumstantial/60 ring-1 ring-circumstantial/30"
-          : ""
+        running ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)] bg-primary/5" : ""
       } ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}`}
     >
       {/* Selection rail – dedicated zone for multi-select (separate from complete) */}
@@ -275,8 +272,10 @@ export function TaskCard({
                 <Repeat2 className="h-2.5 w-2.5" /> #{followupNumber}
               </span>
             )}
-            {!task.completed && (
-              <ClaudeBadge taskId={task.id} startedAt={(task as { claude_started_at?: string | null }).claude_started_at} />
+            {fromClaude && (
+              <span title="Em andamento no Claude" style={{ color: "#D97757" }} className="inline-flex">
+                <ClaudeMark className="h-3.5 w-3.5" />
+              </span>
             )}
             {(task.postpone_count ?? 0) >= 3 && !task.completed && (
               <span
@@ -314,7 +313,7 @@ export function TaskCard({
           {totalSpent > 0 && (
             <span
               className={`inline-flex items-center gap-1 ${
-                running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
+                running ? "text-primary font-medium" : ""
               }`}
             >
               <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
@@ -349,51 +348,27 @@ export function TaskCard({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          {(onStart || onPause || onStop) && (
-            <>
-              {!isActive ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onStart?.(); }}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary hover:bg-primary/25"
-                  aria-label="Iniciar tarefa"
-                  title="Iniciar"
-                >
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                </button>
-              ) : (
-                <>
-                  {running ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onPause?.(); }}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2 text-xs font-medium text-primary-foreground hover:opacity-90"
-                      aria-label="Pausar"
-                      title="Pausar"
-                    >
-                      <Pause className="h-3 w-3 fill-current" />
-                      <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onResume?.(); }}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-circumstantial/20 px-2 text-xs font-medium text-circumstantial hover:bg-circumstantial/30"
-                      aria-label="Retomar"
-                      title="Retomar"
-                    >
-                      <Play className="h-3 w-3 fill-current" />
-                      <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onStop?.(); }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:border-destructive/50 hover:text-destructive"
-                    aria-label="Parar e zerar"
-                    title="Parar e zerar"
-                  >
-                    <Square className="h-3 w-3 fill-current" />
-                  </button>
-                </>
-              )}
-            </>
+          {(onStart || onPause) && (
+            !running ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onStart?.(); }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary hover:bg-primary/25"
+                aria-label="Iniciar tarefa"
+                title="Iniciar"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPause?.(); }}
+                className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2 text-xs font-medium text-primary-foreground hover:opacity-90"
+                aria-label="Pausar"
+                title="Pausar"
+              >
+                <Pause className="h-3 w-3 fill-current" />
+                <span className="tabular-nums">{formatTimer(totalSpent)}</span>
+              </button>
+            )
           )}
 
           <ClaudeCodeButton taskId={task.id} title={task.title} projectName={project?.name} />

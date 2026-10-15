@@ -272,7 +272,7 @@ export const listTasks = defineTool({
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const selectCols =
-      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,priority,claude_started_at,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,priority,claude_started_at,in_progress_since,time_spent_seconds,role:roles(id,name,color),project:projects(id,name,color,user_id)";
     const limit = Math.min(args.limit ?? 100, 500);
     const offset = Math.max(args.offset ?? 0, 0);
     let q = db(ctx.auth)
@@ -373,6 +373,7 @@ export const listTasks = defineTool({
           project_name: rr.project?.name ?? null,
           priority: r.priority ?? 3,
           claude_started_at: r.claude_started_at ?? null,
+          in_progress_since: r.in_progress_since ?? null,
           comments_count,
         };
       }
