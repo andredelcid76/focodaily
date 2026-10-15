@@ -24,14 +24,14 @@ export function ClaudeActiveStrip() {
     let alive = true;
     const load = async () => {
       try {
-        const data = await fetchAllRows<ActiveRow>((from, to) =>
+        const data = await fetchAllRows<ActiveRow>(() =>
           supabase
             .from("tasks")
             .select("id,title,claude_started_at")
             .eq("status", "in_progress")
             .eq("completed", false)
             .order("in_progress_since" as never, { ascending: false })
-            .range(from, to) as never,
+            .order("id"),
         );
         if (alive) setRows(data);
       } catch {

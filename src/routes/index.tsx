@@ -6,7 +6,6 @@ import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
 import { useTaskDependencies } from "@/hooks/useTaskDependencies";
 import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
-import { useActiveTimer } from "@/hooks/useActiveTimer";
 import { TaskCard } from "@/components/TaskCard";
 import { TaskListRow, TaskListHeader, type TaskSortKey, type TaskSortDir } from "@/components/TaskListRow";
 import { useMultiSelect } from "@/hooks/useMultiSelect";
@@ -123,7 +122,6 @@ function TodayInner({ userId }: { userId: string }) {
   const subtaskCounts = useSubtaskCounts(userId);
   const { projects, loading: projectsLoading } = useProjects(userId);
   const meetingsApi = useMeetings(userId);
-  const timer = useActiveTimer();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -529,30 +527,12 @@ function TodayInner({ userId }: { userId: string }) {
     toast.success(`Follow-up criado para ${formatHuman(date)}`);
   };
 
-  // Timer integration: persist accumulated time on pause/stop/switch.
+  // Várias tarefas em andamento ao mesmo tempo; o tempo é somado no banco (trigger).
   const handleStartTimer = (t: Task) => {
-    if (timer.activeTaskId && timer.activeTaskId !== t.id) {
-      const stopped = timer.stop();
-      if (stopped && stopped.deltaSeconds > 0) {
-        tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
-      }
-    }
-    timer.start(t.id);
+    void tasksApi.updateTask(t.id, { status: "in_progress", in_progress_since: new Date().toISOString() } as Partial<Task>);
   };
-  const handlePauseTimer = () => {
-    const paused = timer.pause();
-    if (paused && paused.deltaSeconds > 0) {
-      tasksApi.addTimeSpent(paused.taskId, paused.deltaSeconds);
-    }
-  };
-  const handleResumeTimer = () => {
-    timer.resume();
-  };
-  const handleStopTimer = () => {
-    const stopped = timer.stop();
-    if (stopped && stopped.deltaSeconds > 0) {
-      tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
-    }
+  const handlePauseTimer = (t: Task) => {
+    void tasksApi.updateTask(t.id, { status: "todo", in_progress_since: null } as Partial<Task>);
   };
 
   // Wrap toggleComplete: if a task is being completed and the timer is on it,
@@ -568,16 +548,10 @@ function TodayInner({ userId }: { userId: string }) {
           );
           if (!ok) return;
         }
-        if (timer.activeTaskId === t.id) {
-          const stopped = timer.stop();
-          if (stopped && stopped.deltaSeconds > 0) {
-            await tasksApi.addTimeSpent(stopped.taskId, stopped.deltaSeconds);
-          }
-        }
       }
       await tasksApi.toggleComplete(t);
     },
-    [timer, tasksApi, blockedByMap],
+    [tasksApi, blockedByMap],
   );
 
   const dayLabel = isViewingToday
@@ -731,13 +705,8 @@ function TodayInner({ userId }: { userId: string }) {
                 project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                 onToggle={() => toggleCompleteWithTimer(t)}
                 onEdit={() => openEdit(t)}
-                isActive={timer.activeTaskId === t.id}
-                isPaused={timer.activeTaskId === t.id && timer.isPaused}
-                liveSeconds={timer.elapsedSeconds}
                 onStart={() => handleStartTimer(t)}
-                onPause={handlePauseTimer}
-                onResume={handleResumeTimer}
-                onStop={handleStopTimer}
+                onPause={() => handlePauseTimer(t)}
                 onPostpone={(date) => handlePostpone(t, date)}
                 onDuplicate={(date) => handleDuplicate(t, date)}
                 onFollowUp={(date) => handleFollowUp(t, date)}
@@ -773,13 +742,8 @@ function TodayInner({ userId }: { userId: string }) {
                       onEdit={() => openEdit(t)}
                       isOverdue
                       index={i + 1}
-                      isActive={timer.activeTaskId === t.id}
-                      isPaused={timer.activeTaskId === t.id && timer.isPaused}
-                      liveSeconds={timer.elapsedSeconds}
                       onStart={() => handleStartTimer(t)}
-                      onPause={handlePauseTimer}
-                      onResume={handleResumeTimer}
-                      onStop={handleStopTimer}
+                      onPause={() => handlePauseTimer(t)}
                       onPostpone={(date: string) => handlePostpone(t, date)}
                       onDuplicate={(date: string) => handleDuplicate(t, date)}
                       onFollowUp={(date: string) => handleFollowUp(t, date)}
@@ -925,13 +889,8 @@ function TodayInner({ userId }: { userId: string }) {
                       onToggle={() => toggleCompleteWithTimer(t)}
                       onEdit={() => openEdit(t)}
                       index={i + 1}
-                      isActive={timer.activeTaskId === t.id}
-                      isPaused={timer.activeTaskId === t.id && timer.isPaused}
-                      liveSeconds={timer.elapsedSeconds}
                       onStart={() => handleStartTimer(t)}
-                      onPause={handlePauseTimer}
-                      onResume={handleResumeTimer}
-                      onStop={handleStopTimer}
+                      onPause={() => handlePauseTimer(t)}
                       onPostpone={(date) => handlePostpone(t, date)}
                       onDuplicate={(date) => handleDuplicate(t, date)}
                       onFollowUp={(date) => handleFollowUp(t, date)}
