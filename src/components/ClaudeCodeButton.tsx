@@ -16,13 +16,16 @@ export function openTaskInClaudeCode(opts: {
     `Vamos trabalhar na tarefa "${opts.title}" do projeto "${projeto}" do Foco ` +
     `(task id: ${opts.id}). Puxe os detalhes dessa tarefa no Foco e vamos executá-la juntos.`;
   const url = `claude://code/new?q=${encodeURIComponent(prompt)}&folder=${encodeURIComponent(FOLDER)}`;
-  // Marca a tarefa como "no Claude"; se falhar, o deep link abre do mesmo jeito.
-  setClaudeStarted(opts.id, new Date().toISOString()).catch(() => {});
-  window.location.href = url;
+  // Põe em andamento + marca "no Claude"; se falhar, o deep link abre do mesmo jeito.
+  setClaudeStarted(opts.id, new Date().toISOString())
+    .catch(() => false)
+    .finally(() => {
+      window.location.href = url;
+    });
 }
 
 /** Claude's sunburst mark, simplified. */
-function ClaudeMark({ className }: { className?: string }) {
+export function ClaudeMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">
       <path d="M12 2.4c.36 0 .66.27.7.62l.5 4.36 2.6-3.06a.7.7 0 0 1 1.2.68l-1.5 4.12 3.86-2.12a.7.7 0 0 1 .82 1.1l-3.1 3.1 4.36.5a.7.7 0 0 1 0 1.4l-4.36.5 3.1 3.1a.7.7 0 0 1-.82 1.1l-3.86-2.12 1.5 4.12a.7.7 0 0 1-1.2.68l-2.6-3.06-.5 4.36a.7.7 0 0 1-1.4 0l-.5-4.36-2.6 3.06a.7.7 0 0 1-1.2-.68l1.5-4.12L3.94 20a.7.7 0 0 1-.82-1.1l3.1-3.1-4.36-.5a.7.7 0 0 1 0-1.4l4.36-.5-3.1-3.1a.7.7 0 0 1 .82-1.1l3.86 2.12-1.5-4.12a.7.7 0 0 1 1.2-.68l2.6 3.06.5-4.36c.04-.35.34-.62.7-.62Z" />

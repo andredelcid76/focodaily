@@ -68,6 +68,9 @@ function Shell({ children }: { children: ReactNode }) {
   useGlobalSearchHotkey(searchOpen, setSearchOpen);
   useAppBadge();
   useLiveTaskSync(user?.id);
+  useEffect(() => {
+    if (user?.id) void migrateLegacyTimer();
+  }, [user?.id]);
   useUpdateNotice();
   useAccentColor();
   useTheme(); // ensures the class stays synced when OS theme changes

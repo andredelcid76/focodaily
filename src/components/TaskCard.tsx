@@ -11,13 +11,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { formatMinutes, toISODate, todayISO, addDays } from "@/lib/date";
-import { formatTimer } from "@/hooks/useActiveTimer";
+import { formatTimer, isTaskRunning, useLiveSpent } from "@/hooks/useInProgress";
 import type { Task } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
 import { ProjectChip } from "./ProjectChip";
 import { ClaudeCodeButton } from "./ClaudeCodeButton";
-import { ClaudeBadge } from "./ClaudeActivity";
 import { useProfiles, profileInitials } from "@/hooks/useProfiles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -91,8 +90,10 @@ export function TaskCard({
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
-  const running = isActive && !isPaused;
+  void isActive; void isPaused; void liveSeconds; void onResume; void onStop;
+  const totalSpent = useLiveSpent(task as never);
+  const running = isTaskRunning(task as never);
+  const fromClaude = running && !!(task as { claude_started_at?: string | null }).claude_started_at;
 
   const today = todayISO();
   const tomorrow = addDays(today, 1);
@@ -118,11 +119,7 @@ export function TaskCard({
           ? "border-l-4 border-l-overdue"
           : ""
       } ${
-        isActive && !task.completed
-          ? running
-            ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
-            : "border-circumstantial/60 ring-1 ring-circumstantial/30"
-          : ""
+        running ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)] bg-primary/5" : ""
       } ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}`}
     >
       {/* Selection rail – dedicated zone for multi-select (separate from complete) */}
@@ -314,7 +311,7 @@ export function TaskCard({
           {totalSpent > 0 && (
             <span
               className={`inline-flex items-center gap-1 ${
-                running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
+                running ? "text-primary font-medium" : ""
               }`}
             >
               <Timer className="h-3 w-3" /> {formatTimer(totalSpent)}
@@ -370,7 +367,7 @@ export function TaskCard({
                       title="Pausar"
                     >
                       <Pause className="h-3 w-3 fill-current" />
-                      <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                      <span className="tabular-nums">{formatTimer(totalSpent)}</span>
                     </button>
                   ) : (
                     <button
@@ -380,7 +377,7 @@ export function TaskCard({
                       title="Retomar"
                     >
                       <Play className="h-3 w-3 fill-current" />
-                      <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                      <span className="tabular-nums">{formatTimer(totalSpent)}</span>
                     </button>
                   )}
                   <button

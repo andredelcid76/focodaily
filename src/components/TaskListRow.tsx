@@ -13,14 +13,13 @@ import {
 import { TaskCompleteButton } from "./TaskCompleteButton";
 import { PriorityBadge } from "./PriorityBadge";
 import { ClaudeCodeButton } from "./ClaudeCodeButton";
-import { ClaudeBadge } from "./ClaudeActivity";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { formatMinutes, formatShort, toISODate, todayISO, addDays } from "@/lib/date";
-import { formatTimer } from "@/hooks/useActiveTimer";
+import { formatTimer, isTaskRunning, useLiveSpent } from "@/hooks/useInProgress";
 import type { Task, TaskStatus } from "@/hooks/useTasks";
 import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
@@ -102,8 +101,10 @@ export function TaskListRow({
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const totalSpent = (task.time_spent_seconds ?? 0) + (isActive ? liveSeconds ?? 0 : 0);
-  const running = isActive && !isPaused;
+  void isActive; void isPaused; void liveSeconds; void onResume; void onStop;
+  const totalSpent = useLiveSpent(task as never);
+  const running = isTaskRunning(task as never);
+  const fromClaude = running && !!(task as { claude_started_at?: string | null }).claude_started_at;
   const status = (task.status ?? (task.completed ? "done" : "todo")) as TaskStatus;
   const hasActions = !!(onPostpone || onDuplicate || onFollowUp);
 
@@ -143,11 +144,7 @@ export function TaskListRow({
         ${task.completed ? "bg-muted/30 border-border/40 opacity-70" : ""}
         ${isOverdue && !task.completed ? "border-overdue/40" : "border-border/60"}
         ${(task as any).non_negotiable && !task.completed ? "border-l-4 border-l-overdue pl-2" : ""}
-        ${isActive && !task.completed
-          ? running
-            ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)]"
-            : "border-circumstantial/60 ring-1 ring-circumstantial/30"
-          : ""}
+        ${running ? "border-primary/70 ring-2 ring-primary/40 shadow-[var(--shadow-glow)] bg-primary/5" : ""}
         ${selected ? "border-primary ring-2 ring-primary/50 bg-primary/5" : ""}
       `}
     >
@@ -241,7 +238,7 @@ export function TaskListRow({
                     {totalSpent > 0 && (
                       <span
                         className={`inline-flex items-center gap-1 ${
-                          running ? "text-primary font-medium" : isPaused && isActive ? "text-circumstantial font-medium" : ""
+                          running ? "text-primary font-medium" : ""
                         }`}
                         title="Tempo trabalhado"
                       >
@@ -415,7 +412,7 @@ export function TaskListRow({
                   title="Pausar"
                 >
                   <Pause className="h-3 w-3 fill-current" />
-                  <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                  <span className="tabular-nums">{formatTimer(totalSpent)}</span>
                 </button>
               ) : (
                 <button
@@ -425,7 +422,7 @@ export function TaskListRow({
                   title="Retomar"
                 >
                   <Play className="h-3 w-3 fill-current" />
-                  <span className="tabular-nums">{formatTimer(liveSeconds ?? 0)}</span>
+                  <span className="tabular-nums">{formatTimer(totalSpent)}</span>
                 </button>
               )}
               {isActive && (
