@@ -1,3 +1,4 @@
+import { ClaudeActiveStrip } from "@/components/ClaudeActivity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
