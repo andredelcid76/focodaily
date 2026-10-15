@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { TaskCompleteButton } from "./TaskCompleteButton";
 import { PriorityBadge } from "./PriorityBadge";
-import { ClaudeCodeButton } from "./ClaudeCodeButton";
+import { ClaudeCodeButton, ClaudeMark } from "./ClaudeCodeButton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
