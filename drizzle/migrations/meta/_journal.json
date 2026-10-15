@@ -85,6 +85,13 @@
       "when": 1792085226615,
       "tag": "0011_task_claude_started_at",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792093797555,
+      "tag": "0012_task_in_progress_since",
+      "breakpoints": true
     }
   ]
 }
