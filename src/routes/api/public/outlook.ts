@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
-import { getValidOutlookAccessToken, OutlookReauthError } from "@/lib/outlook-token";
+import { OutlookReauthError } from "@/lib/outlook-token";
+import { syncOutlookCalendar } from "@/lib/outlook-calendar-sync";
 
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read User.ReadBasic.All Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All Chat.Create ChatMessage.Send";
@@ -160,138 +161,7 @@ async function authenticateRequest(request: Request) {
   return { supabase, userId: data.claims.sub };
 }
 
-export async function syncOutlookCalendar(userId: string) {
-  const { data: conn, error: connErr } = await supabaseAdmin
-    .from("outlook_connections")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (connErr) {
-    throw new Error(connErr.message);
-  }
-
-  if (!conn) {
-    throw new Error("Outlook não está conectado");
-  }
-
-  const accessToken = await getValidOutlookAccessToken(userId, conn);
-
-  const start = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
-  const end = new Date(Date.now() + 60 * 24 * 3600_000).toISOString();
-  const url =
-    `https://graph.microsoft.com/v1.0/me/calendarView?` +
-    `startDateTime=${encodeURIComponent(start)}&endDateTime=${encodeURIComponent(end)}` +
-    `&$select=id,subject,bodyPreview,location,start,end,isAllDay,webLink&$top=200&$orderby=start/dateTime`;
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Prefer: 'outlook.timezone="UTC"',
-    },
-  });
-
-  const jsonResponse = await response.json();
-  if (!response.ok) {
-    throw new Error(`Graph API error [${response.status}]: ${JSON.stringify(jsonResponse)}`);
-  }
-
-  type GraphEvent = {
-    id: string;
-    subject?: string;
-    bodyPreview?: string;
-    location?: { displayName?: string };
-    start: { dateTime: string; timeZone: string };
-    end: { dateTime: string; timeZone: string };
-    isAllDay?: boolean;
-    webLink?: string;
-  };
-
-  const events = (jsonResponse.value ?? []) as GraphEvent[];
-  let imported = 0;
-  const errors: string[] = [];
-  const fetchedIds: string[] = [];
-
-  for (const ev of events) {
-    const startsAt = new Date(ev.start.dateTime + "Z").toISOString();
-    const endsAt = new Date(ev.end.dateTime + "Z").toISOString();
-    const scheduledDate = startsAt.slice(0, 10);
-    fetchedIds.push(ev.id);
-
-    const { error } = await supabaseAdmin
-      .from("meetings")
-      .upsert(
-        {
-          user_id: userId,
-          external_id: ev.id,
-          source: "outlook",
-          title: ev.subject || "(sem título)",
-          description: ev.bodyPreview || null,
-          location: ev.location?.displayName || null,
-          starts_at: startsAt,
-          ends_at: endsAt,
-          scheduled_date: scheduledDate,
-          is_all_day: !!ev.isAllDay,
-          web_link: ev.webLink || null,
-          color: "#0078d4",
-        },
-        { onConflict: "user_id,external_id" }
-      );
-
-    if (error) {
-      errors.push(`${ev.subject || ev.id}: ${error.message}`);
-      console.error("[outlook sync] upsert failed", ev.id, error);
-    } else {
-      imported += 1;
-    }
-  }
-
-  // Remove meetings that were deleted in Outlook (no longer present in window)
-  const startDate = start.slice(0, 10);
-  const endDate = end.slice(0, 10);
-  let removed = 0;
-  try {
-    const delQuery = supabaseAdmin
-      .from("meetings")
-      .delete({ count: "exact" })
-      .eq("user_id", userId)
-      .eq("source", "outlook")
-      .gte("scheduled_date", startDate)
-      .lte("scheduled_date", endDate);
-    const finalQuery = fetchedIds.length
-      ? delQuery.not(
-          "external_id",
-          "in",
-          `(${fetchedIds.map((id) => `"${id.replace(/"/g, '\\"')}"`).join(",")})`,
-        )
-      : delQuery;
-    const { count, error: delErr } = await finalQuery;
-    if (delErr) {
-      console.error("[outlook sync] delete stale error", delErr);
-    } else {
-      removed = count ?? 0;
-    }
-  } catch (e) {
-    console.error("[outlook sync] delete stale exception", e);
-  }
-
-  console.log("[outlook sync]", { userId, totalFromGraph: events.length, imported, removed, errors: errors.length });
-
-  if (events.length > 0 && imported === 0 && errors.length > 0) {
-    throw new Error(`Falha ao salvar reuniões: ${errors[0]}`);
-  }
-
-  const { error: syncError } = await supabaseAdmin
-    .from("outlook_connections")
-    .update({ last_sync_at: new Date().toISOString() })
-    .eq("user_id", userId);
-
-  if (syncError) {
-    throw new Error(syncError.message);
-  }
-
-  return { imported, removed, total: events.length, errors };
-}
+export { syncOutlookCalendar };
 
 function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
