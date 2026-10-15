@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getValidOutlookAccessToken } from "@/lib/outlook-token";
 
 
 const TENANT = "common"; // multi-tenant + personal accounts
