@@ -220,9 +220,9 @@ export function TaskListRow({
                     >
                       {task.title}
                     </span>
-                    {!task.completed && (
-                      <span className="ml-1.5 inline-block align-middle">
-                        <ClaudeBadge taskId={task.id} startedAt={(task as { claude_started_at?: string | null }).claude_started_at} />
+                    {fromClaude && (
+                      <span className="ml-1.5 inline-flex align-middle" title="Em andamento no Claude" style={{ color: "#D97757" }}>
+                        <ClaudeMark className="h-3 w-3" />
                       </span>
                     )}
                   </div>
@@ -393,49 +393,27 @@ export function TaskListRow({
       {/* Actions: one unified segmented control (timer · Claude · mais) */}
       <div className="flex items-center justify-end" data-no-select="true">
         <div className="inline-flex items-center divide-x divide-border/60 overflow-hidden rounded-md border border-border/60 bg-card/60">
-          {!task.completed && (onStart || onPause || onStop) && (
-            <>
-              {!isActive ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onStart?.(); }}
-                  className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                  aria-label="Iniciar"
-                  title="Iniciar"
-                >
-                  <Play className="h-3 w-3 fill-current" />
-                </button>
-              ) : running ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onPause?.(); }}
-                  className="inline-flex h-7 items-center gap-1 bg-primary/15 px-1.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/25"
-                  aria-label="Pausar"
-                  title="Pausar"
-                >
-                  <Pause className="h-3 w-3 fill-current" />
-                  <span className="tabular-nums">{formatTimer(totalSpent)}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onResume?.(); }}
-                  className="inline-flex h-7 items-center gap-1 bg-circumstantial/15 px-1.5 text-[10px] font-medium text-circumstantial transition-colors hover:bg-circumstantial/25"
-                  aria-label="Retomar"
-                  title="Retomar"
-                >
-                  <Play className="h-3 w-3 fill-current" />
-                  <span className="tabular-nums">{formatTimer(totalSpent)}</span>
-                </button>
-              )}
-              {isActive && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onStop?.(); }}
-                  className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                  aria-label="Parar"
-                  title="Parar e zerar"
-                >
-                  <Square className="h-3 w-3 fill-current" />
-                </button>
-              )}
-            </>
+          {!task.completed && (onStart || onPause) && (
+            !running ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onStart?.(); }}
+                className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                aria-label="Iniciar"
+                title="Iniciar"
+              >
+                <Play className="h-3 w-3 fill-current" />
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPause?.(); }}
+                className="inline-flex h-7 items-center gap-1 bg-primary/15 px-1.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/25"
+                aria-label="Pausar"
+                title="Pausar"
+              >
+                <Pause className="h-3 w-3 fill-current" />
+                <span className="tabular-nums">{formatTimer(totalSpent)}</span>
+              </button>
+            )
           )}
           <ClaudeCodeButton
             variant="ghost"
