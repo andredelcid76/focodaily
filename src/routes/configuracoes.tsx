@@ -74,6 +74,7 @@ import { getOutlookAuthUrl, disconnectOutlook, testOutlookConnection } from "@/l
 
 import { ProfileCard } from "@/components/ProfileCard";
 import { AccentColorCard } from "@/components/AccentColorCard";
+import { ClaudeHookTokenCard } from "@/components/ClaudeHookTokenCard";
 
 const PUBLISHED_MCP_URL = "https://focodaily.lovable.app/api/public/mcp";
 
@@ -160,6 +161,7 @@ function IntegracoesInner() {
 
               <TabsContent value="avancado" className="mt-0 space-y-5">
                 <McpCard />
+                <ClaudeHookTokenCard />
               </TabsContent>
             </motion.div>
           </AnimatePresence>
