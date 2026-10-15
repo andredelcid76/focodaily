@@ -24,12 +24,19 @@ export function ClaudeActiveStrip() {
     let alive = true;
     const load = async () => {
       try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth.user?.id;
+        if (!uid) {
+          if (alive) setRows([]);
+          return;
+        }
         const data = await fetchAllRows<ActiveRow>(() =>
           supabase
             .from("tasks")
             .select("id,title,claude_started_at")
             .eq("status", "in_progress")
             .eq("completed", false)
+            .or(`assignee_id.eq.${uid},and(assignee_id.is.null,user_id.eq.${uid})`)
             .order("in_progress_since" as never, { ascending: false })
             .order("id"),
         );
