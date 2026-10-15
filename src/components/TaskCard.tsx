@@ -17,6 +17,7 @@ import type { Role } from "@/hooks/useRoles";
 import type { Project } from "@/hooks/useProjects";
 import { ProjectChip } from "./ProjectChip";
 import { ClaudeCodeButton } from "./ClaudeCodeButton";
+import { ClaudeBadge } from "./ClaudeActivity";
 import { useProfiles, profileInitials } from "@/hooks/useProfiles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -273,6 +274,9 @@ export function TaskCard({
               >
                 <Repeat2 className="h-2.5 w-2.5" /> #{followupNumber}
               </span>
+            )}
+            {!task.completed && (
+              <ClaudeBadge taskId={task.id} startedAt={(task as { claude_started_at?: string | null }).claude_started_at} />
             )}
             {(task.postpone_count ?? 0) >= 3 && !task.completed && (
               <span

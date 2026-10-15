@@ -1,3 +1,5 @@
+import { setClaudeStarted } from "./ClaudeActivity";
+
 const FOLDER =
   "C:\\Users\\andre\\ANPLA SERVE MANUTENCAO E CONSTRUCAO LTDA\\ESTRATÉGIA - Documents\\PLANEJAMENTO ESTRATÉGICO\\2026\\CLAUDE\\PROJETOS CLAUDE";
 
@@ -14,6 +16,8 @@ export function openTaskInClaudeCode(opts: {
     `Vamos trabalhar na tarefa "${opts.title}" do projeto "${projeto}" do Foco ` +
     `(task id: ${opts.id}). Puxe os detalhes dessa tarefa no Foco e vamos executá-la juntos.`;
   const url = `claude://code/new?q=${encodeURIComponent(prompt)}&folder=${encodeURIComponent(FOLDER)}`;
+  // Marca a tarefa como "no Claude"; se falhar, o deep link abre do mesmo jeito.
+  setClaudeStarted(opts.id, new Date().toISOString()).catch(() => {});
   window.location.href = url;
 }
 
