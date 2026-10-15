@@ -8,7 +8,10 @@ export const CLAUDE_CHANGED_EVENT = "foco:claude-changed";
 /** ▶ Claude: põe a tarefa em andamento e marca a origem Claude. */
 export async function setClaudeStarted(taskId: string, value: string | null) {
   const patch: Record<string, unknown> = { claude_started_at: value };
-  if (value) patch.status = "in_progress";
+  if (value) {
+    patch.status = "in_progress";
+    patch.claude_last_activity_at = value;
+  }
   const { error } = await supabase.from("tasks").update(patch as never).eq("id", taskId);
   window.dispatchEvent(new CustomEvent(CLAUDE_CHANGED_EVENT, { detail: { taskId, value } }));
   return !error;

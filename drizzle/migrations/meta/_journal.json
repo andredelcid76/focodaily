@@ -106,6 +106,13 @@
       "when": 1792098994745,
       "tag": "0014_task_actor_and_created_via",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792105346938,
+      "tag": "0015_claude_heartbeat",
+      "breakpoints": true
     }
   ]
 }
