@@ -33,6 +33,7 @@ import { Route as EquipesIdRouteImport } from './routes/equipes.$id'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjetosIndexRouteImport } from './routes/projetos.index'
 import { Route as ProjetosIdRouteImport } from './routes/projetos.$id'
+import { Route as ApiPublicClaudeHeartbeatRouteImport } from './routes/api/public/claude-heartbeat'
 import { Route as ApiPublicMayaRouteImport } from './routes/api/public/maya'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outlook'
@@ -174,6 +175,12 @@ const ProjetosIdRoute = ProjetosIdRouteImport.update({
   path: '/projetos/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicClaudeHeartbeatRoute =
+  ApiPublicClaudeHeartbeatRouteImport.update({
+    id: '/api/public/claude-heartbeat',
+    path: '/api/public/claude-heartbeat',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMayaRoute = ApiPublicMayaRouteImport.update({
   id: '/api/public/maya',
   path: '/api/public/maya',
@@ -294,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/projetos/$id': typeof ProjetosIdRoute
   '/equipes/': typeof EquipesIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
+  '/api/public/claude-heartbeat': typeof ApiPublicClaudeHeartbeatRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
@@ -338,6 +346,7 @@ export interface FileRoutesByTo {
   '/projetos/$id': typeof ProjetosIdRoute
   '/equipes': typeof EquipesIndexRoute
   '/projetos': typeof ProjetosIndexRoute
+  '/api/public/claude-heartbeat': typeof ApiPublicClaudeHeartbeatRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
@@ -383,6 +392,7 @@ export interface FileRoutesById {
   '/projetos/$id': typeof ProjetosIdRoute
   '/equipes/': typeof EquipesIndexRoute
   '/projetos/': typeof ProjetosIndexRoute
+  '/api/public/claude-heartbeat': typeof ApiPublicClaudeHeartbeatRoute
   '/api/public/maya': typeof ApiPublicMayaRoute
   '/api/public/mcp': typeof ApiPublicMcpRoute
   '/api/public/outlook': typeof ApiPublicOutlookRouteWithChildren
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/projetos/$id'
     | '/equipes/'
     | '/projetos/'
+    | '/api/public/claude-heartbeat'
     | '/api/public/maya'
     | '/api/public/mcp'
     | '/api/public/outlook'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/projetos/$id'
     | '/equipes'
     | '/projetos'
+    | '/api/public/claude-heartbeat'
     | '/api/public/maya'
     | '/api/public/mcp'
     | '/api/public/outlook'
@@ -517,6 +529,7 @@ export interface FileRouteTypes {
     | '/projetos/$id'
     | '/equipes/'
     | '/projetos/'
+    | '/api/public/claude-heartbeat'
     | '/api/public/maya'
     | '/api/public/mcp'
     | '/api/public/outlook'
@@ -562,6 +575,7 @@ export interface RootRouteChildren {
   ProjetosIdRoute: typeof ProjetosIdRoute
   EquipesIndexRoute: typeof EquipesIndexRoute
   ProjetosIndexRoute: typeof ProjetosIndexRoute
+  ApiPublicClaudeHeartbeatRoute: typeof ApiPublicClaudeHeartbeatRoute
   ApiPublicMayaRoute: typeof ApiPublicMayaRoute
   ApiPublicMcpRoute: typeof ApiPublicMcpRoute
   ApiPublicOutlookRoute: typeof ApiPublicOutlookRouteWithChildren
@@ -751,6 +765,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjetosIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/claude-heartbeat': {
+      id: '/api/public/claude-heartbeat'
+      path: '/api/public/claude-heartbeat'
+      fullPath: '/api/public/claude-heartbeat'
+      preLoaderRoute: typeof ApiPublicClaudeHeartbeatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/maya': {
       id: '/api/public/maya'
       path: '/api/public/maya'
@@ -918,6 +939,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjetosIdRoute: ProjetosIdRoute,
   EquipesIndexRoute: EquipesIndexRoute,
   ProjetosIndexRoute: ProjetosIndexRoute,
+  ApiPublicClaudeHeartbeatRoute: ApiPublicClaudeHeartbeatRoute,
   ApiPublicMayaRoute: ApiPublicMayaRoute,
   ApiPublicMcpRoute: ApiPublicMcpRoute,
   ApiPublicOutlookRoute: ApiPublicOutlookRouteWithChildren,
