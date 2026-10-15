@@ -1411,6 +1411,7 @@ export type Database = {
           backlog_position: number | null
           blocked_reason: string | null
           category: Database["public"]["Enums"]["task_category"]
+          claude_started_at: string | null
           completed: boolean
           completed_at: string | null
           created_at: string
@@ -1451,6 +1452,7 @@ export type Database = {
           backlog_position?: number | null
           blocked_reason?: string | null
           category?: Database["public"]["Enums"]["task_category"]
+          claude_started_at?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -1491,6 +1493,7 @@ export type Database = {
           backlog_position?: number | null
           blocked_reason?: string | null
           category?: Database["public"]["Enums"]["task_category"]
+          claude_started_at?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
