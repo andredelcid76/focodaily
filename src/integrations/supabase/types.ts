@@ -1415,6 +1415,7 @@ export type Database = {
           completed: boolean
           completed_at: string | null
           created_at: string
+          created_via: string | null
           description: string | null
           duration_minutes: number
           followup_chain_id: string | null
@@ -1457,6 +1458,7 @@ export type Database = {
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          created_via?: string | null
           description?: string | null
           duration_minutes?: number
           followup_chain_id?: string | null
@@ -1499,6 +1501,7 @@ export type Database = {
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          created_via?: string | null
           description?: string | null
           duration_minutes?: number
           followup_chain_id?: string | null
@@ -1745,6 +1748,7 @@ export type Database = {
       }
       company_colleague_ids: { Args: never; Returns: string[] }
       company_domain_of: { Args: { _user_id: string }; Returns: string }
+      current_actor_id: { Args: never; Returns: string }
       is_company_colleague: {
         Args: { _a: string; _b: string }
         Returns: boolean
