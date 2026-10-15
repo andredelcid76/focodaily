@@ -19,5 +19,5 @@
 - [x] Impedir tarefas de projetos pausados de aparecerem antes da leitura dos projetos terminar.
 - [x] Corrigir a reinicialização causada pelo canal duplicado do contador de avisos.
 - [x] Validar a volta para Hoje quadro a quadro, sem tarefas fantasmas.
-- [ ] Autor correto (current_actor_id) nos avisos de tarefas, inclusive via MCP.
-- [ ] Marca cinza "Criada pelo Claude" (created_via) no MCP, list_tasks, TaskCard e TaskListRow.
+- [x] Autor correto (current_actor_id) nos avisos de tarefas, inclusive via MCP.
+- [x] Marca cinza "Criada pelo Claude" (created_via) no MCP, list_tasks, TaskCard e TaskListRow.
