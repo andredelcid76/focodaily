@@ -1411,6 +1411,7 @@ export type Database = {
           backlog_position: number | null
           blocked_reason: string | null
           category: Database["public"]["Enums"]["task_category"]
+          claude_last_activity_at: string | null
           claude_started_at: string | null
           completed: boolean
           completed_at: string | null
@@ -1454,6 +1455,7 @@ export type Database = {
           backlog_position?: number | null
           blocked_reason?: string | null
           category?: Database["public"]["Enums"]["task_category"]
+          claude_last_activity_at?: string | null
           claude_started_at?: string | null
           completed?: boolean
           completed_at?: string | null
@@ -1497,6 +1499,7 @@ export type Database = {
           backlog_position?: number | null
           blocked_reason?: string | null
           category?: Database["public"]["Enums"]["task_category"]
+          claude_last_activity_at?: string | null
           claude_started_at?: string | null
           completed?: boolean
           completed_at?: string | null
@@ -1738,6 +1741,7 @@ export type Database = {
       accept_contact_invite: { Args: { _token: string }; Returns: string }
       accept_project_invite: { Args: { _token: string }; Returns: string }
       accept_team_invite: { Args: { _token: string }; Returns: string }
+      auto_pause_idle_claude_tasks: { Args: never; Returns: number }
       can_access_task: {
         Args: { _task_id: string; _user_id: string }
         Returns: boolean
