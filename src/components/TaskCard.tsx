@@ -272,8 +272,10 @@ export function TaskCard({
                 <Repeat2 className="h-2.5 w-2.5" /> #{followupNumber}
               </span>
             )}
-            {!task.completed && (
-              <ClaudeBadge taskId={task.id} startedAt={(task as { claude_started_at?: string | null }).claude_started_at} />
+            {fromClaude && (
+              <span title="Em andamento no Claude" style={{ color: "#D97757" }} className="inline-flex">
+                <ClaudeMark className="h-3.5 w-3.5" />
+              </span>
             )}
             {(task.postpone_count ?? 0) >= 3 && !task.completed && (
               <span
@@ -346,51 +348,27 @@ export function TaskCard({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          {(onStart || onPause || onStop) && (
-            <>
-              {!isActive ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onStart?.(); }}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary hover:bg-primary/25"
-                  aria-label="Iniciar tarefa"
-                  title="Iniciar"
-                >
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                </button>
-              ) : (
-                <>
-                  {running ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onPause?.(); }}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2 text-xs font-medium text-primary-foreground hover:opacity-90"
-                      aria-label="Pausar"
-                      title="Pausar"
-                    >
-                      <Pause className="h-3 w-3 fill-current" />
-                      <span className="tabular-nums">{formatTimer(totalSpent)}</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onResume?.(); }}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-circumstantial/20 px-2 text-xs font-medium text-circumstantial hover:bg-circumstantial/30"
-                      aria-label="Retomar"
-                      title="Retomar"
-                    >
-                      <Play className="h-3 w-3 fill-current" />
-                      <span className="tabular-nums">{formatTimer(totalSpent)}</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onStop?.(); }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-card text-muted-foreground hover:border-destructive/50 hover:text-destructive"
-                    aria-label="Parar e zerar"
-                    title="Parar e zerar"
-                  >
-                    <Square className="h-3 w-3 fill-current" />
-                  </button>
-                </>
-              )}
-            </>
+          {(onStart || onPause) && (
+            !running ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onStart?.(); }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary hover:bg-primary/25"
+                aria-label="Iniciar tarefa"
+                title="Iniciar"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPause?.(); }}
+                className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2 text-xs font-medium text-primary-foreground hover:opacity-90"
+                aria-label="Pausar"
+                title="Pausar"
+              >
+                <Pause className="h-3 w-3 fill-current" />
+                <span className="tabular-nums">{formatTimer(totalSpent)}</span>
+              </button>
+            )
           )}
 
           <ClaudeCodeButton taskId={task.id} title={task.title} projectName={project?.name} />
