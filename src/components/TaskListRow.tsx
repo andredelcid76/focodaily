@@ -13,6 +13,7 @@ import {
 import { TaskCompleteButton } from "./TaskCompleteButton";
 import { PriorityBadge } from "./PriorityBadge";
 import { ClaudeCodeButton } from "./ClaudeCodeButton";
+import { ClaudeBadge } from "./ClaudeActivity";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -222,6 +223,11 @@ export function TaskListRow({
                     >
                       {task.title}
                     </span>
+                    {!task.completed && (
+                      <span className="ml-1.5 inline-block align-middle">
+                        <ClaudeBadge taskId={task.id} startedAt={(task as { claude_started_at?: string | null }).claude_started_at} />
+                      </span>
+                    )}
                   </div>
                 </div>
                 <TaskDependencyStatus task={task} />

@@ -1,3 +1,4 @@
+import { ClaudeActiveStrip } from "@/components/ClaudeActivity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
@@ -595,7 +596,7 @@ function TodayInner({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      
+      <ClaudeActiveStrip />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">

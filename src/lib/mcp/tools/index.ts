@@ -272,7 +272,7 @@ export const listTasks = defineTool({
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const selectCols =
-      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,priority,role:roles(id,name,color),project:projects(id,name,color,user_id)";
+      "id,title,description,scheduled_date,duration_minutes,category,status,blocked_reason,completed,project_id,role_id,recurrence,non_negotiable,user_id,assignee_id,created_at,updated_at,postpone_count,original_date,backlog_position,priority,claude_started_at,role:roles(id,name,color),project:projects(id,name,color,user_id)";
     const limit = Math.min(args.limit ?? 100, 500);
     const offset = Math.max(args.offset ?? 0, 0);
     let q = db(ctx.auth)
@@ -372,6 +372,7 @@ export const listTasks = defineTool({
           project_id: rr.project?.id ?? null,
           project_name: rr.project?.name ?? null,
           priority: r.priority ?? 3,
+          claude_started_at: r.claude_started_at ?? null,
           comments_count,
         };
       }
@@ -840,10 +841,17 @@ export const updateTask = defineTool({
     origin_source: z.string().nullable().optional().describe("Origem da tarefa (ex: fireflies, outlook, manual)."),
     origin_source_label: z.string().nullable().optional().describe("Rótulo legível da origem."),
     origin_source_url: z.string().nullable().optional().describe("URL da origem da tarefa."),
+    claude_started_at: z
+      .string()
+      .datetime({ offset: true })
+      .nullable()
+      .optional()
+      .describe("Início da execução no Claude (ISO 8601), ou null para desligar o selo \"no Claude\". Concluir a tarefa já zera este campo."),
   }),
   execute: async (args, ctx) => {
     const userId = getUserId(ctx.auth);
     const patch: Record<string, unknown> = {};
+    if (args.claude_started_at !== undefined) patch.claude_started_at = args.claude_started_at;
     if (args.title !== undefined) patch.title = args.title;
     if (args.description !== undefined) patch.description = args.description;
     if (args.scheduled_date !== undefined) patch.scheduled_date = args.scheduled_date;
