@@ -314,7 +314,7 @@ export function TaskCard({
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" /> {formatMinutes(task.duration_minutes)}
           </span>
-          {totalSpent > 0 && (
+          {totalSpent > 0 && !(running && !compact && (onStart || onPause)) && (
             <span
               className={`inline-flex items-center gap-1 ${
                 running ? "text-primary font-medium" : ""

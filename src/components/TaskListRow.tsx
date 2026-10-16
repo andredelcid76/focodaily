@@ -239,7 +239,7 @@ export function TaskListRow({
                   || (task.postpone_count ?? 0) >= 3
                   || (task as any).origin_source) && (
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-                    {totalSpent > 0 && (
+                    {totalSpent > 0 && !running && (
                       <span
                         className={`inline-flex items-center gap-1 ${
                           running ? "text-primary font-medium" : ""
