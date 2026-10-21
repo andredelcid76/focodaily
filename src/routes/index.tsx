@@ -71,6 +71,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
+import { taskNumbers } from "@/lib/task-numbering";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
@@ -216,6 +217,7 @@ function TodayInner({ userId }: { userId: string }) {
     });
   }, [tasksApi, viewDate, isViewingToday, today, pausedProjectIds]);
 
+  const dayNumbers = useMemo(() => taskNumbers(dayTasks), [dayTasks]);
   const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
 
   const nowMs = Date.now();
@@ -289,17 +291,21 @@ function TodayInner({ userId }: { userId: string }) {
     };
     return arr.sort(cmp);
   }, [visibleDayTasks, sortKey, sortDir, projectsById, rolesById]);
+  const allOverdue = useMemo(
+    () => tasksApi.overdueTasks.filter((t) => !isSuspended(t) && isMine(t)),
+    [tasksApi.overdueTasks, pausedProjectIds, userId]
+  );
+  const overdueNumbers = useMemo(() => taskNumbers(allOverdue, false), [allOverdue]);
   const visibleOverdue = useMemo(
     () =>
       applyTaskFilters(
-        tasksApi.overdueTasks
-          .filter((t) => !isSuspended(t) && isMine(t))
+        allOverdue
           .filter((t) => (showCompleted ? true : !t.completed))
           .filter(matchesQuery),
         filters,
         userId
       ),
-    [tasksApi.overdueTasks, showCompleted, normalizedQuery, filters, pausedProjectIds]
+    [allOverdue, showCompleted, normalizedQuery, filters]
   );
   const dayIds = useMemo(() => sortedVisibleDayTasks.map((t) => t.id), [sortedVisibleDayTasks]);
   const overdueIds = useMemo(() => visibleOverdue.map((t) => t.id), [visibleOverdue]);
@@ -689,7 +695,7 @@ function TodayInner({ userId }: { userId: string }) {
           </div>
           <div className="overflow-hidden rounded-2xl border border-overdue/30 bg-card/40 backdrop-blur-sm">
             <div className="divide-y divide-border/40">
-              {visibleOverdue.map((t, i) => (
+              {visibleOverdue.map((t) => (
                 <div key={t.id} className="flex items-center gap-2 pr-2">
                   <div className="flex-1 min-w-0">
                     <TaskListRowStatic
@@ -701,7 +707,7 @@ function TodayInner({ userId }: { userId: string }) {
                       onToggle={() => toggleCompleteWithTimer(t)}
                       onEdit={() => openEdit(t)}
                       isOverdue
-                      index={i + 1}
+                      index={overdueNumbers.get(t.id)}
                       onStart={() => handleStartTimer(t)}
                       onPause={() => handlePauseTimer(t)}
                       onPostpone={(date: string) => handlePostpone(t, date)}
@@ -838,7 +844,7 @@ function TodayInner({ userId }: { userId: string }) {
                   onToggleAll={() => multi.toggleGroup(dayIds)}
                 />
                 <div className="divide-y divide-border/40">
-                  {sortedVisibleDayTasks.map((t, i) => (
+                  {sortedVisibleDayTasks.map((t) => (
                     <TaskListRow
                       key={t.id}
                       task={t}
@@ -848,7 +854,7 @@ function TodayInner({ userId }: { userId: string }) {
                       project={t.project_id ? projectsById.get(t.project_id) ?? null : null}
                       onToggle={() => toggleCompleteWithTimer(t)}
                       onEdit={() => openEdit(t)}
-                      index={i + 1}
+                      index={dayNumbers.get(t.id)}
                       onStart={() => handleStartTimer(t)}
                       onPause={() => handlePauseTimer(t)}
                       onPostpone={(date) => handlePostpone(t, date)}
