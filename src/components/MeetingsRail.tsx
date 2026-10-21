@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronRight, ChevronLeft, ExternalLink, MapPin } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { formatMinutes } from "@/lib/date";
 import type { Meeting } from "@/hooks/useMeetings";
 
@@ -9,13 +8,9 @@ const STORAGE_KEY = "focodaily.meetingsRailOpen";
 export function MeetingsRail({
   meetings,
   totalMinutes,
-  includeMeetings,
-  onToggleInclude,
 }: {
   meetings: Meeting[];
   totalMinutes: number;
-  includeMeetings: boolean;
-  onToggleInclude: (v: boolean) => void;
 }) {
   const [open, setOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -105,10 +100,6 @@ export function MeetingsRail({
                   <span className="ml-1">({upcomingCount} restante{upcomingCount === 1 ? "" : "s"})</span>
                 )}
               </div>
-              <label className="flex items-center gap-2">
-                Incluir nas somas
-                <Switch checked={includeMeetings} onCheckedChange={onToggleInclude} />
-              </label>
             </div>
 
             <ul className="flex-1 divide-y divide-border/40 overflow-y-auto">

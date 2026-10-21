@@ -93,7 +93,6 @@ function TodayPage() {
 function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
-  const [includeMeetings, setIncludeMeetings] = useState(true);
   const tasksApi = useTasks(userId, { fastInitialDay: today });
   const assigneeProfiles = useProfiles(tasksApi.tasks.flatMap((t) => [t.assignee_id, t.user_id]));
   const assigneeName = (id: string | null | undefined): string | null => {
@@ -226,10 +225,10 @@ function TodayInner({ userId }: { userId: string }) {
   const upcomingMeetingsMinutes = dayMeetings
     .filter((m) => new Date(m.ends_at).getTime() > nowMs)
     .reduce((s, m) => s + meetingDurationMinutes(m), 0);
-  const totalMinutes = tasksMinutes + (includeMeetings ? meetingsMinutes : 0);
-  const remainingMinutes =
-    dayTasks.filter((t) => !t.completed).reduce((s, t) => s + t.duration_minutes, 0) +
-    (includeMeetings ? upcomingMeetingsMinutes : 0);
+  const remainingTasksMinutes = dayTasks
+    .filter((t) => !t.completed)
+    .reduce((s, t) => s + t.duration_minutes, 0);
+  const endedMeetingsCount = dayMeetings.filter((m) => new Date(m.ends_at).getTime() < nowMs).length;
   const completedCount = dayTasks.filter((t) => t.completed).length;
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const matchesQuery = (t: Task) => {
@@ -635,20 +634,33 @@ function TodayInner({ userId }: { userId: string }) {
         </div>
       </div>
 
-      <MeetingsRail
-        meetings={dayMeetings}
-        totalMinutes={meetingsMinutes}
-        includeMeetings={includeMeetings}
-        onToggleInclude={setIncludeMeetings}
-      />
+      <MeetingsRail meetings={dayMeetings} totalMinutes={meetingsMinutes} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard icon={<Clock className="h-4 w-4" />} label="Total programado" value={formatMinutes(totalMinutes)} />
-        <StatCard icon={<Clock className="h-4 w-4" />} label="Restante" value={formatMinutes(remainingMinutes)} accent />
+        <StatCard
+          icon={<Clock className="h-4 w-4" />}
+          label="Total programado"
+          halves={[
+            { label: "Total", value: formatMinutes(tasksMinutes + meetingsMinutes) },
+            { label: "Só tarefas", value: formatMinutes(tasksMinutes) },
+          ]}
+        />
+        <StatCard
+          icon={<Clock className="h-4 w-4" />}
+          label="Restante"
+          accent
+          halves={[
+            { label: "Total", value: formatMinutes(remainingTasksMinutes + upcomingMeetingsMinutes) },
+            { label: "Só tarefas", value: formatMinutes(remainingTasksMinutes) },
+          ]}
+        />
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4" />}
           label="Concluídas"
-          value={`${completedCount} / ${dayTasks.length}`}
+          halves={[
+            { label: "Tarefas", value: `${completedCount} / ${dayTasks.length}` },
+            { label: "Reuniões", value: `${endedMeetingsCount} / ${dayMeetings.length}` },
+          ]}
         />
       </div>
 
@@ -1049,12 +1061,12 @@ function TodayInner({ userId }: { userId: string }) {
 function StatCard({
   icon,
   label,
-  value,
+  halves,
   accent,
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  halves: [{ label: string; value: string }, { label: string; value: string }];
   accent?: boolean;
 }) {
   return (
@@ -1066,7 +1078,14 @@ function StatCard({
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
         {icon} {label}
       </div>
-      <div className={`mt-1 font-display text-2xl font-semibold ${accent ? "text-primary" : ""}`}>{value}</div>
+      <div className="mt-1 grid grid-cols-2 divide-x divide-border/50">
+        {halves.map((h, i) => (
+          <div key={h.label} className={i === 0 ? "pr-3" : "pl-3"}>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground/80">{h.label}</div>
+            <div className={`font-display text-2xl font-semibold ${accent ? "text-primary" : ""}`}>{h.value}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
