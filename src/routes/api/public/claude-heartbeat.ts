@@ -8,6 +8,7 @@ const Body = z.object({
 });
 
 const RATE_MS = 10_000;
+const AUTO_PAUSE_IDLE_MS = 15 * 60_000;
 
 const notFound = () => Response.json({ ok: false }, { status: 404 });
 
@@ -55,12 +56,21 @@ export const Route = createFileRoute("/api/public/claude-heartbeat")({
           return Response.json({ ok: true, status: task.status });
         }
 
+        if (task.status !== "in_progress") {
+          // Só reabre tarefas pausadas pelo cron (auto_pause_idle_claude_tasks), nunca pausas manuais.
+          const autoPaused =
+            task.status === "todo" &&
+            !!task.claude_started_at &&
+            !!task.claude_last_activity_at &&
+            Date.now() - last >= AUTO_PAUSE_IDLE_MS;
+          if (!autoPaused) {
+            return Response.json({ ok: true, status: task.status, ignored: true });
+          }
+        }
+
         const now = new Date().toISOString();
         const patch: Record<string, unknown> = { claude_last_activity_at: now };
-        if (task.status !== "in_progress") {
-          patch.status = "in_progress";
-          if (!task.claude_started_at) patch.claude_started_at = now;
-        }
+        if (task.status !== "in_progress") patch.status = "in_progress";
 
         // Escreve como o dono do token: current_actor_id() lê x-foco-actor-id → sem notificação.
         const { db } = await import("@/lib/mcp/supabase");
