@@ -152,7 +152,7 @@ export async function deliverPendingNotifications(): Promise<
     const { error: finishError } = await supabaseAdmin.rpc("finish_notification_delivery", {
       _id: n.id, _claim: n.delivery_claim_id ?? "", _failed: failed,
       _teams_ok: teamsOk, _digest: digest,
-      _error: errors.length ? errors.join(" | ").slice(0, 500) : null,
+      _error: errors.length ? errors.join(" | ").slice(0, 500) : "",
     });
     if (finishError) throw new Error(finishError.message);
 
