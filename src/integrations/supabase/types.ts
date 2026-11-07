@@ -1796,6 +1796,7 @@ export type Database = {
           id: string
           planned_date: string
           postpone_count: number
+          priority: number
           project_id: string
           role_id: string
           scheduled_date: string
