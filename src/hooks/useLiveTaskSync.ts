@@ -145,7 +145,7 @@ export function useLiveTaskSync(userId: string | undefined) {
       next.on("postgres_changes", { event: "INSERT", schema: "public", table: "task_comments" }, payload => {
         const taskId = (payload.new as { task_id?: string })?.task_id;
         if (!isLoaded(taskId)) return;
-        invalidate([["task-comments", taskId], ["my-assigned-tasks"]]);
+        invalidate([["task-comments", taskId]]);
         window.dispatchEvent(new CustomEvent(TASK_COMMENTS_CHANGED_EVENT, { detail: { taskId } }));
       });
       next.on("postgres_changes", { event: "*", schema: "public", table: "task_dependencies" }, () => {

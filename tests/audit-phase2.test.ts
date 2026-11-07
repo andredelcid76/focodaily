@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { todayISO, dateInTimezone, setBrowserTimezone } from "../src/lib/date";
 import { literalSearchPattern } from "../src/lib/search-filter";
-import { allowPipedriveSweep, probePipedriveActivities } from "../src/lib/pipedrive-sync-policy";
+import { allowPipedriveSweep, pipedriveMissingMarks, probePipedriveActivities } from "../src/lib/pipedrive-sync-policy";
 import { historyDays } from "../src/lib/analysis-history";
-import { applyTaskChange, replayTaskChanges, taskSubscriptionFilters, taskQueryKeys, rememberOptimisticTask, matchesOptimisticTask } from "../src/lib/task-live-state";
+import { applyTaskChange, applyProjectSnapshot, changesTaskScope, isTaskIdLoaded, replayTaskChanges, scopeTaskChange, setLoadedTaskIds, taskSubscriptionFilters, taskQueryKeys, rememberOptimisticTask, matchesOptimisticTask } from "../src/lib/task-live-state";
 import { dependenciesBySuccessor } from "../src/lib/dependency-status";
 import type { Task } from "../src/hooks/useTasks";
 
@@ -75,4 +75,47 @@ test("invalidation targets old and new projects without global cache clearing", 
 test("dependency select builds indexed successors once", () => {
   const rows = [{ successor_id: "a", lag_days: 1, predecessor: null }, { successor_id: "b", lag_days: 0, predecessor: null }, { successor_id: "a", lag_days: 2, predecessor: null }];
   expect(dependenciesBySuccessor(rows).get("a")).toEqual([rows[0], rows[2]]);
+});
+test("deactivated Pipedrive activities are flagged like 404s, never deleted", () => {
+  expect(pipedriveMissingMarks({ missing: ["a"], inactive: ["b"] })).toEqual([
+    { id: "a", patch: { pipedrive_missing: true, pipedrive_missing_reason: "Pipedrive activity lookup returned HTTP 404; task preserved." } },
+    { id: "b", patch: { pipedrive_missing: true, pipedrive_missing_reason: "atividade desativada no Pipedrive" } },
+  ]);
+});
+test("up to 20 projects keep one filter each; more use grouped in-lists of up to 100", () => {
+  const twenty = Array.from({ length: 20 }, (_, i) => `p${String(i).padStart(3, "0")}`);
+  expect(taskSubscriptionFilters("me", twenty)).toHaveLength(22);
+  const many = Array.from({ length: 150 }, (_, i) => `p${String(i).padStart(3, "0")}`);
+  const filters = taskSubscriptionFilters("me", many);
+  expect(filters).toHaveLength(4);
+  expect(filters[2]).toBe(`project_id=in.(${many.slice(0, 100).join(",")})`);
+  expect(filters[3]).toBe(`project_id=in.(${many.slice(100).join(",")})`);
+});
+test("an update reassigning a task away from me outside my projects becomes a removal", () => {
+  const projects = new Set(["shared"]);
+  const away = scopeTaskChange({ eventType: "UPDATE", new: { id: "one", user_id: "alice", assignee_id: "bob", project_id: "other" }, old: { id: "one" } }, "me", projects);
+  expect(away).toEqual({ eventType: "DELETE", new: {}, old: { id: "one" } });
+  const stillShared = scopeTaskChange({ eventType: "UPDATE", new: { id: "one", user_id: "alice", assignee_id: "bob", project_id: "shared" }, old: { id: "one" } }, "me", projects);
+  expect(stillShared.eventType).toBe("UPDATE");
+});
+test("my own reassignment or project move refreshes list queries instead of patching them", () => {
+  expect(changesTaskScope({ eventType: "UPDATE", new: { ...task, assignee_id: "bob" }, old: { ...task, assignee_id: "me" } })).toBe(true);
+  expect(changesTaskScope({ eventType: "UPDATE", new: { ...task, title: "x" }, old: task })).toBe(false);
+});
+test("project snapshot adds newly visible tasks and drops ones no longer readable", () => {
+  const mine = { ...task, id: "mine", project_id: "p" } as Task;
+  const gone = { ...task, id: "gone", user_id: "alice", project_id: "p" } as Task;
+  const other = { ...task, id: "other", project_id: "q" } as Task;
+  const added = { ...task, id: "added", user_id: "alice", project_id: "p" } as Task;
+  const result = applyProjectSnapshot([mine, gone, other], { eventType: "PROJECT_SNAPSHOT", projectId: "p", rows: [mine, added] });
+  expect(result.map(t => t.id).sort()).toEqual(["added", "mine", "other"]);
+});
+test("deletes and comments are only acted on for tasks a screen has loaded", () => {
+  const owner = Symbol("screen");
+  setLoadedTaskIds(owner, new Set(["one"]));
+  expect(isTaskIdLoaded("one")).toBe(true);
+  expect(isTaskIdLoaded("unknown")).toBe(false);
+  expect(applyTaskChange([task], { eventType: "DELETE", new: {}, old: { id: "unknown" } })).toEqual([task]);
+  setLoadedTaskIds(owner, null);
+  expect(isTaskIdLoaded("one")).toBe(false);
 });
