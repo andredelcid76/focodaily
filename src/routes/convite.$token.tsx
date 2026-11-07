@@ -10,6 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { getInvitePreview, acceptProjectInvite } from "@/lib/team.functions";
 
 export const Route = createFileRoute("/convite/$token")({
+  head: () => ({ meta: [
+    { title: "Convite de projeto | Foco" },
+    { name: "description", content: "Convite de projeto no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Convite de projeto | Foco" },
+    { property: "og:description", content: "Convite de projeto no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: ConvitePage,
 });
 

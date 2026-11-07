@@ -44,6 +44,14 @@ import { todayISO, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/projetos/$id")({
+  head: () => ({ meta: [
+    { title: "Detalhes do projeto | Foco" },
+    { name: "description", content: "Detalhes do projeto no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Detalhes do projeto | Foco" },
+    { property: "og:description", content: "Detalhes do projeto no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: ProjectDetailPage,
 });
 

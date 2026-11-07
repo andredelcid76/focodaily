@@ -29,6 +29,14 @@ import { todayISO, addDays, startOfWeek, weekDays, formatShort, formatMinutes } 
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/semana")({
+  head: () => ({ meta: [
+    { title: "Semana | Foco" },
+    { name: "description", content: "Semana no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Semana | Foco" },
+    { property: "og:description", content: "Semana no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: WeekPage,
 });
 

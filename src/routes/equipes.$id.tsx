@@ -39,6 +39,14 @@ import {
 import { PROJECT_COLORS } from "@/hooks/useProjects";
 
 export const Route = createFileRoute("/equipes/$id")({
+  head: () => ({ meta: [
+    { title: "Detalhes da equipe | Foco" },
+    { name: "description", content: "Detalhes da equipe no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Detalhes da equipe | Foco" },
+    { property: "og:description", content: "Detalhes da equipe no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: TeamDetailPage,
 });
 

@@ -30,6 +30,14 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/analise")({
+  head: () => ({ meta: [
+    { title: "Análise | Foco" },
+    { name: "description", content: "Análise no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Análise | Foco" },
+    { property: "og:description", content: "Análise no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AnalisePage,
 });
 
