@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getCookie } from "@tanstack/react-start/server";
+import { OUTLOOK_STATE_COOKIE, outlookStateCookieHeader, verifyState } from "@/lib/oauth-state";
 
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All";
@@ -36,30 +38,27 @@ export const Route = createFileRoute("/api/public/outlook/callback")({
           return redirectWithMsg("Callback inválido");
         }
 
-        // Validate the state token (CSRF protection): look up + delete in one step
+        // S8: the state must belong to this browser (httpOnly nonce cookie)...
+        if (!(await verifyState(state, getCookie(OUTLOOK_STATE_COOKIE)))) {
+          return redirectWithMsg("Sessão de conexão inválida ou expirada. Tente novamente.");
+        }
+        // ...and is consumed atomically (single use, unexpired) before exchanging the code.
         const { data: pending, error: pendingErr } = await supabaseAdmin
           .from("oauth_pending_states")
-          .select("user_id, expires_at")
+          .delete()
           .eq("state_token", state)
           .eq("provider", "outlook")
+          .gt("expires_at", new Date().toISOString())
+          .select("user_id")
           .maybeSingle();
-
         if (pendingErr) {
-          console.error("[outlook callback] state lookup failed", pendingErr);
+          console.error("[outlook callback] state consumption failed", pendingErr);
           return redirectWithMsg("Falha ao validar a conexão. Tente novamente.");
         }
         if (!pending) {
-          console.warn("[outlook callback] unknown state token");
           return redirectWithMsg("Sessão de conexão inválida ou expirada. Tente novamente.");
         }
-        if (new Date(pending.expires_at).getTime() < Date.now()) {
-          await supabaseAdmin.from("oauth_pending_states").delete().eq("state_token", state);
-          return redirectWithMsg("Sessão de conexão expirada. Tente novamente.");
-        }
-
         const userId = pending.user_id as string;
-        // Consume the state token immediately to prevent replay
-        await supabaseAdmin.from("oauth_pending_states").delete().eq("state_token", state);
 
         const clientId = process.env.MS_CLIENT_ID;
         const clientSecret = process.env.MS_CLIENT_SECRET;

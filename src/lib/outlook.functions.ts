@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getValidOutlookAccessToken } from "@/lib/outlook-token";
+import { setCookie } from "@tanstack/react-start/server";
+import { buildState, OUTLOOK_STATE_COOKIE, OUTLOOK_STATE_COOKIE_OPTIONS, OUTLOOK_STATE_TTL } from "@/lib/oauth-state";
 
 
 const TENANT = "common"; // multi-tenant + personal accounts
@@ -42,15 +44,18 @@ export const getOutlookAuthUrl = createServerFn({ method: "POST" })
 
     // Create a state token in oauth_pending_states for CSRF protection.
     // The callback will look it up to attribute the connection to this user.
-    const state = crypto.randomUUID();
+    const { state, nonce } = await buildState();
     const { error: stateErr } = await supabaseAdmin
       .from("oauth_pending_states")
       .insert({
         state_token: state,
         user_id: context.userId,
         provider: "outlook",
+        expires_at: new Date(Date.now() + OUTLOOK_STATE_TTL * 1000).toISOString(),
       });
     if (stateErr) throw new Error(`Failed to create state token: ${stateErr.message}`);
+    // S8: bind the state to this browser (checked and cleared by the callback).
+    setCookie(OUTLOOK_STATE_COOKIE, nonce, OUTLOOK_STATE_COOKIE_OPTIONS);
 
     const params = new URLSearchParams({
       client_id: clientId,

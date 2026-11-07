@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { OutlookReauthError } from "@/lib/outlook-token";
 import { syncOutlookCalendar } from "@/lib/outlook-calendar-sync";
+import { buildState, outlookStateCookieHeader, OUTLOOK_STATE_TTL } from "@/lib/oauth-state";
 
 const TENANT = "common";
 const SCOPES = "offline_access openid profile User.Read User.ReadBasic.All Mail.ReadWrite Calendars.ReadWrite Tasks.ReadWrite Group.Read.All Chat.Create ChatMessage.Send";
@@ -73,13 +74,14 @@ export const Route = createFileRoute("/api/public/outlook")({
             }
 
             // Generate cryptographically random state token (CSRF protection)
-            const stateToken = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
+            const { state: stateToken, nonce } = await buildState();
             const { error: stateErr } = await supabaseAdmin
               .from("oauth_pending_states")
               .insert({
                 state_token: stateToken,
                 user_id: userId,
                 provider: "outlook",
+                expires_at: new Date(Date.now() + OUTLOOK_STATE_TTL * 1000).toISOString(),
               });
             if (stateErr) {
               console.error("[outlook connect] failed to store state", stateErr);
@@ -98,9 +100,12 @@ export const Route = createFileRoute("/api/public/outlook")({
               prompt: "select_account",
             });
 
-            return json({
+            const response = json({
               url: `https://login.microsoftonline.com/${TENANT}/oauth2/v2.0/authorize?${params.toString()}`,
             });
+            // S8: bind the state to this browser (checked and cleared by the callback).
+            response.headers.append("Set-Cookie", outlookStateCookieHeader(nonce));
+            return response;
           }
 
           if (payload.action === "disconnect") {
