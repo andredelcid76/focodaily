@@ -113,6 +113,13 @@
       "when": 1792105346938,
       "tag": "0015_claude_heartbeat",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794028473681,
+      "tag": "0016_security_phase1_ownership_invites_signup",
+      "breakpoints": true
     }
   ]
 }
