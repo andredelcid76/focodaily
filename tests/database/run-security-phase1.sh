@@ -36,4 +36,6 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0017_s
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0018_security_phase1_delivery_finalize.sql"
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0019_security_phase1_profile_column_permissions.sql"
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0020_security_phase1_invitation_upsert_accounting.sql"
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0021_security_review_delivery_retries.sql"
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/tests/database/security-phase1.sql"
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/tests/database/security-review-delivery.sql"
