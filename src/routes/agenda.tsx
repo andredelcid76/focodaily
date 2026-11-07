@@ -29,7 +29,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { addDays, formatHuman, formatMinutes, todayISO, toISODate } from "@/lib/date";
+import { addDays, dateInTimezone, formatHuman, formatMinutes, timeInTimezone, todayISO, toISODate, zonedDateTime } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/agenda")({
