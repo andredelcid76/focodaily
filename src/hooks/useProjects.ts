@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { notifyProjectTeamAccess } from "@/lib/team.functions";
+import { PROJECT_ACCESS_CHANGED_EVENT } from "@/lib/task-live-state";
 
 export type Project = Tables<"projects">;
 export type ProjectStatus = Project["status"];
@@ -62,8 +63,12 @@ export function useProjects(userId: string | undefined) {
         () => refresh()
       )
       .subscribe();
+    // Being added to / removed from a shared project changes which projects are visible.
+    const onAccess = () => void refresh();
+    window.addEventListener(PROJECT_ACCESS_CHANGED_EVENT, onAccess);
     return () => {
       supabase.removeChannel(ch);
+      window.removeEventListener(PROJECT_ACCESS_CHANGED_EVENT, onAccess);
     };
   }, [userId, refresh]);
 
