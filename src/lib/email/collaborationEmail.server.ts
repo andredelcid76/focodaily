@@ -57,7 +57,9 @@ export async function enqueueCollaborationEmail(input: {
     await logSend({ label: input.label, to: input.to, status: "sent" });
     return { ok: true };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "error";
+    const status = typeof error === "object" && error !== null && "status" in error ? Number(error.status) : null;
+    const message = error instanceof Error ? error.message : "error";
+    const msg = status && Number.isFinite(status) ? `http_${status}:${message}` : message;
     console.error("Failed to send collaboration email", { label: input.label, error: msg });
     await logSend({ label: input.label, to: input.to, status: "failed", errorMessage: msg });
     return { ok: false, error: msg };
