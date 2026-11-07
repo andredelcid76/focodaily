@@ -216,7 +216,7 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     queryKey: ["teams-overview", user?.id],
     enabled: open && !effectiveProjectId && !!user?.id,
     queryFn: () => fetchPeople(),
-    staleTime: 0,
+    staleTime: 60_000,
   });
   const contactMembers = (peopleOverview?.people ?? []).map(person => ({ ...person, role: "contact" }));
   const fetchAllPeople = useServerFn(listAllPeople);

@@ -1,3 +1,5 @@
+import { addDays } from "@/lib/date";
+import { userToday } from "@/lib/user-timezone";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -480,7 +482,7 @@ async function handleChat({
     .order("created_at", { ascending: true })
     .limit(30);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await userToday(supabase, userId);
 
   // Build OpenAI-compatible message list. Past tool runs are collapsed to system notes
   // (we don't have stored tool_call_ids), but the CURRENT turn uses proper tool_calls/tool roles.
@@ -606,12 +608,8 @@ async function handleBriefing({
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
 
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
-
-  const end = new Date(today);
-  end.setDate(end.getDate() + (scope === "week" ? 7 : 0));
-  const endStr = end.toISOString().slice(0, 10);
+  const todayStr = await userToday(supabase, userId);
+  const endStr = addDays(todayStr, scope === "week" ? 7 : 0);
 
   // Coletar tarefas e reuniões
   const { data: tasks } = await supabase

@@ -501,39 +501,6 @@ function InlineQuickActions({
           </div>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={pickerMode !== null} onOpenChange={(o: boolean) => !o && closePicker()}>
-        <DialogContent className="w-auto max-w-[20rem] p-0">
-          <DialogHeader className="border-b border-border/60 p-3">
-            <DialogTitle className="text-sm">
-              {pickerMode === "postpone" && "Mover para…"}
-              {pickerMode === "duplicate" && "Duplicar em…"}
-              {pickerMode === "followup" && "Follow-up em…"}
-            </DialogTitle>
-          </DialogHeader>
-          <Calendar
-            mode="single"
-            selected={pickerDate}
-            onSelect={(d) => d && setPickerDate(d)}
-            initialFocus
-            className="p-3 pointer-events-auto"
-          />
-          <div className="flex justify-end gap-2 border-t border-border/60 p-2">
-            <button
-              onClick={closePicker}
-              className="rounded-md px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent/40"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={confirmPicker}
-              className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
-            >
-              Confirmar
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

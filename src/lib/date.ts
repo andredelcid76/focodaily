@@ -5,13 +5,26 @@ export const toISODate = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-export const todayISO = () => toISODate(new Date());
+export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+let browserTimezone = DEFAULT_TIMEZONE;
+export function setBrowserTimezone(timezone: string | null | undefined) {
+  browserTimezone = validTimezone(timezone);
+}
+export function validTimezone(timezone: string | null | undefined): string {
+  try { new Intl.DateTimeFormat("en", { timeZone: timezone || DEFAULT_TIMEZONE }); return timezone || DEFAULT_TIMEZONE; }
+  catch { return DEFAULT_TIMEZONE; }
+}
+export function dateInTimezone(date: Date, timezone: string | null = browserTimezone): string {
+  const parts = new Intl.DateTimeFormat("en", { timeZone: validTimezone(timezone), year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const part = (type: string) => parts.find(p => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+export const todayISO = (timezone = browserTimezone, now = new Date()) => dateInTimezone(now, timezone);
 
 export const addDays = (iso: string, n: number) => {
   const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() + n);
-  return toISODate(dt);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
 };
 
 export const startOfWeek = (iso: string) => {

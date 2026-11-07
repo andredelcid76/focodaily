@@ -1,5 +1,7 @@
+import { applyTaskChange, replayTaskChanges, rememberOptimisticTask, forgetOptimisticTask, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, type TaskChange } from "@/lib/task-live-state";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { confirmDependencyMove } from "@/lib/dependency-check";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { todayISO, addDays } from "@/lib/date";
@@ -85,6 +87,8 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const fastInitialDay = options?.fastInitialDay;
+  const changesDuringRead = useRef<TaskChange[]>([]);
+  const readSequence = useRef(0);
 
   // Mantém a memória sempre igual ao que está na tela (edições e tempo real)
   useEffect(() => {
@@ -93,6 +97,8 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
   const refresh = useCallback(async () => {
     if (!userId) return;
+    const sequence = ++readSequence.current;
+    changesDuringRead.current = [];
     // PostgREST caps each response at 1000 rows — page through everything,
     // otherwise later-dated tasks get silently cut off.
     const PAGE = 1000;
@@ -110,27 +116,34 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       all.push(...(data as Task[]));
       if (data.length < PAGE) break;
     }
-    if (!failed) {
-      tasksCache.set(userId, all);
-      setTasks(all);
+    if (!failed && sequence === readSequence.current) {
+      const reconciled = replayTaskChanges(all, changesDuringRead.current);
+      tasksCache.set(userId, reconciled);
+      setTasks(reconciled);
+      changesDuringRead.current = [];
     }
     setLoading(false);
   }, [userId]);
 
   const refreshInitialDay = useCallback(async () => {
     if (!userId || !fastInitialDay) return false;
-    const dayStart = `${fastInitialDay}T00:00:00.000Z`;
-    const nextDayStart = `${addDays(fastInitialDay, 1)}T00:00:00.000Z`;
-    const { data, error } = await supabase
+    // Wide UTC bounds cover the user's local calendar day, including DST offsets.
+    const dayStart = `${addDays(fastInitialDay, -1)}T00:00:00.000Z`;
+    const nextDayStart = `${addDays(fastInitialDay, 2)}T00:00:00.000Z`;
+    const sequence = ++readSequence.current;
+    changesDuringRead.current = [];
+    let data: Task[];
+    try { data = await fetchAllRows<Task>(() => supabase
       .from("tasks")
       .select("*")
       .or(
         `scheduled_date.eq.${fastInitialDay},and(scheduled_date.lt.${fastInitialDay},completed.eq.false),and(scheduled_date.gt.${fastInitialDay},completed_at.gte.${dayStart},completed_at.lt.${nextDayStart})`,
       )
       .order("scheduled_date", { ascending: true })
-      .order("position", { ascending: true });
-    if (error || !data) return false;
-    setTasks(data);
+      .order("position", { ascending: true }).order("id")); }
+    catch { return false; }
+    if (sequence !== readSequence.current) return false;
+    setTasks(replayTaskChanges(data, changesDuringRead.current));
     setLoading(false);
     return true;
   }, [fastInitialDay, userId]);
@@ -340,37 +353,20 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       await refresh();
     })();
 
-    const channel = supabase
-      .channel(`tasks-rt-${userId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${userId}` },
-        (payload) => {
-          setTasks((prev) => {
-            if (payload.eventType === "INSERT") {
-              const row = payload.new as Task;
-              if (prev.some((t) => t.id === row.id)) return prev;
-              return [...prev, row];
-            }
-            if (payload.eventType === "UPDATE") {
-              const row = payload.new as Task;
-              return prev.map((t) => (t.id === row.id ? row : t));
-            }
-            if (payload.eventType === "DELETE") {
-              const row = payload.old as Task;
-              return prev.filter((t) => t.id !== row.id);
-            }
-            return prev;
-          });
-        }
-      )
-      .subscribe();
-    // Mudanças de outras pessoas/sistema (tarefas delegadas, projetos compartilhados).
-    const onExternal = () => void refresh();
-    window.addEventListener("foco:tasks-changed", onExternal);
+    const onExternal = (event: Event) => {
+      const change = (event as CustomEvent<TaskChange>).detail;
+      if (change?.eventType) {
+        changesDuringRead.current.push(change);
+        if (changesDuringRead.current.length > 1000) changesDuringRead.current.shift();
+        setTasks(prev => applyTaskChange(prev, change));
+      }
+    };
+    const onRecover = () => void refresh();
+    window.addEventListener(TASKS_CHANGED_EVENT, onExternal);
+    window.addEventListener(TASKS_RESYNC_EVENT, onRecover);
     return () => {
-      window.removeEventListener("foco:tasks-changed", onExternal);
-      supabase.removeChannel(channel);
+      window.removeEventListener(TASKS_CHANGED_EVENT, onExternal);
+      window.removeEventListener(TASKS_RESYNC_EVENT, onRecover);
     };
   }, [userId, fastInitialDay, refresh, refreshInitialDay, ensureRecurring]);
 
@@ -402,11 +398,16 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   };
 
   const updateTask = async (id: string, patch: Partial<Task>) => {
+    rememberOptimisticTask(id, patch);
     // Optimistic update
     const target = tasks.find((t) => t.id === id);
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-    if (error) throw error;
+    const { data: saved, error } = await supabase.from("tasks").update(patch).eq("id", id).select().single();
+    if (error) { forgetOptimisticTask(id); if (target) setTasks(prev => prev.map(t => t.id === id ? target : t)); throw error; }
+    if (saved) {
+      setTasks(prev => applyTaskChange(prev, { eventType: "UPDATE", new: saved, old: target ?? {} }));
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail: { eventType: "UPDATE", new: saved, old: target ?? {} } }));
+    }
     // Considera o responsável DEPOIS do patch: uma delegação feita agora também avisa.
     const nextAssignee =
       patch.assignee_id !== undefined ? patch.assignee_id : target?.assignee_id ?? null;
@@ -881,13 +882,13 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   // Overdue = scheduled_date < today AND not completed
   const todayStr = todayISO();
   // Backlog (no date) and blocked tasks never count as overdue.
-  const overdueTasks = tasks.filter(
+  const overdueTasks = useMemo(() => tasks.filter(
     (t) => !t.completed && !!t.scheduled_date && t.scheduled_date < todayStr && t.status !== "blocked",
-  );
-  const backlogTasks = tasks.filter((t) => !t.scheduled_date && !t.completed);
-  const todayTasks = tasks.filter((t) => t.scheduled_date === todayStr);
+  ), [tasks, todayStr]);
+  const backlogTasks = useMemo(() => tasks.filter((t) => !t.scheduled_date && !t.completed), [tasks]);
+  const todayTasks = useMemo(() => tasks.filter((t) => t.scheduled_date === todayStr), [tasks, todayStr]);
   const tomorrowStr = addDays(todayStr, 1);
-  const tomorrowTasks = tasks.filter((t) => t.scheduled_date === tomorrowStr);
+  const tomorrowTasks = useMemo(() => tasks.filter((t) => t.scheduled_date === tomorrowStr), [tasks, tomorrowStr]);
 
   const tasksByDay = (date: string) => tasks.filter((t) => t.scheduled_date === date);
 
@@ -899,7 +900,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     return min - 1;
   };
 
-  return {
+  const currentApi = {
     tasks,
     loading,
     overdueTasks,
@@ -926,4 +927,28 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     createFollowUp,
     refresh,
   };
+  const apiRef = useRef(currentApi);
+  apiRef.current = currentApi;
+  const actions = useMemo(() => ({
+    tasksByDay: (...args: Parameters<typeof tasksByDay>) => apiRef.current.tasksByDay(...args),
+    topPositionForDay: (...args: Parameters<typeof topPositionForDay>) => apiRef.current.topPositionForDay(...args),
+    createTask: (...args: Parameters<typeof createTask>) => apiRef.current.createTask(...args),
+    updateTask: (...args: Parameters<typeof updateTask>) => apiRef.current.updateTask(...args),
+    deleteTask: (...args: Parameters<typeof deleteTask>) => apiRef.current.deleteTask(...args),
+    updateTaskWithScope: (...args: Parameters<typeof updateTaskWithScope>) => apiRef.current.updateTaskWithScope(...args),
+    deleteTaskWithScope: (...args: Parameters<typeof deleteTaskWithScope>) => apiRef.current.deleteTaskWithScope(...args),
+    toggleComplete: (...args: Parameters<typeof toggleComplete>) => apiRef.current.toggleComplete(...args),
+    setStatus: (...args: Parameters<typeof setStatus>) => apiRef.current.setStatus(...args),
+    reorderInDay: (...args: Parameters<typeof reorderInDay>) => apiRef.current.reorderInDay(...args),
+    moveTaskToDay: (...args: Parameters<typeof moveTaskToDay>) => apiRef.current.moveTaskToDay(...args),
+    bulkMoveToDay: (...args: Parameters<typeof bulkMoveToDay>) => apiRef.current.bulkMoveToDay(...args),
+    bulkDelete: (...args: Parameters<typeof bulkDelete>) => apiRef.current.bulkDelete(...args),
+    bulkAssignProject: (...args: Parameters<typeof bulkAssignProject>) => apiRef.current.bulkAssignProject(...args),
+    bulkAssignRole: (...args: Parameters<typeof bulkAssignRole>) => apiRef.current.bulkAssignRole(...args),
+    addTimeSpent: (...args: Parameters<typeof addTimeSpent>) => apiRef.current.addTimeSpent(...args),
+    duplicateTask: (...args: Parameters<typeof duplicateTask>) => apiRef.current.duplicateTask(...args),
+    createFollowUp: (...args: Parameters<typeof createFollowUp>) => apiRef.current.createFollowUp(...args),
+    refresh: (...args: Parameters<typeof refresh>) => apiRef.current.refresh(...args),
+  }), []);
+  return useMemo(() => ({ tasks, loading, overdueTasks, backlogTasks, todayTasks, tomorrowTasks, ...actions }), [tasks, loading, overdueTasks, backlogTasks, todayTasks, tomorrowTasks, actions]);
 }

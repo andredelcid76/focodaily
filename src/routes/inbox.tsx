@@ -1,3 +1,4 @@
+import { todayISO } from "@/lib/date";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -83,7 +84,7 @@ function InboxPage() {
 
   const acceptMut = useMutation({
     mutationFn: async (s: InboxSuggestion) => {
-      const date = s.suggested_date ?? new Date().toISOString().slice(0, 10);
+      const date = s.suggested_date ?? todayISO();
       return acceptSuggestion({
         id: s.id,
         userId: userId!,
@@ -281,7 +282,7 @@ function InboxPage() {
         <TaskDialog
           open={!!editing}
           onOpenChange={(v) => !v && setEditing(null)}
-          defaultDate={editing.suggested_date ?? new Date().toISOString().slice(0, 10)}
+          defaultDate={editing.suggested_date ?? todayISO()}
           isSeed
           task={
             {
@@ -289,7 +290,7 @@ function InboxPage() {
               description: editing.description,
               category: editing.suggested_category,
               duration_minutes: editing.suggested_duration_minutes,
-              scheduled_date: editing.suggested_date ?? new Date().toISOString().slice(0, 10),
+              scheduled_date: editing.suggested_date ?? todayISO(),
               recurrence: "none",
               role_id: null,
               project_id: null,

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 export type MiniProfile = {
   user_id: string;
@@ -30,9 +31,7 @@ export function useProfiles(userIds: (string | null | undefined)[]) {
     },
   });
 
-  const map = new Map<string, MiniProfile>();
-  (data ?? []).forEach((p) => map.set(p.user_id, p));
-  return map;
+  return useMemo(() => new Map((data ?? []).map(p => [p.user_id, p])), [data]);
 }
 
 export function profileInitials(p?: MiniProfile | null): string {

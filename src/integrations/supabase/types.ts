@@ -1467,6 +1467,8 @@ export type Database = {
           origin_source_label: string | null
           origin_source_url: string | null
           original_date: string | null
+          pipedrive_missing: boolean
+          pipedrive_missing_reason: string | null
           planned_date: string | null
           planner_etag: string | null
           planner_task_id: string | null
@@ -1511,6 +1513,8 @@ export type Database = {
           origin_source_label?: string | null
           origin_source_url?: string | null
           original_date?: string | null
+          pipedrive_missing?: boolean
+          pipedrive_missing_reason?: string | null
           planned_date?: string | null
           planner_etag?: string | null
           planner_task_id?: string | null
@@ -1555,6 +1559,8 @@ export type Database = {
           origin_source_label?: string | null
           origin_source_url?: string | null
           original_date?: string | null
+          pipedrive_missing?: boolean
+          pipedrive_missing_reason?: string | null
           planned_date?: string | null
           planner_etag?: string | null
           planner_task_id?: string | null

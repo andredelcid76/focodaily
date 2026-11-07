@@ -2,6 +2,15 @@ import { addDays, todayISO } from '@/lib/date';
 
 export type Predecessor = { id: string; title: string; scheduled_date: string | null; completed: boolean };
 export type DependencyInfo = { successor_id: string; lag_days: number; predecessor: Predecessor | null };
+export function dependenciesBySuccessor(rows: DependencyInfo[]) {
+  const map = new Map<string, DependencyInfo[]>();
+  for (const row of rows) {
+    const list = map.get(row.successor_id) ?? [];
+    list.push(row);
+    map.set(row.successor_id, list);
+  }
+  return map;
+}
 export function dependencyStatus(date: string | null, dependencies: DependencyInfo[]) {
   const dated = dependencies.flatMap(d => d.predecessor?.scheduled_date
     ? [{ predecessor: d.predecessor, limit: addDays(d.predecessor.scheduled_date, d.lag_days) }] : []);

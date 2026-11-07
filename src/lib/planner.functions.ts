@@ -1,3 +1,4 @@
+import { userToday } from "@/lib/user-timezone";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -133,7 +134,7 @@ export const importPlannerTasks = createServerFn({ method: "POST" })
     const tasksRes = await graph(token, `/planner/plans/${project.planner_plan_id}/tasks`);
     const plannerTasks = (tasksRes.value ?? []) as any[];
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = await userToday(context.supabase, context.userId);
     let created = 0, updated = 0;
 
     for (const pt of plannerTasks) {

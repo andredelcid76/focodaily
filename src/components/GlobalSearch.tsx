@@ -25,6 +25,7 @@ import {
 import type { Tables } from "@/integrations/supabase/types";
 import { PROJECT_STATUS_LABEL } from "@/hooks/useProjects";
 import { formatHuman } from "@/lib/date";
+import { literalSearchPattern } from "@/lib/search-filter";
 
 type Task = Tables<"tasks">;
 type Project = Tables<"projects">;
@@ -47,8 +48,9 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
       return;
     }
     setLoading(true);
+    let alive = true;
     const handle = setTimeout(async () => {
-      const pattern = `%${q}%`;
+      const pattern = literalSearchPattern(q);
       const [tRes, pRes] = await Promise.all([
         supabase
           .from("tasks")
@@ -62,11 +64,12 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
           .or(`name.ilike.${pattern},description.ilike.${pattern}`)
           .limit(8),
       ]);
+      if (!alive) return;
       setTasks(tRes.data ?? []);
       setProjects(pRes.data ?? []);
       setLoading(false);
     }, 180);
-    return () => clearTimeout(handle);
+    return () => { alive = false; clearTimeout(handle); };
   }, [query, open, user]);
 
   // Reset on close
@@ -128,15 +131,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                 key={t.id}
                 value={`task-${t.id}-${t.title}`}
                 onSelect={() => {
-                  // Navigate to Today view for that date AND request that the task dialog opens
-                  const openTask = () => {
-                    window.dispatchEvent(
-                      new CustomEvent("focodaily:open-task", { detail: { taskId: t.id } })
-                    );
-                  };
-                  navigate({ to: "/", search: { date: t.scheduled_date } as any });
-                  // Give the route a tick to mount, then dispatch
-                  setTimeout(openTask, 50);
+                  window.dispatchEvent(new CustomEvent("foco:open-task", { detail: { taskId: t.id, comments: false } }));
                   close();
                 }}
               >

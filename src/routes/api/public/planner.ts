@@ -1,3 +1,4 @@
+import { userToday } from "@/lib/user-timezone";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -176,7 +177,7 @@ async function importProjectTasks(userId: string, projectId: string) {
   const token = await getAccessToken(userId);
   const tasksRes = await graph(token, `/planner/plans/${project.planner_plan_id}/tasks`);
   const plannerTasks = (tasksRes.value ?? []) as any[];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await userToday(supabaseAdmin, userId);
   let created = 0;
   let updated = 0;
 

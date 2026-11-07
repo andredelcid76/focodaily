@@ -1,3 +1,4 @@
+import { userToday } from "@/lib/user-timezone";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -40,7 +41,7 @@ export const dismissInboxSuggestion = createServerFn({ method: "POST" })
 
 const acceptSchema = z.object({
   id: z.string().uuid(),
-  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   duration_minutes: z.number().int().min(5).max(480).optional(),
   category: z.enum(["urgent", "important", "circumstantial"]).optional(),
   project_id: z.string().uuid().nullable().optional(),
@@ -61,13 +62,14 @@ export const acceptInboxSuggestion = createServerFn({ method: "POST" })
     if (sErr) throw new Error(sErr.message);
     if (!sug) throw new Error("Sugestão não encontrada");
 
+    const scheduledDate = data.scheduled_date ?? await userToday(supabase, userId);
     const insert = {
       user_id: userId,
       title: data.title ?? sug.title,
       description: sug.description ?? null,
-      scheduled_date: data.scheduled_date,
-      original_date: data.scheduled_date,
-      planned_date: data.scheduled_date,
+      scheduled_date: scheduledDate,
+      original_date: scheduledDate,
+      planned_date: scheduledDate,
       duration_minutes: data.duration_minutes ?? sug.suggested_duration_minutes ?? 30,
       category: data.category ?? sug.suggested_category ?? "important",
       project_id: data.project_id ?? null,

@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Link2Off, LockKeyhole } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { loadDependencyInfo } from '@/lib/dependency-check';
-import { dependencyStatus, dependencyDateLabel } from '@/lib/dependency-status';
+import { dependencyStatus, dependencyDateLabel, dependenciesBySuccessor } from '@/lib/dependency-status';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 export function TaskDependencyStatus({ task }: { task: { id: string; scheduled_date: string | null; completed: boolean } }) {
   const { user } = useAuth();
-  const { data = [] } = useQuery({ queryKey: ['dependency-status', user?.id], queryFn: () => loadDependencyInfo(), enabled: !!user, staleTime: 5000, refetchInterval: 15000 });
-  const status = dependencyStatus(task.scheduled_date, data.filter(d => d.successor_id === task.id));
+  const { data } = useQuery({ queryKey: ['dependency-status', user?.id], queryFn: () => loadDependencyInfo(), enabled: !!user, staleTime: 300_000, select: dependenciesBySuccessor });
+  const status = dependencyStatus(task.scheduled_date, data?.get(task.id) ?? []);
   if (!status.conflicts.length && (task.completed || !status.pending.length)) return null;
   return <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1 text-[10px]" onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
     {status.conflicts.map(c => {

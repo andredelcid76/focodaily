@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
+import { setBrowserTimezone } from "@/lib/date";
 
 type AuthCtx = {
   user: User | null;
@@ -14,17 +15,37 @@ const Ctx = createContext<AuthCtx | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timezoneUser, setTimezoneUser] = useState<string | null>(null);
+  const timezoneReady = timezoneUser === (session?.user.id ?? "anonymous");
 
   useEffect(() => {
+    let alive = true;
+    setBrowserTimezone(null);
+    const uid = session?.user.id;
+    if (!uid) { setTimezoneUser("anonymous"); return; }
+    void supabase.from("profiles").select("timezone").eq("user_id", uid).maybeSingle().then(({ data }) => {
+      if (!alive) return;
+      setBrowserTimezone(data?.timezone);
+      setTimezoneUser(uid);
+    });
+    return () => { alive = false; };
+  }, [session?.user.id]);
+
+  useEffect(() => {
+    let alive = true;
+    let sessionChanged = false;
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      sessionChanged = true;
+      if (!alive) return;
       setSession(s);
       setLoading(false);
     });
     supabase.auth.getSession().then(({ data }) => {
+      if (!alive || sessionChanged) return;
       setSession(data.session);
       setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
   return (
@@ -32,13 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user: session?.user ?? null,
         session,
-        loading,
+        loading: loading || !timezoneReady,
         signOut: async () => {
           await supabase.auth.signOut();
         },
       }}
     >
-      {children}
+      {timezoneReady ? children : null}
     </Ctx.Provider>
   );
 }

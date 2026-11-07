@@ -69,7 +69,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
+import { todayISO, dateInTimezone, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 import { taskNumbers } from "@/lib/task-numbering";
 
@@ -95,13 +95,6 @@ function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
   const tasksApi = useTasks(userId, { fastInitialDay: today });
-  const assigneeProfiles = useProfiles(tasksApi.tasks.flatMap((t) => [t.assignee_id, t.user_id]));
-  const assigneeName = (id: string | null | undefined): string | null => {
-    if (!id) return null;
-    if (id === userId) return "Eu";
-    const profile = assigneeProfiles.get(id);
-    return profile?.display_name ?? profile?.email ?? "Outro usuário";
-  };
   const depsApi = useTaskDependencies(userId);
 
   // Map taskId -> array of blocking predecessor titles (open ones only)
@@ -195,8 +188,7 @@ function TodayInner({ userId }: { userId: string }) {
 
   const isViewingToday = viewDate === today;
   const dayTasks = useMemo(() => {
-    const base = tasksApi
-      .tasksByDay(viewDate)
+    const base = tasksApi.tasks.filter(t => t.scheduled_date === viewDate)
       .slice()
       .filter((t) => !isSuspended(t) && isMine(t));
     // When viewing today, also include tasks scheduled for the future that were COMPLETED today.
@@ -205,7 +197,7 @@ function TodayInner({ userId }: { userId: string }) {
         if (!t.completed || !t.completed_at) return false;
         if ((t.scheduled_date ?? "") <= today) return false; // already in base or in past
         if (!isMine(t)) return false;
-        return t.completed_at.slice(0, 10) === today;
+        return dateInTimezone(new Date(t.completed_at)) === today;
       });
       base.push(...completedTodayFromFuture);
     }
@@ -215,7 +207,7 @@ function TodayInner({ userId }: { userId: string }) {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
       return a.position - b.position;
     });
-  }, [tasksApi, viewDate, isViewingToday, today, pausedProjectIds]);
+  }, [tasksApi.tasks, viewDate, isViewingToday, today, pausedProjectIds, userId]);
 
   const dayNumbers = useMemo(() => taskNumbers(dayTasks), [dayTasks]);
   const dayMeetings = useMemo(() => meetingsApi.meetingsByDay(viewDate), [meetingsApi, viewDate]);
@@ -307,6 +299,13 @@ function TodayInner({ userId }: { userId: string }) {
       ),
     [allOverdue, showCompleted, normalizedQuery, filters]
   );
+  const assigneeProfiles = useProfiles([...sortedVisibleDayTasks, ...visibleOverdue].flatMap((t) => [t.assignee_id, t.user_id]));
+  const assigneeName = (id: string | null | undefined): string | null => {
+    if (!id) return null;
+    if (id === userId) return "Eu";
+    const profile = assigneeProfiles.get(id);
+    return profile?.display_name ?? profile?.email ?? "Outro usuário";
+  };
   const dayIds = useMemo(() => sortedVisibleDayTasks.map((t) => t.id), [sortedVisibleDayTasks]);
   const overdueIds = useMemo(() => visibleOverdue.map((t) => t.id), [visibleOverdue]);
   const orderedSelectIds = useMemo(() => [...overdueIds, ...dayIds], [overdueIds, dayIds]);
@@ -568,7 +567,7 @@ function TodayInner({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      <ClaudeActiveStrip />
+      <ClaudeActiveStrip tasks={tasksApi.tasks} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
