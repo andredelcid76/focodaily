@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { addDays, startOfWeek, toISODate } from "@/lib/date";
+import { addDays, dateInTimezone, startOfWeek } from "@/lib/date";
 
 export type Meeting = {
   id: string;
@@ -86,7 +86,7 @@ export function useMeetings(userId: string, aroundDate?: string) {
       ends_at: string;
       is_all_day?: boolean;
     }) => {
-      const scheduled_date = toISODate(new Date(payload.starts_at));
+      const scheduled_date = dateInTimezone(new Date(payload.starts_at));
       const { error } = await supabase.from("meetings").insert({
         user_id: userId,
         title: payload.title,
@@ -107,7 +107,7 @@ export function useMeetings(userId: string, aroundDate?: string) {
   const updateMeeting = useCallback(
     async (id: string, patch: Partial<Meeting>) => {
       const next = { ...patch };
-      if (patch.starts_at) next.scheduled_date = toISODate(new Date(patch.starts_at));
+      if (patch.starts_at) next.scheduled_date = dateInTimezone(new Date(patch.starts_at));
       const { error } = await supabase.from("meetings").update(next).eq("id", id);
       if (error) throw error;
       await refresh();

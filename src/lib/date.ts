@@ -58,3 +58,28 @@ export const formatMinutes = (mins: number) => {
   if (h) return `${h}h`;
   return `${m}min`;
 };
+
+function wallClockAsUTC(date: Date, timezone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: validTimezone(timezone), hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(date);
+  const n = (type: string) => Number(parts.find(p => p.type === type)?.value ?? 0);
+  return Date.UTC(n("year"), n("month") - 1, n("day"), n("hour") % 24, n("minute"), n("second"));
+}
+
+/** "HH:MM" of an instant on the user's clock (profile timezone). */
+export function timeInTimezone(date: Date, timezone: string | null = browserTimezone): string {
+  const wall = new Date(wallClockAsUTC(date, timezone ?? DEFAULT_TIMEZONE));
+  return `${String(wall.getUTCHours()).padStart(2, "0")}:${String(wall.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+/** Instant for a calendar date + clock time in the user's timezone (not the device's). */
+export function zonedDateTime(iso: string, time: string, timezone: string | null = browserTimezone): Date {
+  const tz = timezone ?? DEFAULT_TIMEZONE;
+  const [y, m, d] = iso.split("-").map(Number);
+  const [hh = 0, mm = 0, ss = 0] = time.split(":").map(Number);
+  const guess = Date.UTC(y, m - 1, d, hh, mm, ss);
+  const first = guess - (wallClockAsUTC(new Date(guess), tz) - guess);
+  return new Date(guess - (wallClockAsUTC(new Date(first), tz) - first));
+}
