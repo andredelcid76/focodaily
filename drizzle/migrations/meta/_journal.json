@@ -141,6 +141,13 @@
       "when": 1794028730865,
       "tag": "0019_security_phase1_profile_column_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794028761821,
+      "tag": "0020_security_phase1_invitation_upsert_accounting",
+      "breakpoints": true
     }
   ]
 }
