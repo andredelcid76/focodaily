@@ -1,4 +1,8 @@
 # Auditoria de segurança — Fase 1
+- [x] Revisão: classificar falhas de entrega, recuperar reservas de 15 min e limitar a 5 tentativas.
+- [x] Revisão: alinhar MCP com permissões atuais e validar responsável no projeto destino.
+- [x] Revisão: mostrar recusa de cadastro no retorno social e corrigir cron legado de scan.
+- [x] Revisão: executar testes de entrega, permissões, login e agendamento.
 - [x] S1: proteger posse, projeto de origem e ator MCP.
 - [x] S2/S3: proteger convites, limite combinado e e-mail confirmado.
 - [x] S4/S7: exigir Bearer MCP e validar retornos internos.

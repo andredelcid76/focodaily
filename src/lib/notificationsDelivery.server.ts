@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueueCollaborationEmail } from "@/lib/email/collaborationEmail.server";
 import { sendTeamsDirectMessage } from "@/lib/teamsChat.server";
+import { isTransientDeliveryError } from "@/lib/notification-delivery-policy";
 
 const APP_URL = "https://focodaily.lovable.app";
 
@@ -78,10 +79,10 @@ export async function deliverPendingNotifications(): Promise<
   const results: DeliveryResult[] = [];
 
   for (const n of pending ?? []) {
+    let teamsOk = false;
     try {
     const errors: string[] = [];
     let emailOk = false;
-    let teamsOk = false;
     let digest = false;
     const type = (n.type as string) ?? "task_assigned";
     const p = prefsMap.get(n.user_id as string);
@@ -104,11 +105,12 @@ export async function deliverPendingNotifications(): Promise<
       skipBurst = (count ?? 0) > 0;
     }
 
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("email,display_name")
       .eq("user_id", n.user_id as string)
       .maybeSingle();
+    if (profileError) throw profileError;
 
     const recipientEmail = (profile?.email as string | null) ?? null;
     const link = absLink(n.link as string | null);
@@ -148,7 +150,7 @@ export async function deliverPendingNotifications(): Promise<
       if (!teams.ok && teams.error) errors.push(`teams:${teams.error}`);
     }
 
-    const failed = errors.some(e => !["email:grouped", "email:disabled_by_user"].includes(e));
+    const failed = errors.some(isTransientDeliveryError);
     const { error: finishError } = await supabaseAdmin.rpc("finish_notification_delivery", {
       _id: n.id, _claim: n.delivery_claim_id ?? "", _failed: failed,
       _teams_ok: teamsOk, _digest: digest,
@@ -163,9 +165,10 @@ export async function deliverPendingNotifications(): Promise<
       ...(errors.length ? { error: errors.join(" | ") } : {}),
     });
     } catch (err) {
+      const message = err instanceof Error ? err.message : typeof err === "object" && err !== null && "message" in err ? String(err.message) : "Falha ao entregar notificação";
       await supabaseAdmin.rpc("finish_notification_delivery", {
-        _id: n.id, _claim: n.delivery_claim_id ?? "", _failed: true,
-        _teams_ok: false, _digest: false, _error: "Falha ao entregar notificação",
+        _id: n.id, _claim: n.delivery_claim_id ?? "", _failed: isTransientDeliveryError(err),
+        _teams_ok: teamsOk, _digest: false, _error: message.slice(0, 500),
       });
       results.push({ id: n.id, email: false, teams: false, error: err instanceof Error ? err.message : "Falha ao entregar" });
     }

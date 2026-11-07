@@ -10,12 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 import { internalReturnPath } from "@/lib/internal-return-path";
-
-const RESTRICTED_SIGNUP = "O Foco é restrito à equipe Anpla. Peça um convite.";
-function authError(message: string) {
-  return /database error saving new user|signup.*(disabled|not allowed)|anpla|foco_signup_restricted/i.test(message)
-    ? RESTRICTED_SIGNUP : message;
-}
+import { authError, socialAuthReturnUrl } from "@/lib/auth-errors";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
@@ -45,7 +40,9 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const error = new URL(window.location.href).searchParams.get("error_description");
+    const url = new URL(window.location.href);
+    const hash = new URLSearchParams(url.hash.slice(1));
+    const error = url.searchParams.get("error_description") ?? hash.get("error_description") ?? url.searchParams.get("error") ?? hash.get("error");
     if (error) toast.error(authError(error));
   }, []);
 
@@ -101,7 +98,7 @@ function AuthPage() {
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
-                const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+                const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: socialAuthReturnUrl(window.location.origin, internalReturnPath(next, window.location.origin)) });
                 if (r.error) { toast.error(authError(r.error.message ?? "Falha no login Google")); setBusy(false); }
               }}
             >
@@ -114,7 +111,7 @@ function AuthPage() {
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
-                const r = await lovable.auth.signInWithOAuth("apple", { redirect_uri: window.location.origin });
+                const r = await lovable.auth.signInWithOAuth("apple", { redirect_uri: socialAuthReturnUrl(window.location.origin, internalReturnPath(next, window.location.origin)) });
                 if (r.error) { toast.error(authError(r.error.message ?? "Falha no login Apple")); setBusy(false); }
               }}
             >
@@ -127,7 +124,7 @@ function AuthPage() {
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
-                const r = await lovable.auth.signInWithOAuth("microsoft", { redirect_uri: window.location.origin });
+                const r = await lovable.auth.signInWithOAuth("microsoft", { redirect_uri: socialAuthReturnUrl(window.location.origin, internalReturnPath(next, window.location.origin)) });
                 if (r.error) { toast.error(authError(r.error.message ?? "Falha no login Microsoft")); setBusy(false); }
               }}
             >

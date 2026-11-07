@@ -901,22 +901,37 @@ export const updateTask = defineTool({
         .maybeSingle();
     if (curErr) throw new Error(curErr.message);
     if (!current) throw new Error("Tarefa não encontrada.");
-    if (current.user_id !== userId && current.assignee_id !== userId) {
-      await assertCanAssign(ctx.auth, userId, current.project_id, current.user_id);
+    let sourceManager = false;
+    if (current.project_id) {
+      const manager = await db(ctx.auth).rpc("is_project_manager_or_above", { _project_id: current.project_id, _user_id: userId });
+      if (manager.error) throw new Error(manager.error.message);
+      sourceManager = manager.data === true;
     }
-    if ((args.assignee_id !== undefined && args.assignee_id !== current.assignee_id)
-        || (args.project_id !== undefined && args.project_id !== current.project_id)) {
-      await assertCanAssign(ctx.auth, userId, current.project_id, current.user_id);
+    const isOwner = current.user_id === userId;
+    const isAssignee = current.assignee_id === userId;
+    if (!isOwner && !isAssignee && !sourceManager) throw new Error("Tarefa não encontrada ou sem acesso.");
+    const changingProject = args.project_id !== undefined && args.project_id !== current.project_id;
+    const changingAssignee = args.assignee_id !== undefined && args.assignee_id !== current.assignee_id;
+    if (changingProject && !isOwner && !sourceManager) {
+      throw new Error("Somente o dono atual ou gestor do projeto atual pode alterar o projeto.");
     }
-    if (args.assignee_id !== undefined) {
-      if (args.assignee_id) {
-        await assertAssigneeAllowed(ctx.auth, args.assignee_id, current.project_id, current.user_id);
+    if (changingAssignee && !isOwner && !sourceManager) {
+      const { data: project, error: projectError } = await db(ctx.auth).from("projects")
+        .select("members_can_reassign").eq("id", current.project_id ?? "").maybeSingle();
+      if (projectError) throw new Error(projectError.message);
+      if (!isAssignee || project?.members_can_reassign !== true) {
+        throw new Error("Apenas o dono ou gestores podem reatribuir, salvo quando o projeto permite ao responsável.");
       }
-      if (args.assignee_id !== undefined) patch.assignee_id = args.assignee_id;
     }
     // Mover uma tarefa para dentro de um projeto exige acesso a esse projeto
     // (service_role bypassa a RLS). Definir project_id = null é permitido.
     if (args.project_id) await assertProjectAccess(ctx.auth, args.project_id, userId);
+    const destinationProject = args.project_id !== undefined ? args.project_id : current.project_id;
+    const destinationAssignee = args.assignee_id !== undefined ? args.assignee_id : current.assignee_id;
+    if ((changingProject || args.assignee_id !== undefined) && destinationAssignee) {
+      await assertAssigneeAllowed(ctx.auth, destinationAssignee, destinationProject, current.user_id);
+    }
+    if (args.assignee_id !== undefined) patch.assignee_id = args.assignee_id;
 
     // ── Recorrência: mover INSTÂNCIA de série tem de seguir o mesmo contrato da
     // UI (`updateTaskWithScope`, escopo "this"): registrar a exceção na data
@@ -942,6 +957,7 @@ export const updateTask = defineTool({
       .from("tasks")
       .update(patch as never)
       .eq("id", args.id)
+      .or(`user_id.eq.${userId},assignee_id.eq.${userId}${sourceManager && current.project_id ? `,project_id.eq.${current.project_id}` : ""}`)
       .select()
       .single();
     if (error) throw new Error(error.message);
