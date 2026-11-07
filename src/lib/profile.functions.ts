@@ -1,3 +1,4 @@
+import { userToday } from "@/lib/user-timezone";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -73,7 +74,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
     }
 
     if (data.first_tasks?.length) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = await userToday(supabase, userId);
       const rows = data.first_tasks
         .map((t) => t.trim())
         .filter(Boolean)

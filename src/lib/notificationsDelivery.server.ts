@@ -1,3 +1,4 @@
+import { todayISO } from "@/lib/date";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueueCollaborationEmail } from "@/lib/email/collaborationEmail.server";
 import { sendTeamsDirectMessage } from "@/lib/teamsChat.server";
@@ -192,10 +193,10 @@ export async function sendDailyDigests(): Promise<{ sent: number }> {
     byUser.set(n.user_id as string, list);
   }
   let sent = 0;
-  const day = new Date().toISOString().slice(0, 10);
   for (const [uid, items] of byUser) {
     if (!items?.length) continue;
-    const { data: profile } = await supabaseAdmin.from("profiles").select("email").eq("user_id", uid).maybeSingle();
+    const { data: profile } = await supabaseAdmin.from("profiles").select("email,timezone").eq("user_id", uid).maybeSingle();
+    const day = todayISO(profile?.timezone ?? undefined);
     const ids = items.map((i) => i.id as string);
     if (profile?.email) {
       const lines = items.slice(0, 40).map((i) => `• ${i.title}: ${i.body ?? ""}`);

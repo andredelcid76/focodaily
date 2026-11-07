@@ -1,3 +1,6 @@
+import { userToday } from "@/lib/user-timezone";
+import { addDays } from "@/lib/date";
+import { allowPipedriveSweep } from "@/lib/pipedrive-sync-policy";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -317,7 +320,7 @@ async function getPipedriveCreds(userId: string): Promise<{ token: string; domai
   return null;
 }
 
-async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
+async function fetchPipedrive(userId: string, today: string): Promise<SourceItem[]> {
   const creds = await getPipedriveCreds(userId);
   if (!creds) return [];
   const { token, domain } = creds;
@@ -337,8 +340,8 @@ async function fetchPipedrive(userId: string): Promise<SourceItem[]> {
       return [];
     }
 
-    const startDate = new Date(Date.now() - 1 * 86400_000).toISOString().slice(0, 10);
-    const endDate = new Date(Date.now() + 21 * 86400_000).toISOString().slice(0, 10);
+    const startDate = addDays(today, -1);
+    const endDate = addDays(today, 21);
     const r = await fetch(
       `${base}/activities?user_id=${pdUserId}&done=0&start_date=${startDate}&end_date=${endDate}&start=0&limit=100&api_token=${token}`,
     );
@@ -447,20 +450,20 @@ function parsePdTime(s?: string): number {
   return new Date(s.replace(" ", "T") + "Z").getTime();
 }
 
-async function syncPipedriveToApp(userId: string): Promise<void> {
+async function syncPipedriveToApp(userId: string, today: string): Promise<boolean> {
   const creds = await getPipedriveCreds(userId);
-  if (!creds) return;
+  if (!creds) return true;
   const { token, domain } = creds;
   try {
     const base = `https://${domain}.pipedrive.com/api/v1`;
     const meR = await fetch(`${base}/users/me?api_token=${token}`);
-    if (!meR.ok) return;
+    if (!meR.ok) return false;
     const meJson = await meR.json();
     const pdUserId = meJson?.data?.id as number | undefined;
-    if (!pdUserId) return;
+    if (!pdUserId) return false;
 
-    const startDate = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
-    const endDate = new Date(Date.now() + 60 * 86400_000).toISOString().slice(0, 10);
+    const startDate = addDays(today, -30);
+    const endDate = addDays(today, 60);
 
     const fetchPage = async (done: 0 | 1): Promise<PdActivity[]> => {
       const r = await fetch(
@@ -488,6 +491,40 @@ async function syncPipedriveToApp(userId: string): Promise<void> {
       if (t.origin_source_url) linkedByUrl.set(t.origin_source_url as string, t);
     }
 
+    // ── Deletion sync ────────────────────────────────────────
+    // For linked tasks whose activity didn't appear in the window, probe the
+    // single-activity endpoint. Stage all results before changing any task.
+    const orphans = linkedList
+      .map((t) => {
+        const url = (t.origin_source_url as string | null) ?? "";
+        const m = /\/activity\/(\d+)\b/.exec(url);
+        return m ? { task: t, id: parseInt(m[1], 10) } : null;
+      })
+      .filter((x): x is { task: (typeof linkedList)[number]; id: number } => !!x && !seenIds.has(x.id));
+
+    const missing: string[] = [];
+    const inactive: string[] = [];
+    for (const { task, id } of orphans.slice(0, 30)) {
+      try {
+        const pr = await fetch(`${base}/activities/${id}?api_token=${token}`);
+        if (pr.status === 404) {
+          missing.push(task.id as string);
+          if (!allowPipedriveSweep(missing.length)) {
+            console.error("Pipedrive sync aborted: more than 5 activity lookups returned 404.");
+            return false;
+          }
+          continue;
+        }
+        if (!pr.ok) continue;
+        const pj = await pr.json();
+        const act = pj?.data as PdActivity | undefined;
+        if (act && act.active_flag === false) {
+          inactive.push(task.id as string);
+        }
+      } catch {
+        // ignore individual probe failures
+      }
+    }
     // ── Update / completion sync ─────────────────────────────
     for (const a of all) {
       const url = pdActivityUrl(domain, a.id);
@@ -529,36 +566,16 @@ async function syncPipedriveToApp(userId: string): Promise<void> {
       }
     }
 
-    // ── Deletion sync ────────────────────────────────────────
-    // For linked tasks whose activity didn't appear in the window, probe the
-    // single-activity endpoint. 404 or active_flag=false ⇒ deleted upstream.
-    const orphans = linkedList
-      .map((t) => {
-        const url = (t.origin_source_url as string | null) ?? "";
-        const m = /\/activity\/(\d+)\b/.exec(url);
-        return m ? { task: t, id: parseInt(m[1], 10) } : null;
-      })
-      .filter((x): x is { task: (typeof linkedList)[number]; id: number } => !!x && !seenIds.has(x.id));
 
-    for (const { task, id } of orphans.slice(0, 30)) {
-      try {
-        const pr = await fetch(`${base}/activities/${id}?api_token=${token}`);
-        if (pr.status === 404) {
-          await supabaseAdmin.from("tasks").delete().eq("id", task.id as string);
-          continue;
-        }
-        if (!pr.ok) continue;
-        const pj = await pr.json();
-        const act = pj?.data as PdActivity | undefined;
-        if (act && act.active_flag === false) {
-          await supabaseAdmin.from("tasks").delete().eq("id", task.id as string);
-        }
-      } catch {
-        // ignore individual probe failures
-      }
+    for (const id of missing) {
+      const { error } = await supabaseAdmin.from("tasks").update({ pipedrive_missing: true, pipedrive_missing_reason: "Pipedrive activity lookup returned HTTP 404; task preserved." }).eq("id", id);
+      if (error) throw error;
     }
+    for (const id of inactive) await supabaseAdmin.from("tasks").delete().eq("id", id);
+    return true;
   } catch (e) {
     console.error("pipedrive→app sync", e);
+    return false;
   }
 }
 
@@ -621,11 +638,11 @@ function isDuplicateTitle(
 async function aiExtractTasks(
   items: SourceItem[],
   existingContext: { openTasks: string[]; projects: string[] },
+  today: string,
 ): Promise<Array<{ source_index: number; suggestions: AISuggestion[] }>> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!lovableKey || items.length === 0) return [];
 
-  const today = new Date().toISOString().slice(0, 10);
   const numbered = items.map((it, i) => `### ITEM ${i} (${it.source})\n${it.text.slice(0, 2000)}`).join("\n\n");
 
   const existingBlock = [
@@ -694,7 +711,8 @@ Retorne JSON válido:
 
 export async function scanForUser(userId: string) {
   // Bidirectional sync: pull Pipedrive completions/updates/deletions into the app first
-  await syncPipedriveToApp(userId);
+  const today = await userToday(supabaseAdmin, userId);
+  if (!await syncPipedriveToApp(userId, today)) return { user_id: userId, scanned: 0, created: 0, error: "Pipedrive sync aborted; no tasks changed." };
   // Look up the user's email/name (used to attribute Fireflies action items).
   const { data: oconn } = await supabaseAdmin
     .from("outlook_connections")
@@ -708,7 +726,7 @@ export async function scanForUser(userId: string) {
   const [emails, meetings, deals] = await Promise.all([
     fetchOutlookEmails(userId),
     fetchFireflies(userId, userEmail, userName),
-    fetchPipedrive(userId),
+    fetchPipedrive(userId, today),
   ]);
   const all = [...emails, ...meetings, ...deals];
   if (all.length === 0) return { user_id: userId, scanned: 0, created: 0 };
@@ -809,7 +827,7 @@ export async function scanForUser(userId: string) {
     if (isDuplicateTitle(title, openTitleSet, openTokenSets)) continue;
     const scheduledDate = it.source_date
       ? String(it.source_date).slice(0, 10)
-      : new Date().toISOString().slice(0, 10);
+      : today;
     const { error } = await supabaseAdmin.from("tasks").insert({
       user_id: userId,
       title,
@@ -830,7 +848,7 @@ export async function scanForUser(userId: string) {
   }
 
   // AI extract (skip pipedrive — they're auto-created above)
-  const results = await aiExtractTasks(otherFresh, { openTasks: openTitles, projects: projectNames });
+  const results = await aiExtractTasks(otherFresh, { openTasks: openTitles, projects: projectNames }, today);
 
   // Persist
   let created = autoCreated;
@@ -853,7 +871,7 @@ export async function scanForUser(userId: string) {
         source_date: item.source_date,
         suggested_category: s.suggested_category ?? "important",
         suggested_duration_minutes: s.suggested_duration_minutes ?? 30,
-        suggested_date: s.suggested_date ?? new Date().toISOString().slice(0, 10),
+        suggested_date: s.suggested_date ?? today,
         reasoning: s.reasoning ?? null,
       } as never);
       if (!error) {
