@@ -11,4 +11,4 @@
 - Enforce invitation limits and signup eligibility in database triggers; profile email comes only from Auth server synchronization.
 - Validate internal auth return paths centrally; external OAuth redirects require exact registered-client allowlist checks before redirects.
 - Compute user calendar dates through the shared timezone helper using profiles.timezone, with a validated fallback; keep timestamp serialization in UTC.
-- Centralize filtered task Realtime in the shell and apply row payloads idempotently; use bounded reconciliation for missed events/access changes and invalidate only affected query families.
+- Centralize filtered task Realtime in the shell and apply row payloads idempotently; access losses/gains arrive via the private user:<uid> doorbell (re-check by id), deletes/comments are acted on only for loaded tasks, and only affected query families are invalidated.
