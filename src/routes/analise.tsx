@@ -1,16 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllRows } from "@/lib/fetchAll";
 import { TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT } from "@/lib/task-live-state";
-import type { Database } from "@/integrations/supabase/types";
 import { PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "@/components/PriorityBadge";
 import { useAuth } from "@/lib/auth";
 import { useProjects } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
-import { todayISO, addDays, dateInTimezone } from "@/lib/date";
-import { historyDays } from "@/lib/analysis-history";
+import { todayISO } from "@/lib/date";
+import { analyticsWindow, projectsBreakdown, rolesBreakdown, type AnalyticsSummary } from "@/lib/analytics-summary";
 import {
   BarChart3,
   TrendingUp,
@@ -58,16 +56,6 @@ const PERIOD_LABEL: Record<Period, string> = {
   all: "Tudo",
 };
 
-const periodDays = (p: Period): number => {
-  switch (p) {
-    case "today": return 1;
-    case "yesterday": return 1;
-    case "7d": return 7;
-    case "30d": return 30;
-    case "90d": return 90;
-    case "all": return 0; // The all-history range is derived from the task events below.
-  }
-};
 
 function AnalisePage() {
   const { user } = useAuth();
@@ -75,192 +63,83 @@ function AnalisePage() {
   return <AnaliseInner userId={user.id} />;
 }
 
-type AnalyticsTask = Database["public"]["Functions"]["analytics_task_facts"]["Returns"][number];
-const EMPTY_TASKS: AnalyticsTask[] = [];
+const EMPTY_SUMMARY: AnalyticsSummary = {
+  today: "",
+  kpis: { total: 0, done: 0, overdue: 0, postponed: 0, critical: 0, total_postpones: 0, minutes: 0, done_minutes: 0 },
+  by_role: [], by_project: [], by_category: [], by_priority: [], top_postponed: [], daily: [],
+};
 
-/** Only my own/assigned tasks and only the fields this page counts (server-side RPC). */
-function useAnalyticsTasks(userId: string) {
+/** Aggregated in the database for the chosen window only (analytics_summary). */
+function useAnalyticsSummary(userId: string, period: Period) {
   const queryClient = useQueryClient();
-  const queryKey = useMemo(() => ["analytics-task-facts", userId] as const, [userId]);
+  const window = useMemo(() => analyticsWindow(period, todayISO()), [period]);
+  const queryKey = useMemo(() => ["analytics-summary", userId, window.start, window.end, window.seriesStart] as const, [userId, window]);
   const query = useQuery({
     queryKey,
-    queryFn: () =>
-      fetchAllRows<AnalyticsTask>(() => supabase.rpc("analytics_task_facts").order("id", { ascending: true }) as never),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("analytics_summary", {
+        p_start: window.start as string,
+        p_end: window.end as string,
+        p_series_start: window.seriesStart as string,
+      });
+      if (error) throw new Error(error.message);
+      return data as unknown as AnalyticsSummary;
+    },
+    placeholderData: keepPreviousData,
   });
   // Same live behaviour as the other screens: refresh shortly after any task change.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const onChange = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => void queryClient.invalidateQueries({ queryKey }), 700);
+      timer = setTimeout(() => void queryClient.invalidateQueries({ queryKey: ["analytics-summary", userId] }), 700);
     };
-    window.addEventListener(TASKS_CHANGED_EVENT, onChange);
-    window.addEventListener(TASKS_RESYNC_EVENT, onChange);
+    globalThis.addEventListener(TASKS_CHANGED_EVENT, onChange);
+    globalThis.addEventListener(TASKS_RESYNC_EVENT, onChange);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener(TASKS_CHANGED_EVENT, onChange);
-      window.removeEventListener(TASKS_RESYNC_EVENT, onChange);
+      globalThis.removeEventListener(TASKS_CHANGED_EVENT, onChange);
+      globalThis.removeEventListener(TASKS_RESYNC_EVENT, onChange);
     };
-  }, [queryClient, queryKey]);
-  return query.data ?? EMPTY_TASKS;
+  }, [queryClient, userId]);
+  return query.data ?? EMPTY_SUMMARY;
 }
 
 function AnaliseInner({ userId }: { userId: string }) {
-  const tasks = useAnalyticsTasks(userId);
   const { projects } = useProjects(userId);
   const { roles } = useRoles(userId);
   const [period, setPeriod] = useState<Period>("30d");
+  const summary = useAnalyticsSummary(userId, period);
 
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
-  const { cutoff, upper } = useMemo(() => {
-    const today = todayISO();
-    if (period === "all") return { cutoff: null as string | null, upper: null as string | null };
-    if (period === "today") {
-      const end = addDays(today, 1);
-      return { cutoff: today, upper: end };
-    }
-    if (period === "yesterday") {
-      const start = addDays(today, -1);
-      return { cutoff: start, upper: today };
-    }
-    const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
-    const d = addDays(today, -days + 1);
-    return { cutoff: d, upper: null };
-  }, [period]);
-
-  const inRange = (iso?: string | null) => {
-    if (!iso) return false;
-    if (!cutoff) return true;
-    const d = iso.length === 10 ? iso : dateInTimezone(new Date(iso));
-    if (d < cutoff) return false;
-    if (upper && d >= upper) return false;
-    return true;
-  };
-
-  const scoped = useMemo(() => {
-    return tasks.filter((t) => {
-      if (t.user_id !== userId && t.assignee_id !== userId) return false;
-      if (!cutoff) return true;
-      return (
-        inRange(t.scheduled_date) ||
-        inRange(t.planned_date) ||
-        inRange(t.completed_at) ||
-        inRange(t.created_at)
-      );
-    });
-  }, [tasks, userId, cutoff, upper]);
-
-  // KPIs
   const kpis = useMemo(() => {
-    const total = scoped.length;
-    const done = scoped.filter((t) => t.completed).length;
-    const overdue = scoped.filter(
-      (t) => !t.completed && t.scheduled_date && t.scheduled_date < todayISO(),
-    ).length;
-    const postponed = scoped.filter((t) => (t.postpone_count ?? 0) > 0).length;
-    const critical = scoped.filter((t) => (t.postpone_count ?? 0) >= 3).length;
-    const totalPostpones = scoped.reduce((s, t) => s + (t.postpone_count ?? 0), 0);
+    const { total, done, overdue, postponed, critical, total_postpones: totalPostpones } = summary.kpis;
     const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
     const avgPostpone = total > 0 ? (totalPostpones / total).toFixed(1) : "0";
     return { total, done, overdue, postponed, critical, completionRate, avgPostpone, totalPostpones };
-  }, [scoped]);
+  }, [summary]);
 
-  // Evolução diária (concluídas, criadas e adiadas por dia)
-  // Para 'today' e 'yesterday' mostramos 14 dias de contexto para a evolução.
-  const daily = useMemo(() => {
-    const windowDays =
-      period === "today" || period === "yesterday" ? 14 : periodDays(period);
-    const map = new Map<
-      string,
-      { date: string; concluidas: number; criadas: number; adiadas: number }
-    >();
-    const today = todayISO();
-    // Usa todas as tarefas do usuário para a evolução, não apenas o recorte do período.
-    const userTasks = tasks.filter(
-      (t) => t.user_id === userId || t.assignee_id === userId,
-    );
-    const eventDates = userTasks.flatMap(t => [t.completed_at ? dateInTimezone(new Date(t.completed_at)) : null, dateInTimezone(new Date(t.created_at)), t.planned_date]).filter((d): d is string => !!d);
-    const dates = period === "all" ? historyDays(today, eventDates) : Array.from({ length: windowDays }, (_, i) => addDays(today, i - windowDays + 1));
-    for (const iso of dates) map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0, adiadas: 0 });
-    for (const t of userTasks) {
-      if (t.completed_at) {
-        const iso = dateInTimezone(new Date(t.completed_at));
-        const entry = map.get(iso);
-        if (entry) entry.concluidas += 1;
-      }
-      if (t.created_at) {
-        const iso = dateInTimezone(new Date(t.created_at));
-        const entry = map.get(iso);
-        if (entry) entry.criadas += 1;
-      }
-      // Adiada nesse dia: estava planejada para o dia mas foi remarcada para depois
-      if (
-        t.planned_date &&
-        t.scheduled_date &&
-        t.scheduled_date > t.planned_date &&
-        (t.postpone_count ?? 0) > 0
-      ) {
-        const entry = map.get(t.planned_date);
-        if (entry) entry.adiadas += 1;
-      }
-    }
-    return Array.from(map.values());
-  }, [tasks, userId, period]);
+  // Atividade diária (concluídas, criadas e adiadas por dia), já agregada no banco.
+  const daily = useMemo(
+    () => summary.daily.map((d) => ({ date: d.day.slice(5), concluidas: d.concluidas, criadas: d.criadas, adiadas: d.adiadas })),
+    [summary],
+  );
 
   // Snapshot diário recente (últimos 7 dias) para a "evolução"
-  const snapshot = useMemo(() => {
-    return daily.slice(-7);
-  }, [daily]);
+  const snapshot = useMemo(() => daily.slice(-7), [daily]);
 
-  // Por papel
-  const byRole = useMemo(() => {
-    const map = new Map<string, { name: string; color: string; total: number; concluidas: number; adiadas: number }>();
-    map.set("sem", { name: "Sem papel", color: "#64748b", total: 0, concluidas: 0, adiadas: 0 });
-    for (const t of scoped) {
-      const r = t.role_id ? rolesById.get(t.role_id) : null;
-      const key = r?.id ?? "sem";
-      const entry = map.get(key) ?? { name: r?.name ?? "Sem papel", color: r?.color ?? "#64748b", total: 0, concluidas: 0, adiadas: 0 };
-      entry.total += 1;
-      if (t.completed) entry.concluidas += 1;
-      if ((t.postpone_count ?? 0) > 0) entry.adiadas += 1;
-      map.set(key, entry);
-    }
-    return Array.from(map.values()).filter((x) => x.total > 0).sort((a, b) => b.total - a.total);
-  }, [scoped, rolesById]);
-
-  // Por projeto
-  const byProject = useMemo(() => {
-    const map = new Map<string, { name: string; color: string; total: number; concluidas: number; adiadas: number; criticas: number }>();
-    for (const t of scoped) {
-      if (!t.project_id) continue;
-      const p = projectsById.get(t.project_id);
-      if (!p) continue;
-      const entry = map.get(p.id) ?? { name: p.name, color: p.color, total: 0, concluidas: 0, adiadas: 0, criticas: 0 };
-      entry.total += 1;
-      if (t.completed) entry.concluidas += 1;
-      if ((t.postpone_count ?? 0) > 0) entry.adiadas += 1;
-      if ((t.postpone_count ?? 0) >= 3) entry.criticas += 1;
-      map.set(p.id, entry);
-    }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [scoped, projectsById]);
-
-  // Top procrastinadas
-  const topPostponed = useMemo(() => {
-    return [...scoped]
-      .filter((t) => (t.postpone_count ?? 0) > 0)
-      .sort((a, b) => (b.postpone_count ?? 0) - (a.postpone_count ?? 0))
-      .slice(0, 8);
-  }, [scoped]);
+  const byRole = useMemo(() => rolesBreakdown(summary.by_role, rolesById), [summary, rolesById]);
+  const byProject = useMemo(() => projectsBreakdown(summary.by_project, projectsById), [summary, projectsById]);
+  const topPostponed = summary.top_postponed;
 
   // Distribuição por prioridade
   const byPriority = useMemo(() => {
     const map = new Map<number, number>();
-    for (const t of scoped) {
-      const p = toPriority((t as { priority?: number | null }).priority);
-      map.set(p, (map.get(p) ?? 0) + 1);
+    for (const row of summary.by_priority) {
+      const p = toPriority(row.priority);
+      map.set(p, (map.get(p) ?? 0) + row.total);
     }
     const colors: Record<number, string> = {
       5: "#f87171",
@@ -274,7 +153,7 @@ function AnaliseInner({ userId }: { userId: string }) {
       value: map.get(p) ?? 0,
       color: colors[p],
     }));
-  }, [scoped]);
+  }, [summary]);
 
   return (
     <div className="space-y-6">

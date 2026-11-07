@@ -2,7 +2,8 @@ import { ClaudeActiveStrip } from "@/components/ClaudeActivity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
+import { useTaskLookup, useTasks, type Task, type TaskCategory } from "@/hooks/useTasks";
+import { supabase } from "@/integrations/supabase/client";
 import { useTaskDependencies } from "@/hooks/useTaskDependencies";
 import { useRoles } from "@/hooks/useRoles";
 import { useProjects } from "@/hooks/useProjects";
@@ -94,12 +95,19 @@ function TodayPage() {
 function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
-  const tasksApi = useTasks(userId, { fastInitialDay: today });
+  const tasksApi = useTasks(userId, { kind: "day", date: viewDate });
   const depsApi = useTaskDependencies(userId);
 
+  // Predecessors outside the day window are read on demand (title + completion only).
+  const outsidePredecessorIds = useMemo(() => {
+    const loaded = new Set(tasksApi.tasks.map((t) => t.id));
+    return depsApi.deps.filter((d) => loaded.has(d.successor_id) && !loaded.has(d.predecessor_id)).map((d) => d.predecessor_id);
+  }, [tasksApi.tasks, depsApi.deps]);
+  const outsidePredecessors = useTaskLookup(outsidePredecessorIds);
   // Map taskId -> array of blocking predecessor titles (open ones only)
   const blockedByMap = useMemo(() => {
-    const taskMap = new Map(tasksApi.tasks.map((t) => [t.id, t]));
+    const taskMap = new Map<string, { title: string; completed: boolean }>(tasksApi.tasks.map((t) => [t.id, t]));
+    for (const [id, t] of outsidePredecessors) if (!taskMap.has(id)) taskMap.set(id, t);
     const out = new Map<string, string[]>();
     for (const d of depsApi.deps) {
       const pre = taskMap.get(d.predecessor_id);
@@ -110,7 +118,7 @@ function TodayInner({ userId }: { userId: string }) {
       }
     }
     return out;
-  }, [tasksApi.tasks, depsApi.deps]);
+  }, [tasksApi.tasks, depsApi.deps, outsidePredecessors]);
   const { roles } = useRoles(userId);
   const subtaskCounts = useSubtaskCounts(userId);
   const { projects, loading: projectsLoading } = useProjects(userId);
@@ -455,12 +463,17 @@ function TodayInner({ userId }: { userId: string }) {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ taskId: string }>).detail;
       if (!detail?.taskId) return;
-      const found = tasksApi.tasks.find((t) => t.id === detail.taskId);
-      if (found) {
-        // Switch the view date to the task's date for context
-        if (found.scheduled_date) setViewDate(found.scheduled_date);
-        openEdit(found);
-      }
+      void (async () => {
+        // Outside the loaded day window, read just that task.
+        const found =
+          tasksApi.tasks.find((t) => t.id === detail.taskId) ??
+          ((await supabase.from("tasks").select("*").eq("id", detail.taskId).maybeSingle()).data as Task | null);
+        if (found) {
+          // Switch the view date to the task's date for context
+          if (found.scheduled_date) setViewDate(found.scheduled_date);
+          openEdit(found);
+        }
+      })();
     };
     window.addEventListener("focodaily:open-task", handler);
     return () => window.removeEventListener("focodaily:open-task", handler);

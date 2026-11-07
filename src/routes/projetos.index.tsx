@@ -93,7 +93,7 @@ function ProjectsPage() {
 function ProjectsInner({ userId }: { userId: string }) {
   const projectsApi = useProjects(userId);
   const { roles } = useRoles(userId);
-  const tasksApi = useTasks(userId);
+  const tasksApi = useTasks(userId, { kind: "project-stats" });
   const today = todayISO();
 
   const [dialogOpen, setDialogOpen] = useState(false);

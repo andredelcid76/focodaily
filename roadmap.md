@@ -1,7 +1,13 @@
 # Auditoria Fase 3 — banco e dados
 - [x] A: políticas com (select auth.uid()), consolidar duplicadas em tarefas, my_project_ids(), índices, Advisor e EXPLAIN antes/depois.
-- [ ] B1/B2: tarefas por janela — pausado: ações de série/posição/dependência dependem da coleção completa; precisa decisão do usuário.
-- [x] B3: analytics_summary no banco para a Análise.
+- [x] B1/B2: tarefas por janela — chaves day/week/project/project-stats/delegated; ações buscam sob demanda; Realtime aplica em todas as chaves.
+- [ ] B1/B2: chave backlog e tela Tarefas — aguardando decisão do usuário (não há tela de backlog própria; Tarefas é a lista completa por definição).
+- [x] B3: analytics_summary(p_start, p_end) SECURITY INVOKER agregando no banco (America/Sao_Paulo); Análise sem baixar linhas; remover analytics_task_facts.
+- [x] Revisão F3-1/2: S10 sem burla por recurrence_parent_id nem troca de dono+responsável; testes de banco.
+- [x] Revisão F3-4: policy UPDATE de tasks TO authenticated.
+- [x] Revisão F3-5: datas de reunião (useMeetings/Agenda) pelo helper de fuso.
+- [x] Revisão F3-7: Performance Advisor e avisos restantes.
+- [x] Rodar testes de banco e app.
 - [x] B4: reuniões só da janela exibida.
 - [x] B5: projetos e papéis num cache único, sem canais duplicados.
 - [x] B6: busca global no servidor, limite 50.

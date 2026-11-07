@@ -29,7 +29,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { addDays, formatHuman, formatMinutes, todayISO, toISODate } from "@/lib/date";
+import { addDays, dateInTimezone, formatHuman, formatMinutes, timeInTimezone, todayISO, toISODate, zonedDateTime } from "@/lib/date";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/agenda")({
@@ -420,29 +420,29 @@ function MeetingDialog({
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
 }) {
-  const initialStart = meeting ? new Date(meeting.starts_at) : new Date(`${defaultDate}T09:00:00`);
-  const initialEnd = meeting ? new Date(meeting.ends_at) : new Date(`${defaultDate}T10:00:00`);
+  const initialStart = meeting ? new Date(meeting.starts_at) : zonedDateTime(defaultDate, "09:00");
+  const initialEnd = meeting ? new Date(meeting.ends_at) : zonedDateTime(defaultDate, "10:00");
 
   const [title, setTitle] = useState(meeting?.title ?? "");
   const [description, setDescription] = useState(meeting?.description ?? "");
   const [location, setLocation] = useState(meeting?.location ?? "");
-  const [date, setDate] = useState(toISODate(initialStart));
-  const [startTime, setStartTime] = useState(initialStart.toTimeString().slice(0, 5));
-  const [endTime, setEndTime] = useState(initialEnd.toTimeString().slice(0, 5));
+  const [date, setDate] = useState(dateInTimezone(initialStart));
+  const [startTime, setStartTime] = useState(timeInTimezone(initialStart));
+  const [endTime, setEndTime] = useState(timeInTimezone(initialEnd));
   const [allDay, setAllDay] = useState(meeting?.is_all_day ?? false);
   const [saving, setSaving] = useState(false);
 
   // Reset on open
   useMemo(() => {
     if (open) {
-      const s = meeting ? new Date(meeting.starts_at) : new Date(`${defaultDate}T09:00:00`);
-      const e = meeting ? new Date(meeting.ends_at) : new Date(`${defaultDate}T10:00:00`);
+      const s = meeting ? new Date(meeting.starts_at) : zonedDateTime(defaultDate, "09:00");
+      const e = meeting ? new Date(meeting.ends_at) : zonedDateTime(defaultDate, "10:00");
       setTitle(meeting?.title ?? "");
       setDescription(meeting?.description ?? "");
       setLocation(meeting?.location ?? "");
-      setDate(toISODate(s));
-      setStartTime(s.toTimeString().slice(0, 5));
-      setEndTime(e.toTimeString().slice(0, 5));
+      setDate(dateInTimezone(s));
+      setStartTime(timeInTimezone(s));
+      setEndTime(timeInTimezone(e));
       setAllDay(meeting?.is_all_day ?? false);
     }
   }, [open, meeting, defaultDate]);
@@ -452,9 +452,9 @@ function MeetingDialog({
       toast.error("Dê um título à reunião");
       return;
     }
-    const startISO = allDay ? `${date}T00:00:00` : `${date}T${startTime}:00`;
-    const endISO = allDay ? `${date}T23:59:59` : `${date}T${endTime}:00`;
-    if (!allDay && new Date(endISO) <= new Date(startISO)) {
+    const startAt = zonedDateTime(date, allDay ? "00:00:00" : startTime);
+    const endAt = zonedDateTime(date, allDay ? "23:59:59" : endTime);
+    if (!allDay && endAt <= startAt) {
       toast.error("O horário final deve ser depois do início");
       return;
     }
@@ -464,8 +464,8 @@ function MeetingDialog({
         title: title.trim(),
         description: description.trim() || null,
         location: location.trim() || null,
-        starts_at: new Date(startISO).toISOString(),
-        ends_at: new Date(endISO).toISOString(),
+        starts_at: startAt.toISOString(),
+        ends_at: endAt.toISOString(),
         is_all_day: allDay,
       });
       onOpenChange(false);

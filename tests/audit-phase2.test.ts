@@ -60,8 +60,8 @@ test("filters cover owner, assignee and shared project independently", () => {
 test("live events arriving during a read replay over its stale snapshot", () => {
   expect(replayTaskChanges([task], [{ eventType: "UPDATE", new: { id: "one", title: "External MCP" }, old: {} }])[0].title).toBe("External MCP");
 });
-test("primary-key-only deletes invalidate project queries even without old project id", () => {
-  expect(taskQueryKeys({ eventType: "DELETE", new: {}, old: { id: "one" } })).toContainEqual(["project-tasks"]);
+test("primary-key-only deletes re-read the hydrated lists (windows drop the row from the payload)", () => {
+  expect(taskQueryKeys({ eventType: "DELETE", new: {}, old: { id: "one" } })).toContainEqual(["tasks", "delegated"]);
 });
 test("same-user MCP changes do not match unrelated optimistic fields", () => {
   rememberOptimisticTask("one", { title: "Local" });
@@ -69,8 +69,8 @@ test("same-user MCP changes do not match unrelated optimistic fields", () => {
   expect(matchesOptimisticTask({ eventType: "UPDATE", new: { ...task, title: "Local" }, old: {} })).toBe(true);
   expect(matchesOptimisticTask({ eventType: "UPDATE", new: { ...task, title: "Local" }, old: {} })).toBe(false);
 });
-test("invalidation targets old and new projects without global cache clearing", () => {
-  expect(taskQueryKeys({ eventType: "UPDATE", new: { project_id: "new" }, old: { project_id: "old" } })).toEqual([["my-assigned-tasks"], ["dependency-status"], ["project-tasks", "new"], ["project-tasks", "old"]]);
+test("invalidation never clears task windows globally", () => {
+  expect(taskQueryKeys({ eventType: "UPDATE", new: { project_id: "new" }, old: { project_id: "old" } })).toEqual([["my-assigned-tasks"], ["tasks", "delegated"], ["dependency-status"]]);
 });
 test("dependency select builds indexed successors once", () => {
   const rows = [{ successor_id: "a", lag_days: 1, predecessor: null }, { successor_id: "b", lag_days: 0, predecessor: null }, { successor_id: "a", lag_days: 2, predecessor: null }];

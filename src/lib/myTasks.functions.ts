@@ -43,10 +43,13 @@ export type MyTaskRow = {
 // - personal tasks they own
 // - tasks (in any project) where they are the assignee
 // - tasks from shared projects (membership or team) where they're neither owner nor assignee
+// scope "delegated" (Delegadas): only tasks delegated to me by others or by me to others.
 export const listMyAssignedTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input?: { scope?: "all" | "delegated" }) => ({ scope: input?.scope === "delegated" ? "delegated" as const : "all" as const }))
+  .handler(async ({ context, data: input }) => {
     const { userId } = context;
+    const delegatedOnly = input.scope === "delegated";
 
     const TASK_COLS =
       "id,title,description,category,status,completed,scheduled_date,duration_minutes,assignee_id,user_id,project_id,role_id,non_negotiable,priority";
@@ -93,7 +96,11 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
         supabaseAdmin
           .from("tasks")
           .select(TASK_COLS)
-          .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
+          .or(
+            delegatedOnly
+              ? `and(assignee_id.eq.${userId},user_id.neq.${userId}),and(user_id.eq.${userId},assignee_id.not.is.null,assignee_id.neq.${userId})`
+              : `user_id.eq.${userId},assignee_id.eq.${userId}`,
+          )
           .order("scheduled_date", { ascending: true, nullsFirst: false })
           .order("id", { ascending: true }) as never,
     );
@@ -121,7 +128,7 @@ export const listMyAssignedTasks = createServerFn({ method: "GET" })
     );
 
     let sharedRows: TaskRowRaw[] = [];
-    if (sharedProjectIds.length) {
+    if (sharedProjectIds.length && !delegatedOnly) {
       const rows = await fetchAllPages(
         () =>
           supabaseAdmin

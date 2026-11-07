@@ -1786,23 +1786,9 @@ export type Database = {
       accept_contact_invite: { Args: { _token: string }; Returns: string }
       accept_project_invite: { Args: { _token: string }; Returns: string }
       accept_team_invite: { Args: { _token: string }; Returns: string }
-      analytics_task_facts: {
-        Args: never
-        Returns: {
-          assignee_id: string
-          completed: boolean
-          completed_at: string
-          created_at: string
-          id: string
-          planned_date: string
-          postpone_count: number
-          priority: number
-          project_id: string
-          role_id: string
-          scheduled_date: string
-          title: string
-          user_id: string
-        }[]
+      analytics_summary: {
+        Args: { p_end: string; p_series_start?: string; p_start: string }
+        Returns: Json
       }
       auto_pause_idle_claude_tasks: { Args: never; Returns: number }
       can_access_task: {

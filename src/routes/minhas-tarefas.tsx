@@ -61,8 +61,9 @@ export function TaskTableView({ scope, hideHeader = false }: { scope: TaskTableS
   const { projects } = useProjects(userId);
   const fetchTasks = useServerFn(listMyAssignedTasks);
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["my-assigned-tasks"],
-    queryFn: () => fetchTasks(),
+    // Delegadas reads only delegated rows under one shared key for both tabs; Tarefas reads everything.
+    queryKey: scope === "all" ? ["my-assigned-tasks"] : ["tasks", "delegated"],
+    queryFn: () => fetchTasks({ data: { scope: scope === "all" ? "all" : "delegated" } }),
     staleTime: 30_000,
   });
 
