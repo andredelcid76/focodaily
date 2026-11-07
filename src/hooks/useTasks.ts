@@ -1,4 +1,4 @@
-import { applyTaskChange, replayTaskChanges, rememberOptimisticTask, forgetOptimisticTask, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, type TaskChange } from "@/lib/task-live-state";
+import { applyTaskChange, applyLiveUpdate, replayTaskChanges, rememberOptimisticTask, forgetOptimisticTask, setLoadedTaskIds, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, type LiveTaskUpdate } from "@/lib/task-live-state";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { confirmDependencyMove } from "@/lib/dependency-check";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
@@ -87,8 +87,15 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const fastInitialDay = options?.fastInitialDay;
-  const changesDuringRead = useRef<TaskChange[]>([]);
+  const changesDuringRead = useRef<LiveTaskUpdate[]>([]);
   const readSequence = useRef(0);
+  const [loadedOwner] = useState(() => Symbol("useTasks"));
+
+  // Lets the live feed ignore deletes/comments of tasks no screen has loaded.
+  useEffect(() => {
+    setLoadedTaskIds(loadedOwner, new Set(tasks.map(t => t.id)));
+  }, [loadedOwner, tasks]);
+  useEffect(() => () => setLoadedTaskIds(loadedOwner, null), [loadedOwner]);
 
   // Mantém a memória sempre igual ao que está na tela (edições e tempo real)
   useEffect(() => {
@@ -354,12 +361,12 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     })();
 
     const onExternal = (event: Event) => {
-      const change = (event as CustomEvent<TaskChange>).detail;
-      if (change?.eventType) {
-        changesDuringRead.current.push(change);
-        if (changesDuringRead.current.length > 1000) changesDuringRead.current.shift();
-        setTasks(prev => applyTaskChange(prev, change));
-      }
+      const detail = (event as CustomEvent<LiveTaskUpdate | LiveTaskUpdate[]>).detail;
+      const changes = (Array.isArray(detail) ? detail : [detail]).filter(c => c?.eventType);
+      if (!changes.length) return;
+      changesDuringRead.current.push(...changes);
+      if (changesDuringRead.current.length > 1000) changesDuringRead.current.splice(0, changesDuringRead.current.length - 1000);
+      setTasks(prev => changes.reduce(applyLiveUpdate, prev));
     };
     const onRecover = () => void refresh();
     window.addEventListener(TASKS_CHANGED_EVENT, onExternal);

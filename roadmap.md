@@ -4,6 +4,8 @@
 - [x] P1/P5/P7/P10: atualização incremental filtrada, dependências e cache/memorização.
 - [x] P9/Pendência: índices e remoção idempotente do cron legado em migration nova.
 - [x] Executar testes existentes/novos e verificar riscos de Realtime.
+- [x] Revisão Fase 2: Pipedrive ignora tarefas já marcadas, aborta só a própria sincronização e marca atividades desativadas.
+- [x] Revisão Fase 2: tempo real com exclusões, comentários de terceiros, perda/ganho de acesso e filtros agrupados.
 - [ ] Validar busca/Realtime em duas sessões reais — bloqueado por ausência de sessão autenticada disponível.
 # Auditoria de segurança — Fase 1
 - [x] Revisão: classificar falhas de entrega, recuperar reservas de 15 min e limitar a 5 tentativas.

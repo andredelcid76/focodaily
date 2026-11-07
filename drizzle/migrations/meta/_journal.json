@@ -162,6 +162,13 @@
       "when": 1794032500434,
       "tag": "0022_audit_phase2_indexes_and_legacy_cron",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794033407794,
+      "tag": "0023_realtime_access_doorbells",
+      "breakpoints": true
     }
   ]
 }

@@ -21,3 +21,12 @@ export async function probePipedriveActivities(
   }
   return { aborted: false, missing, inactive };
 }
+export const PIPEDRIVE_404_REASON = "Pipedrive activity lookup returned HTTP 404; task preserved.";
+export const PIPEDRIVE_INACTIVE_REASON = "atividade desativada no Pipedrive";
+/** Missing and deactivated activities are both preserved as flagged tasks; nothing is deleted. */
+export function pipedriveMissingMarks(result: { missing: string[]; inactive: string[] }) {
+  return [
+    ...result.missing.map(id => ({ id, patch: { pipedrive_missing: true, pipedrive_missing_reason: PIPEDRIVE_404_REASON } })),
+    ...result.inactive.map(id => ({ id, patch: { pipedrive_missing: true, pipedrive_missing_reason: PIPEDRIVE_INACTIVE_REASON } })),
+  ];
+}
