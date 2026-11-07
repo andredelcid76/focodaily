@@ -721,7 +721,7 @@ export async function scanForUser(userId: string) {
     fetchPipedrive(userId, today),
   ]);
   const all = [...emails, ...meetings, ...deals];
-  if (all.length === 0) return { user_id: userId, scanned: 0, created: 0 };
+  if (all.length === 0) return { user_id: userId, scanned: 0, created: 0, ...(pipedriveSyncAborted ? { pipedrive_sync_aborted: true } : {}) };
 
   // Filter out items that already have a suggestion (any status) or an existing task linked to them.
   const { data: existingSugs } = await supabaseAdmin
@@ -756,7 +756,7 @@ export async function scanForUser(userId: string) {
       last_error: null,
       updated_at: new Date().toISOString(),
     } as never);
-    return { user_id: userId, scanned: 0, created: 0 };
+    return { user_id: userId, scanned: 0, created: 0, ...(pipedriveSyncAborted ? { pipedrive_sync_aborted: true } : {}) };
   }
 
   // Fetch existing open tasks + active projects so the AI (and a post-filter)
@@ -882,7 +882,7 @@ export async function scanForUser(userId: string) {
     updated_at: new Date().toISOString(),
   } as never);
 
-  return { user_id: userId, scanned: fresh.length, created };
+  return { user_id: userId, scanned: fresh.length, created, ...(pipedriveSyncAborted ? { pipedrive_sync_aborted: true } : {}) };
 }
 
 export const Route = createFileRoute("/api/public/inbox/scan")({
