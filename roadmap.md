@@ -1,4 +1,10 @@
 # Delegação sem projeto
+ # Auditoria de segurança — Fase 1
+- [ ] S1: proteger posse, projeto de origem e ator MCP.
+- [ ] S2/S3: proteger convites, limite combinado e e-mail confirmado.
+- [ ] S4/S7: exigir Bearer MCP e validar retornos internos.
+- [ ] S6: proteger agendadores e reservar notificações atomicamente.
+- [ ] Restringir novos cadastros e executar testes de segurança.
 - [x] Agrupar avisos por tarefa no sino e na página, preservando filtros e contadores.
 - [x] Validar agrupamento com cinco testes e expansão/ações em navegador com dados de exemplo.
 - [ ] Conferir ações persistidas na conta real — bloqueado por ausência de sessão autenticada na prévia.
