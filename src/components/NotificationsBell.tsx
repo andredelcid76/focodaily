@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useNotificationActions, useRecentNotifications } from "@/hooks/useNotifications";
-import { NotificationItem } from "@/components/NotificationItem";
+import { GroupedNotifications } from "@/components/GroupedNotifications";
 import { FILTER_GROUPS } from "@/lib/notificationTypes";
 
 export function NotificationsBell() {
@@ -91,19 +91,18 @@ export function NotificationsBell() {
               {tab === "unread" ? "Tudo em dia por aqui" : "Nenhuma notificação"}
             </div>
           ) : (
-            visible.map((n) => (
-              <NotificationItem
-                key={n.id}
-                n={n}
-                actor={n.actor_id ? profiles.get(n.actor_id) : undefined}
+              <GroupedNotifications
+                items={visible}
+                profiles={profiles}
                 onOpen={(x) => {
                   setOpen(false);
                   actions.open(x, (to) => navigate({ to }));
                 }}
                 onToggleRead={actions.toggleRead}
                 onDelete={actions.remove}
+                onReadGroup={actions.readGroup}
+                onDeleteGroup={actions.removeGroup}
               />
-            ))
           )}
         </div>
         <div className="border-t border-border/60 px-3 py-2 text-center">

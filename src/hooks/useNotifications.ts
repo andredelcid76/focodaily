@@ -54,7 +54,23 @@ export function useNotificationActions(
     await supabase.from("notifications").delete().not("read_at", "is", null).eq("user_id", userId);
   }, [userId, setItems]);
 
-  return { open, toggleRead, remove, markAllRead, clearRead };
+  const readGroup = useCallback(async (taskId: string, read: boolean) => {
+    if (!userId) return;
+    const readAt = read ? new Date().toISOString() : null;
+    const { error } = await supabase.from("notifications").update({ read_at: readAt })
+      .eq("user_id", userId).eq("task_id", taskId);
+    if (error) { toast.error("Não foi possível atualizar o grupo"); return; }
+    setItems((prev) => prev.map((n) => n.task_id === taskId ? { ...n, read_at: readAt } : n));
+  }, [userId, setItems]);
+
+  const removeGroup = useCallback(async (taskId: string) => {
+    if (!userId) return;
+    const { error } = await supabase.from("notifications").delete().eq("user_id", userId).eq("task_id", taskId);
+    if (error) { toast.error("Não foi possível apagar o grupo"); return; }
+    setItems((prev) => prev.filter((n) => n.task_id !== taskId));
+  }, [userId, setItems]);
+
+  return { open, toggleRead, remove, markAllRead, clearRead, readGroup, removeGroup };
 }
 
 /** Últimos avisos + contador de não lidos, sempre sincronizados em tempo real. */
