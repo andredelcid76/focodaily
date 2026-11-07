@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueueCollaborationEmail } from "@/lib/email/collaborationEmail.server";
 import { APP_URL } from "@/lib/app-url";
+import { isSelfPromotion } from "@/lib/project-roles";
 
 
 // ============================================================
@@ -281,7 +282,7 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
         .eq("project_id", data.project_id)
         .eq("user_id", userId)
         .maybeSingle();
-      if (projectRoleRank(data.role) > projectRoleRank(myMembership?.role)) {
+      if (isSelfPromotion(userId, data.user_id, myMembership?.role, data.role)) {
         throw new Error("Você não pode aumentar o próprio papel no projeto.");
       }
     }
