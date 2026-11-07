@@ -103,7 +103,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
       .object({
         project_id: z.string().uuid(),
         email: z.string().email().max(255),
-        origin: z.string().url(),
+        origin: z.string().optional(), // Backward-compatible input, deliberately ignored.
         role: z.enum(["admin", "manager", "member"]).default("member"),
       })
       .parse(input),
@@ -434,7 +434,7 @@ export const notifyProjectTeamAccess = createServerFn({ method: "POST" })
       .object({
         project_id: z.string().uuid(),
         team_id: z.string().uuid(),
-        origin: z.string().url(),
+        origin: z.string().optional(), // Backward-compatible input, deliberately ignored.
       })
       .parse(input),
   )

@@ -47,6 +47,11 @@ BEGIN
     ELSE INSERT INTO team_invites(team_id,email,token,invited_by) VALUES(source_id,'invite'||i||'@example.com',i::text,owner_id); END IF;
   END LOOP;
   ASSERT (SELECT count(*)=20 FROM invitation_send_log WHERE user_id=owner_id), '20 combined invites allowed';
+  -- Re-sending via UPSERT is counted once, not once for INSERT and again for UPDATE.
+  INSERT INTO contact_invites(id,email,token,inviter_id) VALUES('40000000-0000-0000-0000-000000000001','upsert@example.com','upsert1',member_id);
+  INSERT INTO contact_invites(id,email,token,inviter_id) VALUES('40000000-0000-0000-0000-000000000001','upsert@example.com','upsert2',member_id)
+    ON CONFLICT(id) DO UPDATE SET token=EXCLUDED.token;
+  ASSERT (SELECT count(*)=2 FROM invitation_send_log WHERE user_id=member_id), 'upsert counts one invitation';
   BEGIN INSERT INTO contact_invites(email,token,inviter_id) VALUES('21@example.com','21',owner_id); RAISE EXCEPTION 'TEST_FAILED 21st invite allowed';
     EXCEPTION WHEN raise_exception THEN IF SQLERRM NOT LIKE '%20 convites em 24 horas%' THEN RAISE; END IF; END;
   BEGIN INSERT INTO auth.users(id,email) VALUES(gen_random_uuid(),'outsider@example.com'); RAISE EXCEPTION 'TEST_FAILED outsider signup allowed';
@@ -71,6 +76,7 @@ BEGIN
   ASSERT (SELECT emailed_at IS NULL AND teams_sent_at IS NOT NULL AND delivery_claim_id IS NULL FROM notifications WHERE id=claimed), 'retry preserves Teams success';
   ASSERT (SELECT count(*)=1 FROM claim_pending_notifications()), 'failed send retry';
   ASSERT NOT has_column_privilege('authenticated','contact_invites','token','SELECT'), 'invite token unreadable';
+  ASSERT NOT has_column_privilege('authenticated','profiles','email','UPDATE'), 'email column update revoked';
   ASSERT NOT has_function_privilege('authenticated','claim_pending_notifications()','EXECUTE'), 'claim service-only';
   ASSERT NOT has_table_privilege('authenticated','cron_credentials','SELECT'), 'cron secret unreadable';
   RAISE NOTICE 'PASS ownership, source/destination access, actor trust, email sync, combined 20/24h limit, signup eligibility, confirmed invitation identity, notification reservations and grants';

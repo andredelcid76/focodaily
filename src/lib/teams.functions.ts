@@ -188,7 +188,7 @@ export const inviteToTeam = createServerFn({ method: "POST" })
       .object({
         team_id: z.string().uuid(),
         email: z.string().email().max(255),
-        origin: z.string().url(),
+        origin: z.string().optional(), // Backward-compatible input, deliberately ignored.
       })
       .parse(input),
   )
@@ -565,7 +565,7 @@ export const inviteContact = createServerFn({ method: "POST" })
     z
       .object({
         email: z.string().email().max(255),
-        origin: z.string().url(),
+        origin: z.string().optional(), // Backward-compatible input, deliberately ignored.
       })
       .parse(input),
   )

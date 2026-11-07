@@ -13,6 +13,7 @@ CREATE TABLE project_members(project_id uuid,user_id uuid,role text,UNIQUE(proje
 CREATE TABLE team_members(team_id uuid,user_id uuid,role text,UNIQUE(team_id,user_id));
 CREATE TABLE tasks(id uuid PRIMARY KEY,user_id uuid,project_id uuid,assignee_id uuid,title text);
 CREATE TABLE profiles(user_id uuid PRIMARY KEY,email text);
+GRANT UPDATE ON profiles TO authenticated;
 CREATE TABLE contacts(owner_id uuid,contact_id uuid,UNIQUE(owner_id,contact_id));
 CREATE TABLE contact_invites(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),inviter_id uuid,email text,token text,expires_at timestamptz DEFAULT now()+interval '7 days',accepted_at timestamptz,accepted_by uuid,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now());
 CREATE TABLE project_invites(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),project_id uuid,invited_by uuid,email text,token text,role text DEFAULT 'member',expires_at timestamptz DEFAULT now()+interval '7 days',accepted_at timestamptz,accepted_by uuid);
@@ -33,4 +34,6 @@ CREATE TRIGGER task_security_test BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE FU
 SQL
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0017_security_phase1_cron_notification_claims.sql"
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0018_security_phase1_delivery_finalize.sql"
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0019_security_phase1_profile_column_permissions.sql"
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/drizzle/migrations/0020_security_phase1_invitation_upsert_accounting.sql"
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$root/tests/database/security-phase1.sql"
