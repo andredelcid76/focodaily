@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueueCollaborationEmail } from "@/lib/email/collaborationEmail.server";
+import { APP_URL } from "@/lib/app-url";
 
 
 // ============================================================
@@ -265,11 +266,11 @@ export const inviteToTeam = createServerFn({ method: "POST" })
       title: `Você foi convidado para a equipe ${team.name}`,
       body: `Abra o convite para entrar na equipe ${team.name} no Foco.`,
       ctaLabel: "Abrir convite",
-      ctaUrl: `${data.origin}/convite-equipe/${token}`,
+      ctaUrl: `${APP_URL}/convite-equipe/${token}`,
     });
 
     return {
-      invite_url: `${data.origin}/convite-equipe/${token}`,
+      invite_url: `${APP_URL}/convite-equipe/${token}`,
       email,
       team_name: team.name,
     };
@@ -632,10 +633,10 @@ export const inviteContact = createServerFn({ method: "POST" })
       title: "Convite de colaboração",
       body: `${inviterName} te convidou para colaborar no Foco. Depois de aceitar, você poderá ser adicionado a projetos e equipes.`,
       ctaLabel: "Aceitar convite",
-      ctaUrl: `${data.origin}/convite-contato/${token}`,
+      ctaUrl: `${APP_URL}/convite-contato/${token}`,
     });
 
-    return { invite_url: `${data.origin}/convite-contato/${token}`, email };
+    return { invite_url: `${APP_URL}/convite-contato/${token}`, email };
   });
 
 export const revokeContactInvite = createServerFn({ method: "POST" })

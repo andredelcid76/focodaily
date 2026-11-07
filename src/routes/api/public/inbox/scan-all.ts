@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { scanForUser } from "./scan";
 import { syncOutlookCalendar } from "../outlook";
+import { authenticateCron } from "@/lib/cron-auth.server";
 
 // Public cron endpoint: iterates every user with at least one active source
 // (Outlook / Pipedrive / Fireflies) and runs inbox scan + Outlook calendar sync.
@@ -13,9 +14,7 @@ export const Route = createFileRoute("/api/public/inbox/scan-all")({
         // Authenticate cron callers with the service role key (server-only,
         // never bundled to client JS). The previous anon-key check was
         // ineffective because the anon key is public.
-        const provided = request.headers.get("apikey") ?? request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-        const expected = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        if (!provided || !expected || provided !== expected) {
+        if (!await authenticateCron(request)) {
           return new Response("Unauthorized", { status: 401 });
         }
 
@@ -55,7 +54,7 @@ export const Route = createFileRoute("/api/public/inbox/scan-all")({
           }
         }
 
-        return Response.json({ ok: true, total: userIds.length, results });
+        return Response.json({ ok: true, total: userIds.length, failed: results.filter(r => !r.ok).length });
       },
     },
   },

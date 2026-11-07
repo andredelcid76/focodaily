@@ -113,7 +113,7 @@ async function legacyAssertAssigneeAllowed(
   }
 }
 
-/** Respeita members_can_reassign: se false, só dono da tarefa/projeto (ou gestor) atribui. */
+/** MCP reassignment uses the current owner and source project, never the requested destination. */
 async function assertCanAssign(
   auth: unknown,
   userId: string,
@@ -123,18 +123,9 @@ async function assertCanAssign(
   if (userId === taskOwnerId) return;
   if (!projectId) throw new Error("Somente o dono da tarefa pode alterar o responsável.");
   const client = db(auth);
-  const { data: project } = await client
-    .from("projects")
-    .select("user_id,members_can_reassign")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (!project) throw new Error("Projeto não encontrado.");
-  if (project.user_id === userId) return;
-  const admin = await client.rpc("is_project_admin", { _project_id: projectId, _user_id: userId });
-  if (admin.data) return;
-  if (!project.members_can_reassign) {
-    throw new Error("Este projeto só permite que o dono/gestor atribua ou reatribua tarefas.");
-  }
+  const manager = await client.rpc("is_project_manager_or_above", { _project_id: projectId, _user_id: userId });
+  if (manager.error) throw new Error(manager.error.message);
+  if (!manager.data) throw new Error("Somente o dono atual ou gestor do projeto atual pode alterar projeto ou responsável.");
 }
 
 const taskStatusEnum = z.enum(["todo", "doing", "in_progress", "blocked", "done"]);
@@ -903,7 +894,7 @@ export const updateTask = defineTool({
     } else if (args.blocked_reason !== undefined) {
       patch.blocked_reason = args.blocked_reason;
     }
-    if (args.assignee_id !== undefined) {
+    if (args.assignee_id !== undefined || args.project_id !== undefined) {
       const { data: current, error: curErr } = await db(ctx.auth)
         .from("tasks")
         .select("user_id,project_id,assignee_id")
@@ -911,12 +902,11 @@ export const updateTask = defineTool({
         .maybeSingle();
       if (curErr) throw new Error(curErr.message);
       if (!current) throw new Error("Tarefa não encontrada.");
-      const projectId = args.project_id !== undefined ? args.project_id : (current.project_id as string | null);
-      await assertCanAssign(ctx.auth, userId, projectId, current.user_id as string);
+      await assertCanAssign(ctx.auth, userId, current.project_id, current.user_id);
       if (args.assignee_id) {
-        await assertAssigneeAllowed(ctx.auth, args.assignee_id, projectId, current.user_id as string);
+        await assertAssigneeAllowed(ctx.auth, args.assignee_id, current.project_id, current.user_id);
       }
-      patch.assignee_id = args.assignee_id;
+      if (args.assignee_id !== undefined) patch.assignee_id = args.assignee_id;
     }
     // Mover uma tarefa para dentro de um projeto exige acesso a esse projeto
     // (service_role bypassa a RLS). Definir project_id = null é permitido.

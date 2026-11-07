@@ -13,14 +13,6 @@ type McpAuth = {
   scopes?: string[];
 };
 
-type CachedSessionAuth = {
-  auth: McpAuth;
-  expiresAt: number;
-};
-
-const SESSION_AUTH_TTL_MS = 60 * 60 * 1000;
-const sessionAuthCache = new Map<string, CachedSessionAuth>();
-
 const mcp = createMcpServer({
   name: "foco-mcp",
   version: "1.0.0",
@@ -56,10 +48,6 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "Mcp-Session-Id",
 };
 
-function getSessionId(request: Request): string | null {
-  return request.headers.get("Mcp-Session-Id") ?? request.headers.get("mcp-session-id");
-}
-
 function getBearerToken(request: Request): string | null {
   const header = request.headers.get("Authorization") ?? request.headers.get("authorization");
   if (!header) return null;
@@ -71,42 +59,9 @@ function getBearerToken(request: Request): string | null {
   return token || null;
 }
 
-function getCachedSessionAuth(sessionId: string | null): McpAuth | null {
-  if (!sessionId) return null;
-
-  const cached = sessionAuthCache.get(sessionId);
-  if (!cached) return null;
-  if (cached.expiresAt < Date.now()) {
-    sessionAuthCache.delete(sessionId);
-    return null;
-  }
-
-  cached.expiresAt = Date.now() + SESSION_AUTH_TTL_MS;
-  return cached.auth;
-}
-
-function cacheSessionAuth(sessionId: string | null, auth: McpAuth) {
-  if (!sessionId) return;
-
-  sessionAuthCache.set(sessionId, {
-    auth,
-    expiresAt: Date.now() + SESSION_AUTH_TTL_MS,
-  });
-}
-
-function pruneSessionAuthCache() {
-  const now = Date.now();
-  for (const [sessionId, cached] of sessionAuthCache.entries()) {
-    if (cached.expiresAt < now) sessionAuthCache.delete(sessionId);
-  }
-}
-
 async function getMcpAuth(request: Request): Promise<McpAuth | null> {
-  pruneSessionAuthCache();
-
-  const sessionId = getSessionId(request);
   const token = getBearerToken(request);
-  if (!token) return getCachedSessionAuth(sessionId);
+  if (!token) return null;
 
   const hash = hashToken(token);
 
@@ -117,7 +72,7 @@ async function getMcpAuth(request: Request): Promise<McpAuth | null> {
     .maybeSingle();
 
   if (!oauthError && oauthToken && !oauthToken.revoked_at) {
-    if (oauthToken.expires_at && new Date(oauthToken.expires_at).getTime() < Date.now()) return null;
+    if (oauthToken.expires_at && new Date(oauthToken.expires_at).getTime() <= Date.now()) return null;
 
     await supabaseAdmin
       .from("oauth_access_tokens")
@@ -179,8 +134,6 @@ export const Route = createFileRoute("/api/public/mcp")({
 
         const res = await mcp.handleRequest(request, { auth });
         const headers = new Headers(res.headers);
-        const sessionId = headers.get("Mcp-Session-Id") ?? getSessionId(request);
-        cacheSessionAuth(sessionId, auth);
         for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
         if (res.status === 401) {
           headers.set("WWW-Authenticate", buildWwwAuthenticate(request));
