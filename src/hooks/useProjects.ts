@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { retainSharedChannel } from "@/lib/shared-channel";
 import { supabase } from "@/integrations/supabase/client";
