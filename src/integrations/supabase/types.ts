@@ -551,6 +551,7 @@ export type Database = {
           actor_id: string | null
           body: string | null
           created_at: string
+          delivery_attempts: number
           delivery_claim_id: string | null
           delivery_error: string | null
           digest_pending: boolean
@@ -571,6 +572,7 @@ export type Database = {
           actor_id?: string | null
           body?: string | null
           created_at?: string
+          delivery_attempts?: number
           delivery_claim_id?: string | null
           delivery_error?: string | null
           digest_pending?: boolean
@@ -591,6 +593,7 @@ export type Database = {
           actor_id?: string | null
           body?: string | null
           created_at?: string
+          delivery_attempts?: number
           delivery_claim_id?: string | null
           delivery_error?: string | null
           digest_pending?: boolean
@@ -1792,6 +1795,7 @@ export type Database = {
           actor_id: string | null
           body: string | null
           created_at: string
+          delivery_attempts: number
           delivery_claim_id: string | null
           delivery_error: string | null
           digest_pending: boolean
