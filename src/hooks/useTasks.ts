@@ -158,7 +158,7 @@ export function useTasks(userId: string | undefined, window?: TaskWindow | null)
 
   const resolvePosition = useCallback(
     (date: string | null | undefined, position: number | null | undefined) =>
-      position === TOP_OF_DAY ? topPositionFor(qc, date ?? null) : Promise.resolve(position),
+      position === TOP_OF_DAY ? topPositionFor(qc, date ?? null) : Promise.resolve(position ?? undefined),
     [qc],
   );
 
@@ -383,7 +383,7 @@ export function useTasks(userId: string | undefined, window?: TaskWindow | null)
     if (!userId) return;
     // Por padrão a tarefa fica com quem criou; null explícito = sem responsável.
     const position = await resolvePosition(data.scheduled_date, data.position);
-    const payload = { ...data, ...(position === undefined ? {} : { position }), user_id: userId, assignee_id: data.assignee_id === undefined ? userId : data.assignee_id };
+    const payload = { ...data, ...(position == null ? {} : { position }), user_id: userId, assignee_id: data.assignee_id === undefined ? userId : data.assignee_id };
     const { data: inserted, error } = await supabase
       .from("tasks")
       .insert(payload)
