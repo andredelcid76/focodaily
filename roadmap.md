@@ -1,6 +1,7 @@
 # Delegação sem projeto
-- [ ] Agrupar avisos por tarefa no sino e na página, preservando filtros e contadores.
-- [ ] Validar agrupamento, expansão e ações de grupo.
+- [x] Agrupar avisos por tarefa no sino e na página, preservando filtros e contadores.
+- [x] Validar agrupamento com cinco testes e expansão/ações em navegador com dados de exemplo.
+- [ ] Conferir ações persistidas na conta real — bloqueado por ausência de sessão autenticada na prévia.
 - [x] Disponibilizar responsável em tarefas sem projeto, usando os contatos existentes.
 - [x] Conferir permissões, MCP e notificações para delegação independente de projeto.
 - [x] Validar seletor no navegador e payload de persistência no código, sem enviar delegações de teste a contatos reais.
