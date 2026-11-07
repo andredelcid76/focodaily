@@ -10,3 +10,5 @@
 - Cron callbacks use a dedicated server secret mirrored to a service-only database credential store, never a public key or client input.
 - Enforce invitation limits and signup eligibility in database triggers; profile email comes only from Auth server synchronization.
 - Validate internal auth return paths centrally; external OAuth redirects require exact registered-client allowlist checks before redirects.
+- Compute user calendar dates through the shared timezone helper using profiles.timezone, with a validated fallback; keep timestamp serialization in UTC.
+- Centralize filtered task Realtime in the shell and apply row payloads idempotently; use bounded reconciliation for missed events/access changes and invalidate only affected query families.

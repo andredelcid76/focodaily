@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
+import { todayISO, addDays, dateInTimezone } from "@/lib/date";
+import { historyDays } from "@/lib/analysis-history";
 import {
   BarChart3,
   TrendingUp,
@@ -59,7 +61,7 @@ const periodDays = (p: Period): number => {
     case "7d": return 7;
     case "30d": return 30;
     case "90d": return 90;
-    case "all": return 60;
+    case "all": return 0; // The all-history range is derived from the task events below.
   }
 };
 
@@ -141,26 +143,22 @@ function AnaliseInner({ userId }: { userId: string }) {
       string,
       { date: string; concluidas: number; criadas: number; adiadas: number }
     >();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = windowDays - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const iso = d.toISOString().slice(0, 10);
-      map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0, adiadas: 0 });
-    }
+    const today = todayISO();
     // Usa todas as tarefas do usuário para a evolução, não apenas o recorte do período.
     const userTasks = tasks.filter(
       (t) => t.user_id === userId || t.assignee_id === userId,
     );
+    const eventDates = userTasks.flatMap(t => [t.completed_at ? dateInTimezone(new Date(t.completed_at)) : null, dateInTimezone(new Date(t.created_at)), t.planned_date]).filter((d): d is string => !!d);
+    const dates = period === "all" ? historyDays(today, eventDates) : Array.from({ length: windowDays }, (_, i) => addDays(today, i - windowDays + 1));
+    for (const iso of dates) map.set(iso, { date: iso.slice(5), concluidas: 0, criadas: 0, adiadas: 0 });
     for (const t of userTasks) {
       if (t.completed_at) {
-        const iso = t.completed_at.slice(0, 10);
+        const iso = dateInTimezone(new Date(t.completed_at));
         const entry = map.get(iso);
         if (entry) entry.concluidas += 1;
       }
       if (t.created_at) {
-        const iso = t.created_at.slice(0, 10);
+        const iso = dateInTimezone(new Date(t.created_at));
         const entry = map.get(iso);
         if (entry) entry.criadas += 1;
       }

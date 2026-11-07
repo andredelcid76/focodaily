@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import type { Task } from "@/hooks/useTasks";
+import { TASKS_CHANGED_EVENT } from "@/lib/task-live-state";
 import { supabase } from "@/integrations/supabase/client";
 import { ClaudeMark } from "./ClaudeCodeButton";
 
@@ -13,8 +14,11 @@ export async function setClaudeStarted(taskId: string, value: string | null) {
     patch.status = "in_progress";
     patch.claude_last_activity_at = value;
   }
-  const { error } = await supabase.from("tasks").update(patch as never).eq("id", taskId);
-  window.dispatchEvent(new CustomEvent(CLAUDE_CHANGED_EVENT, { detail: { taskId, value } }));
+  const { data, error } = await supabase.from("tasks").update(patch as never).eq("id", taskId).select().single();
+  if (!error && data) {
+    window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail: { eventType: "UPDATE", new: data, old: {} } }));
+    window.dispatchEvent(new CustomEvent(CLAUDE_CHANGED_EVENT, { detail: { taskId, value } }));
+  }
   return !error;
 }
 

@@ -197,7 +197,7 @@ function TodayInner({ userId }: { userId: string }) {
         if (!t.completed || !t.completed_at) return false;
         if ((t.scheduled_date ?? "") <= today) return false; // already in base or in past
         if (!isMine(t)) return false;
-        return t.completed_at.slice(0, 10) === today;
+        return dateInTimezone(new Date(t.completed_at)) === today;
       });
       base.push(...completedTodayFromFuture);
     }

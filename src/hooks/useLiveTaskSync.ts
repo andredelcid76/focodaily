@@ -32,7 +32,7 @@ export function useLiveTaskSync(userId: string | undefined) {
       // Always reconcile trigger-produced timestamps/time totals, even for an optimistic write.
       window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail: change }));
       if (!local) invalidate(taskQueryKeys(change));
-      else invalidate([["dependency-status"], ...taskQueryKeys(change).filter(key => key[0] === "project-tasks" || key[0] === "my-assigned-tasks")]);
+      else invalidate([["dependency-status"]]);
     };
     const connect = async () => {
       const projects = await fetchAllRows<{ id: string }>(() => supabase.from("projects").select("id").order("id"));
@@ -55,7 +55,7 @@ export function useLiveTaskSync(userId: string | undefined) {
       channel.subscribe(status => {
         if (status === "SUBSCRIBED") {
           // Recover changes missed between initial read and subscription, and on reconnect.
-          if (subscribed) window.dispatchEvent(new CustomEvent(TASKS_RESYNC_EVENT));
+          window.dispatchEvent(new CustomEvent(TASKS_RESYNC_EVENT));
           subscribed = true;
         }
       });

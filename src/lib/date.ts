@@ -14,7 +14,7 @@ export function validTimezone(timezone: string | null | undefined): string {
   try { new Intl.DateTimeFormat("en", { timeZone: timezone || DEFAULT_TIMEZONE }); return timezone || DEFAULT_TIMEZONE; }
   catch { return DEFAULT_TIMEZONE; }
 }
-export function dateInTimezone(date: Date, timezone?: string | null): string {
+export function dateInTimezone(date: Date, timezone: string | null = browserTimezone): string {
   const parts = new Intl.DateTimeFormat("en", { timeZone: validTimezone(timezone), year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
   const part = (type: string) => parts.find(p => p.type === type)?.value ?? "";
   return `${part("year")}-${part("month")}-${part("day")}`;
