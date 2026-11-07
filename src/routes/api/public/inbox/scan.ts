@@ -450,6 +450,7 @@ function parsePdTime(s?: string): number {
   return new Date(s.replace(" ", "T") + "Z").getTime();
 }
 
+/** Returns false only when excessive 404s aborted this Pipedrive sync; other scan sources continue. */
 async function syncPipedriveToApp(userId: string, today: string): Promise<boolean> {
   const creds = await getPipedriveCreds(userId);
   if (!creds) return true;
@@ -484,7 +485,9 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
         "id,origin_source_url,updated_at,title,description,scheduled_date,duration_minutes,completed",
       )
       .eq("user_id", userId)
-      .eq("origin_source", "pipedrive");
+      .eq("origin_source", "pipedrive")
+      // Already-flagged tasks are not probed again, so old 404s never re-trigger the abort.
+      .eq("pipedrive_missing", false);
     const linkedList = linked ?? [];
     const linkedByUrl = new Map<string, (typeof linkedList)[number]>();
     for (const t of linkedList) {
@@ -507,7 +510,7 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
       id => fetch(`${base}/activities/${id}?api_token=${token}`),
     );
     if (aborted) {
-      console.error("Pipedrive sync aborted: more than 5 activity lookups returned 404.");
+      console.error("Pipedrive sync aborted: more than 5 activity lookups returned 404; other scan sources continue.");
       return false;
     }
     // ── Update / completion sync ─────────────────────────────
@@ -556,7 +559,10 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
       const { error } = await supabaseAdmin.from("tasks").update({ pipedrive_missing: true, pipedrive_missing_reason: "Pipedrive activity lookup returned HTTP 404; task preserved." }).eq("id", id);
       if (error) throw error;
     }
-    for (const id of inactive) await supabaseAdmin.from("tasks").delete().eq("id", id);
+    for (const id of inactive) {
+      const { error } = await supabaseAdmin.from("tasks").update({ pipedrive_missing: true, pipedrive_missing_reason: "atividade desativada no Pipedrive" }).eq("id", id);
+      if (error) throw error;
+    }
     return true;
   } catch (e) {
     console.error("pipedrive→app sync", e);
@@ -697,7 +703,8 @@ Retorne JSON válido:
 export async function scanForUser(userId: string) {
   // Bidirectional sync: pull Pipedrive completions/updates/deletions into the app first
   const today = await userToday(supabaseAdmin, userId);
-  if (!await syncPipedriveToApp(userId, today)) return { user_id: userId, scanned: 0, created: 0, error: "Pipedrive sync aborted; no tasks changed." };
+  // An aborted Pipedrive sync changes no Pipedrive-linked tasks, but Outlook/Fireflies/inbox continue.
+  const pipedriveSyncAborted = !await syncPipedriveToApp(userId, today);
   // Look up the user's email/name (used to attribute Fireflies action items).
   const { data: oconn } = await supabaseAdmin
     .from("outlook_connections")
