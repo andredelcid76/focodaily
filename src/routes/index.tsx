@@ -94,7 +94,7 @@ function TodayPage() {
 function TodayInner({ userId }: { userId: string }) {
   const today = todayISO();
   const [viewDate, setViewDate] = useState(today);
-  const tasksApi = useTasks(userId, { fastInitialDay: today });
+  const tasksApi = useTasks(userId, { kind: "day", date: viewDate });
   const depsApi = useTaskDependencies(userId);
 
   // Map taskId -> array of blocking predecessor titles (open ones only)

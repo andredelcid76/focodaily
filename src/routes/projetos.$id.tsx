@@ -68,7 +68,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
   const navigate = useNavigate();
   const projectsApi = useProjects(userId);
   const { roles } = useRoles(userId);
-  const tasksApi = useTasks(userId);
+  const tasksApi = useTasks(userId, { kind: "project", projectId });
   const meetingsApi = useMeetings(userId);
   const statusHistory = useProjectHistory(projectId);
   const comments = useProjectComments(projectId, userId);
@@ -102,31 +102,7 @@ function ProjectDetailInner({ userId, projectId, accessToken }: { userId: string
 
   // Dentro do projeto aparecem as tarefas de TODOS os participantes (a RLS
   // permite que membros leiam as tarefas do projeto), não só as minhas.
-
-  const { data: allProjectTasks } = useQuery({
-    queryKey: ["project-tasks", projectId],
-    enabled: !!projectId,
-    staleTime: 15_000,
-    refetchInterval: 60_000,
-    queryFn: async () => {
-      const { fetchAllRows } = await import("@/lib/fetchAll");
-      try {
-        return await fetchAllRows<Task>(
-          () => supabase.from("tasks").select("*").eq("project_id", projectId).order("id") as never,
-        );
-      } catch {
-        return [] as Task[];
-      }
-    },
-  });
-
-  const projectTasks = useMemo(() => {
-    const byId = new Map<string, Task>();
-    for (const t of allProjectTasks ?? []) byId.set(t.id, t);
-    // Minhas tarefas vêm do hook em tempo real — sobrepõem a cópia da query.
-    for (const t of tasksApi.tasks) if ((t as any).project_id === projectId) byId.set(t.id, t);
-    return Array.from(byId.values());
-  }, [allProjectTasks, tasksApi.tasks, projectId]);
+  const projectTasks = tasksApi.tasks;
 
   const projectMeetings = useMemo(
     () => meetingsApi.meetings.filter((m) => (m as any).project_id === projectId),

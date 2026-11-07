@@ -49,7 +49,7 @@ function WeekPage() {
 function WeekInner({ userId }: { userId: string }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(todayISO()));
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
-  const tasksApi = useTasks(userId);
+  const tasksApi = useTasks(userId, { kind: "week", start: weekStart });
   const meetingsApi = useMeetings(userId, weekStart);
   const { roles } = useRoles(userId);
   const { projects } = useProjects(userId);
