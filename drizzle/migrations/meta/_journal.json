@@ -155,6 +155,13 @@
       "when": 1794029294779,
       "tag": "0021_security_review_delivery_retries",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794032500434,
+      "tag": "0022_audit_phase2_indexes_and_legacy_cron",
+      "breakpoints": true
     }
   ]
 }
