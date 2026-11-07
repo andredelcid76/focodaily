@@ -169,6 +169,13 @@
       "when": 1794033407794,
       "tag": "0023_realtime_access_doorbells",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794066004331,
+      "tag": "0024_phase3_rls_initplan_security",
+      "breakpoints": true
     }
   ]
 }

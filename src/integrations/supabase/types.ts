@@ -1828,6 +1828,7 @@ export type Database = {
       company_colleague_ids: { Args: never; Returns: string[] }
       company_domain_of: { Args: { _user_id: string }; Returns: string }
       current_actor_id: { Args: never; Returns: string }
+      delegable_user_ids: { Args: never; Returns: string[] }
       finish_notification_delivery: {
         Args: {
           _claim: string
@@ -1868,6 +1869,7 @@ export type Database = {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
+      my_project_ids: { Args: never; Returns: string[] }
       notify_due_tasks: { Args: never; Returns: undefined }
       reorder_projects: {
         Args: { p_ordered_ids: string[] }
