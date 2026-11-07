@@ -33,6 +33,14 @@ import { addDays, formatHuman, formatMinutes, todayISO, toISODate } from "@/lib/
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/agenda")({
+  head: () => ({ meta: [
+    { title: "Agenda | Foco" },
+    { name: "description", content: "Agenda no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Agenda | Foco" },
+    { property: "og:description", content: "Agenda no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AgendaPage,
 });
 

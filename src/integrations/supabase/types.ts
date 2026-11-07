@@ -136,6 +136,21 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_credentials: {
+        Row: {
+          id: number
+          secret: string
+        }
+        Insert: {
+          id?: number
+          secret: string
+        }
+        Update: {
+          id?: number
+          secret?: string
+        }
+        Relationships: []
+      }
       daily_briefings: {
         Row: {
           content: string
@@ -391,6 +406,24 @@ export type Database = {
         }
         Relationships: []
       }
+      invitation_send_log: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mcp_tokens: {
         Row: {
           created_at: string
@@ -518,6 +551,7 @@ export type Database = {
           actor_id: string | null
           body: string | null
           created_at: string
+          delivery_claim_id: string | null
           delivery_error: string | null
           digest_pending: boolean
           emailed_at: string | null
@@ -537,6 +571,7 @@ export type Database = {
           actor_id?: string | null
           body?: string | null
           created_at?: string
+          delivery_claim_id?: string | null
           delivery_error?: string | null
           digest_pending?: boolean
           emailed_at?: string | null
@@ -556,6 +591,7 @@ export type Database = {
           actor_id?: string | null
           body?: string | null
           created_at?: string
+          delivery_claim_id?: string | null
           delivery_error?: string | null
           digest_pending?: boolean
           emailed_at?: string | null
@@ -1750,9 +1786,50 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      claim_pending_notifications: {
+        Args: never
+        Returns: {
+          actor_id: string | null
+          body: string | null
+          created_at: string
+          delivery_claim_id: string | null
+          delivery_error: string | null
+          digest_pending: boolean
+          emailed_at: string | null
+          group_count: number
+          id: string
+          link: string | null
+          meta: Json
+          project_id: string | null
+          read_at: string | null
+          task_id: string | null
+          teams_sent_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "notifications"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       company_colleague_ids: { Args: never; Returns: string[] }
       company_domain_of: { Args: { _user_id: string }; Returns: string }
       current_actor_id: { Args: never; Returns: string }
+      finish_notification_delivery: {
+        Args: {
+          _claim: string
+          _digest: boolean
+          _error: string
+          _failed: boolean
+          _id: string
+          _teams_ok: boolean
+        }
+        Returns: undefined
+      }
+      foco_cron_post: { Args: { _path: string }; Returns: number }
       is_company_colleague: {
         Args: { _a: string; _b: string }
         Returns: boolean

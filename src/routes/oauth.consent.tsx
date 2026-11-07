@@ -19,6 +19,14 @@ type Search = {
 };
 
 export const Route = createFileRoute("/oauth/consent")({
+  head: () => ({ meta: [
+    { title: "Autorizar integração | Foco" },
+    { name: "description", content: "Autorizar integração no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Autorizar integração | Foco" },
+    { property: "og:description", content: "Autorizar integração no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (s: Record<string, unknown>): Search => ({
     client_id: String(s.client_id ?? ""),
     redirect_uri: String(s.redirect_uri ?? ""),

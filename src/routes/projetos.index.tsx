@@ -70,6 +70,14 @@ import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/projetos/")({
+  head: () => ({ meta: [
+    { title: "Projetos | Foco" },
+    { name: "description", content: "Projetos no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Projetos | Foco" },
+    { property: "og:description", content: "Projetos no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: ProjectsPage,
 });
 

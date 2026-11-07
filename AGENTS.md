@@ -5,3 +5,8 @@
 - Listas que podem crescer devem paginar com fetchAllRows (src/lib/fetchAll.ts) — a API corta em 1000 linhas sem avisar.
 - Today task numbering uses the shared task-numbering helper on complete collections before view filters or sorting, so display order does not redefine task identity.
 - Share notification grouping and rendering between the bell and history page after filters; group actions scope writes by user_id and task_id so pagination does not limit their effect.
+- Task ownership authorization always uses the persisted owner/source project; actor headers are trusted only from service-role requests.
+- Claim notification deliveries atomically through service-only RPCs before sending; release failed claims and preserve successful Teams delivery state.
+- Cron callbacks use a dedicated server secret mirrored to a service-only database credential store, never a public key or client input.
+- Enforce invitation limits and signup eligibility in database triggers; profile email comes only from Auth server synchronization.
+- Validate internal auth return paths centrally; external OAuth redirects require exact registered-client allowlist checks before redirects.

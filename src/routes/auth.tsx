@@ -9,8 +9,23 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
+import { internalReturnPath } from "@/lib/internal-return-path";
+
+const RESTRICTED_SIGNUP = "O Foco é restrito à equipe Anpla. Peça um convite.";
+function authError(message: string) {
+  return /database error saving new user|signup.*(disabled|not allowed)|anpla|foco_signup_restricted/i.test(message)
+    ? RESTRICTED_SIGNUP : message;
+}
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({ meta: [
+    { title: "Entrar | Foco" },
+    { name: "description", content: "Acesse suas tarefas e projetos no Foco." },
+    { property: "og:title", content: "Entrar | Foco" },
+    { property: "og:description", content: "Acesse suas tarefas e projetos no Foco." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (s: Record<string, unknown>): { next?: string } =>
     typeof s.next === "string" ? { next: s.next } : {},
 
@@ -30,9 +45,15 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const error = new URL(window.location.href).searchParams.get("error_description");
+    if (error) toast.error(authError(error));
+  }, []);
+
+  useEffect(() => {
     if (!loading && user) {
-      if (next && next.startsWith("/")) {
-        window.location.replace(next);
+      const target = internalReturnPath(next, window.location.origin);
+      if (target !== "/") {
+        window.location.replace(target);
       } else {
         router.navigate({ to: "/" });
       }
@@ -44,7 +65,7 @@ function AuthPage() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) toast.error(error.message);
+    if (error) toast.error(authError(error.message));
   };
 
   const onSignUp = async (e: React.FormEvent) => {
@@ -56,7 +77,7 @@ function AuthPage() {
       options: { emailRedirectTo: window.location.origin },
     });
     setBusy(false);
-    if (error) toast.error(error.message);
+    if (error) toast.error(authError(error.message));
     else toast.success("Conta criada! Verifique seu email para confirmar.");
   };
 
@@ -81,7 +102,7 @@ function AuthPage() {
               onClick={async () => {
                 setBusy(true);
                 const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-                if (r.error) { toast.error(r.error.message ?? "Falha no login Google"); setBusy(false); }
+                if (r.error) { toast.error(authError(r.error.message ?? "Falha no login Google")); setBusy(false); }
               }}
             >
               Continuar com Google
@@ -94,7 +115,7 @@ function AuthPage() {
               onClick={async () => {
                 setBusy(true);
                 const r = await lovable.auth.signInWithOAuth("apple", { redirect_uri: window.location.origin });
-                if (r.error) { toast.error(r.error.message ?? "Falha no login Apple"); setBusy(false); }
+                if (r.error) { toast.error(authError(r.error.message ?? "Falha no login Apple")); setBusy(false); }
               }}
             >
               Continuar com Apple
@@ -107,7 +128,7 @@ function AuthPage() {
               onClick={async () => {
                 setBusy(true);
                 const r = await lovable.auth.signInWithOAuth("microsoft", { redirect_uri: window.location.origin });
-                if (r.error) { toast.error(r.error.message ?? "Falha no login Microsoft"); setBusy(false); }
+                if (r.error) { toast.error(authError(r.error.message ?? "Falha no login Microsoft")); setBusy(false); }
               }}
             >
               Continuar com Microsoft

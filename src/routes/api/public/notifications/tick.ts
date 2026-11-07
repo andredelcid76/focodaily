@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { deliverPendingNotifications, sendDailyDigests } from "@/lib/notificationsDelivery.server";
+import { authenticateCron } from "@/lib/cron-auth.server";
 
 /**
  * Rodada diária (agendada no banco): entrega avisos pendentes (prazos/atrasos)
@@ -9,7 +10,8 @@ import { deliverPendingNotifications, sendDailyDigests } from "@/lib/notificatio
 export const Route = createFileRoute("/api/public/notifications/tick")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        if (!await authenticateCron(request)) return new Response("Unauthorized", { status: 401 });
         const delivered = await deliverPendingNotifications();
         const hour = new Date().getUTCHours();
         const digest = hour === 10 ? await sendDailyDigests() : { sent: 0 };

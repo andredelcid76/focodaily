@@ -113,6 +113,41 @@
       "when": 1792105346938,
       "tag": "0015_claude_heartbeat",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794028473681,
+      "tag": "0016_security_phase1_ownership_invites_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794028511911,
+      "tag": "0017_security_phase1_cron_notification_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794028554823,
+      "tag": "0018_security_phase1_delivery_finalize",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794028730865,
+      "tag": "0019_security_phase1_profile_column_permissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794028761821,
+      "tag": "0020_security_phase1_invitation_upsert_accounting",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,14 @@ import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 
 export const Route = createFileRoute("/bem-vindo")({
+  head: () => ({ meta: [
+    { title: "Bem-vindo | Foco" },
+    { name: "description", content: "Bem-vindo no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Bem-vindo | Foco" },
+    { property: "og:description", content: "Bem-vindo no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <AuthProvider>
       <Welcome />

@@ -65,21 +65,20 @@ async function loadPrefs(userIds: string[]) {
 export async function deliverPendingNotifications(): Promise<
   { ok: true; processed: number; results: DeliveryResult[] } | { ok: false; error: string }
 > {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const { error: setupError } = await supabaseAdmin.from("cron_credentials").upsert({ id: 1, secret: cronSecret });
+    if (setupError) return { ok: false, error: "Falha na configuração do agendador" };
+  }
   const { data: pending, error } = await supabaseAdmin
-    .from("notifications")
-    .select("id,user_id,actor_id,type,title,body,task_id,link")
-    .in("type", DELIVERABLE_TYPES as unknown as string[])
-    .is("emailed_at", null)
-    .gte("created_at", since)
-    .order("created_at", { ascending: true })
-    .limit(50);
+    .rpc("claim_pending_notifications");
   if (error) return { ok: false, error: error.message };
 
   const prefsMap = await loadPrefs(Array.from(new Set((pending ?? []).map((n) => n.user_id as string))));
   const results: DeliveryResult[] = [];
 
   for (const n of pending ?? []) {
+    try {
     const errors: string[] = [];
     let emailOk = false;
     let teamsOk = false;
@@ -100,6 +99,7 @@ export async function deliverPendingNotifications(): Promise<
         .eq("task_id", n.task_id as string)
         .eq("type", "task_updated")
         .neq("id", n.id as string)
+        .is("delivery_claim_id", null)
         .gte("emailed_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());
       skipBurst = (count ?? 0) > 0;
     }
@@ -138,7 +138,7 @@ export async function deliverPendingNotifications(): Promise<
       errors.push("email:recipient_without_email");
     }
 
-    if (recipientEmail && n.actor_id && wantTeams && !skipBurst) {
+    if (recipientEmail && n.actor_id && wantTeams && !skipBurst && !n.teams_sent_at) {
       const teams = await sendTeamsDirectMessage({
         senderUserId: n.actor_id as string,
         recipientEmail,
@@ -148,15 +148,13 @@ export async function deliverPendingNotifications(): Promise<
       if (!teams.ok && teams.error) errors.push(`teams:${teams.error}`);
     }
 
-    await supabaseAdmin
-      .from("notifications")
-      .update({
-        emailed_at: new Date().toISOString(),
-        teams_sent_at: teamsOk ? new Date().toISOString() : null,
-        digest_pending: digest,
-        delivery_error: errors.length ? errors.join(" | ").slice(0, 500) : null,
-      })
-      .eq("id", n.id as string);
+    const failed = errors.some(e => !["email:grouped", "email:disabled_by_user"].includes(e));
+    const { error: finishError } = await supabaseAdmin.rpc("finish_notification_delivery", {
+      _id: n.id, _claim: n.delivery_claim_id ?? "", _failed: failed,
+      _teams_ok: teamsOk, _digest: digest,
+      _error: errors.length ? errors.join(" | ").slice(0, 500) : "",
+    });
+    if (finishError) throw new Error(finishError.message);
 
     results.push({
       id: n.id as string,
@@ -164,6 +162,13 @@ export async function deliverPendingNotifications(): Promise<
       teams: teamsOk,
       ...(errors.length ? { error: errors.join(" | ") } : {}),
     });
+    } catch (err) {
+      await supabaseAdmin.rpc("finish_notification_delivery", {
+        _id: n.id, _claim: n.delivery_claim_id ?? "", _failed: true,
+        _teams_ok: false, _digest: false, _error: "Falha ao entregar notificação",
+      });
+      results.push({ id: n.id, email: false, teams: false, error: err instanceof Error ? err.message : "Falha ao entregar" });
+    }
   }
 
   return { ok: true, processed: results.length, results };

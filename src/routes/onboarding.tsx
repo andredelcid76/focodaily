@@ -14,6 +14,14 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { getMyProfile, completeOnboarding } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/onboarding")({
+  head: () => ({ meta: [
+    { title: "Primeiros passos | Foco" },
+    { name: "description", content: "Primeiros passos no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:title", content: "Primeiros passos | Foco" },
+    { property: "og:description", content: "Primeiros passos no Foco: tarefas, planejamento e colaboração da equipe." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <AuthProvider>
       <OnboardingPage />

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueueCollaborationEmail } from "@/lib/email/collaborationEmail.server";
+import { APP_URL } from "@/lib/app-url";
 
 
 // ============================================================
@@ -102,7 +103,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
       .object({
         project_id: z.string().uuid(),
         email: z.string().email().max(255),
-        origin: z.string().url(),
+        origin: z.string().optional(), // Backward-compatible input, deliberately ignored.
         role: z.enum(["admin", "manager", "member"]).default("member"),
       })
       .parse(input),
@@ -175,7 +176,7 @@ export const inviteToProject = createServerFn({ method: "POST" })
       );
     if (error) throw new Error(error.message);
 
-    const inviteUrl = `${data.origin}/convite/${token}`;
+    const inviteUrl = `${APP_URL}/convite/${token}`;
 
     if (existingProfile?.user_id) {
       await supabaseAdmin.from("notifications").insert({
@@ -433,7 +434,7 @@ export const notifyProjectTeamAccess = createServerFn({ method: "POST" })
       .object({
         project_id: z.string().uuid(),
         team_id: z.string().uuid(),
-        origin: z.string().url(),
+        origin: z.string().optional(), // Backward-compatible input, deliberately ignored.
       })
       .parse(input),
   )
@@ -441,12 +442,18 @@ export const notifyProjectTeamAccess = createServerFn({ method: "POST" })
     const { userId } = context;
 
     const [{ data: project }, { data: team }, { data: actor }] = await Promise.all([
-      supabaseAdmin.from("projects").select("id, name, user_id").eq("id", data.project_id).maybeSingle(),
+      supabaseAdmin.from("projects").select("id, name, user_id, team_id").eq("id", data.project_id).maybeSingle(),
       supabaseAdmin.from("teams").select("id, name, owner_id").eq("id", data.team_id).maybeSingle(),
       supabaseAdmin.from("profiles").select("display_name, email").eq("user_id", userId).maybeSingle(),
     ]);
 
     if (!project || !team) return { success: false };
+    const { data: allowed, error: accessError } = await context.supabase.rpc("is_project_admin", {
+      _project_id: project.id, _user_id: userId,
+    });
+    if (accessError || !allowed || project.team_id !== data.team_id) {
+      throw new Error("Apenas o dono ou admin pode avisar a equipe vinculada a este projeto.");
+    }
 
     const { data: teamMembers } = await supabaseAdmin
       .from("team_members")
@@ -486,7 +493,7 @@ export const notifyProjectTeamAccess = createServerFn({ method: "POST" })
             title: `${project.name} agora está com a sua equipe`,
             body: `${actorName} compartilhou o projeto ${project.name} com a equipe ${team.name}.`,
             ctaLabel: "Abrir projeto",
-            ctaUrl: `${data.origin}/projetos/${project.id}`,
+            ctaUrl: `${APP_URL}/projetos/${project.id}`,
           });
         }
       }),
