@@ -1,3 +1,9 @@
+# Auditoria — Fase 2
+- [ ] B1/B2: busca global segura e abertura universal; remover diálogo duplicado.
+- [ ] B3/B6/B8: data local única, proteção contra 404 Pipedrive e histórico completo.
+- [ ] P1/P5/P7/P10: atualização incremental filtrada, dependências e cache/memorização.
+- [ ] P9/Pendência: índices e remoção idempotente do cron legado em migration nova.
+- [ ] Executar testes existentes/novos e verificar riscos de Realtime.
 # Auditoria de segurança — Fase 1
 - [x] Revisão: classificar falhas de entrega, recuperar reservas de 15 min e limitar a 5 tentativas.
 - [x] Revisão: alinhar MCP com permissões atuais e validar responsável no projeto destino.
