@@ -13,6 +13,7 @@ export function useLiveTaskSync(userId: string | undefined) {
     let alive = true;
     let channel: ReturnType<typeof supabase.channel> | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let connectGeneration = 0;
     const dirtyKeys = new Map<string, unknown[]>();
     const seen = new Set<string>();
     const invalidate = (keys: unknown[][]) => {
@@ -35,10 +36,13 @@ export function useLiveTaskSync(userId: string | undefined) {
       else invalidate([["dependency-status"]]);
     };
     const connect = async () => {
+      const generation = ++connectGeneration;
       const projects = await fetchAllRows<{ id: string }>(() => supabase.from("projects").select("id").order("id"));
-      if (!alive) return;
-      if (channel) await supabase.removeChannel(channel);
-      if (!alive) return;
+      if (!alive || generation !== connectGeneration) return;
+      const previous = channel;
+      channel = undefined;
+      if (previous) await supabase.removeChannel(previous);
+      if (!alive || generation !== connectGeneration) return;
       channel = supabase.channel(`live-sync-${userId}-${crypto.randomUUID()}`);
       for (const filter of taskSubscriptionFilters(userId, projects.map(p => p.id))) {
         channel.on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter }, payload => onTask(payload as TaskChange));
@@ -75,6 +79,7 @@ export function useLiveTaskSync(userId: string | undefined) {
     document.addEventListener("visibilitychange", onVis);
     return () => {
       alive = false;
+      connectGeneration++;
       if (timer) clearTimeout(timer);
       clearInterval(recovery);
       document.removeEventListener("visibilitychange", onVis);

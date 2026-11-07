@@ -41,5 +41,6 @@ export function taskSubscriptionFilters(userId: string, projectIds: string[]) {
 }
 export function taskQueryKeys(change: TaskChange): unknown[][] {
   const projects = new Set([change.new.project_id, change.old.project_id].filter(Boolean));
+  if (change.eventType === "DELETE" && !projects.size) return [["my-assigned-tasks"], ["dependency-status"], ["project-tasks"]];
   return [["my-assigned-tasks"], ["dependency-status"], ...Array.from(projects).map(id => ["project-tasks", id])];
 }

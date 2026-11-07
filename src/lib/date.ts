@@ -23,9 +23,8 @@ export const todayISO = (timezone = browserTimezone, now = new Date()) => dateIn
 
 export const addDays = (iso: string, n: number) => {
   const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() + n);
-  return toISODate(dt);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
 };
 
 export const startOfWeek = (iso: string) => {

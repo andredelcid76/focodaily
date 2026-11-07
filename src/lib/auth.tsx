@@ -32,15 +32,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user.id]);
 
   useEffect(() => {
+    let alive = true;
+    let sessionChanged = false;
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      sessionChanged = true;
+      if (!alive) return;
       setSession(s);
       setLoading(false);
     });
     supabase.auth.getSession().then(({ data }) => {
+      if (!alive || sessionChanged) return;
       setSession(data.session);
       setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => { alive = false; sub.subscription.unsubscribe(); };
   }, []);
 
   return (
