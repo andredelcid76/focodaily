@@ -1786,6 +1786,10 @@ export type Database = {
       accept_contact_invite: { Args: { _token: string }; Returns: string }
       accept_project_invite: { Args: { _token: string }; Returns: string }
       accept_team_invite: { Args: { _token: string }; Returns: string }
+      analytics_summary: {
+        Args: { p_end: string; p_series_start?: string; p_start: string }
+        Returns: Json
+      }
       analytics_task_facts: {
         Args: never
         Returns: {

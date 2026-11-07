@@ -197,6 +197,13 @@
       "when": 1794066381718,
       "tag": "0027_phase3_analytics_rpc_priority",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794066892391,
+      "tag": "0028_phase3_review_delegation_analytics",
+      "breakpoints": true
     }
   ]
 }
