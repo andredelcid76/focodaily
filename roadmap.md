@@ -1,3 +1,15 @@
+# Auditoria Fase 3 — banco e dados
+- [x] A: políticas com (select auth.uid()), consolidar duplicadas em tarefas, my_project_ids(), índices, Advisor e EXPLAIN antes/depois.
+- [ ] B1/B2: tarefas por janela — pausado: ações de série/posição/dependência dependem da coleção completa; precisa decisão do usuário.
+- [x] B3: analytics_summary no banco para a Análise.
+- [x] B4: reuniões só da janela exibida.
+- [x] B5: projetos e papéis num cache único, sem canais duplicados.
+- [x] B6: busca global no servidor, limite 50.
+- [x] S8: estado do Outlook preso ao navegador por cookie de uso único.
+- [x] S10: colaboradores só do domínio ou de projeto compartilhado.
+- [x] S11: troca de papel só por dono/admin, sem autopromoção.
+- [x] S15: dependência exige acesso às duas tarefas.
+- [x] S16: cabeçalho de ator só via service role.
 # Auditoria — Fase 2
 - [x] B1/B2: busca global segura e abertura universal; remover diálogo duplicado.
 - [x] B3/B6/B8: data local única, proteção contra 404 Pipedrive e histórico completo.

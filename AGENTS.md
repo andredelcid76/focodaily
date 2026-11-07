@@ -12,3 +12,6 @@
 - Validate internal auth return paths centrally; external OAuth redirects require exact registered-client allowlist checks before redirects.
 - Compute user calendar dates through the shared timezone helper using profiles.timezone, with a validated fallback; keep timestamp serialization in UTC.
 - Centralize filtered task Realtime in the shell and apply row payloads idempotently; access losses/gains arrive via the private user:<uid> doorbell (re-check by id), deletes/comments are acted on only for loaded tasks, and only affected query families are invalidated.
+- RLS policies wrap auth.uid() as (select auth.uid()) and use my_project_ids() for project visibility, so checks run once per query instead of per row.
+- Delegation scope (self, company-domain colleague or shared project) is enforced by a tasks trigger; people pickers filter through delegable_user_ids() so the UI never offers someone the database will reject.
+- Projects, roles and meetings load through shared TanStack Query keys (meetings per Monday–Sunday week) and shared Realtime channels via retainSharedChannel, so shell widgets and pages do not duplicate requests.

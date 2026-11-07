@@ -1786,6 +1786,24 @@ export type Database = {
       accept_contact_invite: { Args: { _token: string }; Returns: string }
       accept_project_invite: { Args: { _token: string }; Returns: string }
       accept_team_invite: { Args: { _token: string }; Returns: string }
+      analytics_task_facts: {
+        Args: never
+        Returns: {
+          assignee_id: string
+          completed: boolean
+          completed_at: string
+          created_at: string
+          id: string
+          planned_date: string
+          postpone_count: number
+          priority: number
+          project_id: string
+          role_id: string
+          scheduled_date: string
+          title: string
+          user_id: string
+        }[]
+      }
       auto_pause_idle_claude_tasks: { Args: never; Returns: number }
       can_access_task: {
         Args: { _task_id: string; _user_id: string }
@@ -1828,6 +1846,7 @@ export type Database = {
       company_colleague_ids: { Args: never; Returns: string[] }
       company_domain_of: { Args: { _user_id: string }; Returns: string }
       current_actor_id: { Args: never; Returns: string }
+      delegable_user_ids: { Args: never; Returns: string[] }
       finish_notification_delivery: {
         Args: {
           _claim: string
@@ -1868,6 +1887,7 @@ export type Database = {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
+      my_project_ids: { Args: never; Returns: string[] }
       notify_due_tasks: { Args: never; Returns: undefined }
       reorder_projects: {
         Args: { p_ordered_ids: string[] }

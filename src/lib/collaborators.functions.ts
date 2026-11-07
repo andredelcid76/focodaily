@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { delegableUserIds, maskOutsideScope } from "@/lib/delegation";
 
 export type KnownCollaborator = {
   user_id: string;
@@ -49,7 +50,8 @@ export const listKnownCollaborators = createServerFn({ method: "POST" })
       .select("user_id,display_name,email,avatar_url")
       .in("user_id", Array.from(ids));
 
-    const people = ((profiles ?? []) as KnownCollaborator[]).sort((a, b) => {
+    const allowed = await delegableUserIds(supabase);
+    const people = maskOutsideScope((profiles ?? []) as KnownCollaborator[], allowed).sort((a, b) => {
       const an = (a.display_name ?? a.email ?? "").toLowerCase();
       const bn = (b.display_name ?? b.email ?? "").toLowerCase();
       return an.localeCompare(bn, "pt-BR");
@@ -59,17 +61,24 @@ export const listKnownCollaborators = createServerFn({ method: "POST" })
   });
 
 /**
- * Todas as pessoas com conta no Foco — para atribuir tarefas a qualquer um,
- * mesmo fora de equipe ou projeto. Só nome, e-mail e foto.
+ * Pessoas a quem posso atribuir tarefas (S10): colegas do domínio da empresa ou quem
+ * já compartilha projeto comigo. Só nome, e-mail e foto.
  */
 export const listAllPeople = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const allowed = Array.from(await delegableUserIds(context.supabase));
+    if (allowed.length === 0) return { people: [] as KnownCollaborator[], me: context.userId };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { fetchAllRows } = await import("@/lib/fetchAll");
-    const rows = await fetchAllRows<KnownCollaborator>(
-      () => supabaseAdmin.from("profiles").select("user_id,display_name,email,avatar_url").order("user_id") as never,
-    );
+    const rows: KnownCollaborator[] = [];
+    for (let i = 0; i < allowed.length; i += 200) {
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id,display_name,email,avatar_url")
+        .in("user_id", allowed.slice(i, i + 200));
+      if (error) throw new Error(error.message);
+      rows.push(...((data ?? []) as KnownCollaborator[]));
+    }
     const people = rows.sort((a, b) =>
       (a.display_name ?? a.email ?? "").localeCompare(b.display_name ?? b.email ?? "", "pt-BR"),
     );

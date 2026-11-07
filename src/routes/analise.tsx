@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAll";
+import { TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT } from "@/lib/task-live-state";
+import type { Database } from "@/integrations/supabase/types";
 import { PRIORITY_LABEL, PRIORITY_LEVELS, toPriority } from "@/components/PriorityBadge";
 import { useAuth } from "@/lib/auth";
-import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from "@/hooks/useProjects";
 import { useRoles } from "@/hooks/useRoles";
 import { todayISO, addDays, dateInTimezone } from "@/lib/date";
@@ -71,8 +75,38 @@ function AnalisePage() {
   return <AnaliseInner userId={user.id} />;
 }
 
+type AnalyticsTask = Database["public"]["Functions"]["analytics_task_facts"]["Returns"][number];
+const EMPTY_TASKS: AnalyticsTask[] = [];
+
+/** Only my own/assigned tasks and only the fields this page counts (server-side RPC). */
+function useAnalyticsTasks(userId: string) {
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ["analytics-task-facts", userId] as const, [userId]);
+  const query = useQuery({
+    queryKey,
+    queryFn: () =>
+      fetchAllRows<AnalyticsTask>(() => supabase.rpc("analytics_task_facts").order("id", { ascending: true }) as never),
+  });
+  // Same live behaviour as the other screens: refresh shortly after any task change.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onChange = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void queryClient.invalidateQueries({ queryKey }), 700);
+    };
+    window.addEventListener(TASKS_CHANGED_EVENT, onChange);
+    window.addEventListener(TASKS_RESYNC_EVENT, onChange);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener(TASKS_CHANGED_EVENT, onChange);
+      window.removeEventListener(TASKS_RESYNC_EVENT, onChange);
+    };
+  }, [queryClient, queryKey]);
+  return query.data ?? EMPTY_TASKS;
+}
+
 function AnaliseInner({ userId }: { userId: string }) {
-  const { tasks } = useTasks(userId);
+  const tasks = useAnalyticsTasks(userId);
   const { projects } = useProjects(userId);
   const { roles } = useRoles(userId);
   const [period, setPeriod] = useState<Period>("30d");

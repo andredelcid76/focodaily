@@ -114,7 +114,7 @@ function TodayInner({ userId }: { userId: string }) {
   const { roles } = useRoles(userId);
   const subtaskCounts = useSubtaskCounts(userId);
   const { projects, loading: projectsLoading } = useProjects(userId);
-  const meetingsApi = useMeetings(userId);
+  const meetingsApi = useMeetings(userId, viewDate);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
