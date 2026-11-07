@@ -33,13 +33,6 @@ export const Route = createFileRoute("/api/public/oauth/authorize")({
 
         if (!clientId) return errorRedirect(null, "invalid_request", "Missing client_id");
         if (!redirectUri) return errorRedirect(null, "invalid_request", "Missing redirect_uri");
-        if (responseType !== "code")
-          return errorRedirect(redirectUri, "unsupported_response_type", "Only 'code' supported", state);
-        if (!codeChallenge)
-          return errorRedirect(redirectUri, "invalid_request", "PKCE required (code_challenge)", state);
-        if (codeChallengeMethod !== "S256")
-          return errorRedirect(redirectUri, "invalid_request", "code_challenge_method must be S256", state);
-
         const { data: client, error } = await supabaseAdmin
           .from("oauth_clients")
           .select("id, redirect_uris, client_name")
@@ -49,6 +42,12 @@ export const Route = createFileRoute("/api/public/oauth/authorize")({
         const uris = (client.redirect_uris as string[]) ?? [];
         if (!uris.includes(redirectUri))
           return errorRedirect(null, "invalid_request", "redirect_uri not registered for this client");
+        if (responseType !== "code")
+          return errorRedirect(redirectUri, "unsupported_response_type", "Only 'code' supported", state);
+        if (!codeChallenge)
+          return errorRedirect(redirectUri, "invalid_request", "PKCE required (code_challenge)", state);
+        if (codeChallengeMethod !== "S256")
+          return errorRedirect(redirectUri, "invalid_request", "code_challenge_method must be S256", state);
 
         // Forward to consent page (in-app route). User must be signed in there.
         const consent = new URL("/oauth/consent", url.origin);
