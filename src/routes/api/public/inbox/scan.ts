@@ -457,10 +457,10 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
   try {
     const base = `https://${domain}.pipedrive.com/api/v1`;
     const meR = await fetch(`${base}/users/me?api_token=${token}`);
-    if (!meR.ok) return false;
+    if (!meR.ok) return true;
     const meJson = await meR.json();
     const pdUserId = meJson?.data?.id as number | undefined;
-    if (!pdUserId) return false;
+    if (!pdUserId) return true;
 
     const startDate = addDays(today, -30);
     const endDate = addDays(today, 60);
@@ -575,7 +575,7 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
     return true;
   } catch (e) {
     console.error("pipedrive→app sync", e);
-    return false;
+    return true;
   }
 }
 

@@ -3,6 +3,9 @@ export const TASKS_CHANGED_EVENT = "foco:tasks-changed";
 export const TASKS_RESYNC_EVENT = "foco:tasks-resync";
 export const DEPENDENCIES_CHANGED_EVENT = "foco:dependencies-changed";
 export type TaskChange = { eventType: "INSERT" | "UPDATE" | "DELETE"; new: Partial<Task>; old: Partial<Task>; commit_timestamp?: string };
+export function replayTaskChanges(tasks: Task[], changes: TaskChange[]): Task[] {
+  return changes.reduce(applyTaskChange, tasks);
+}
 
 export function applyTaskChange(tasks: Task[], change: TaskChange): Task[] {
   const id = change.eventType === "DELETE" ? change.old.id : change.new.id;

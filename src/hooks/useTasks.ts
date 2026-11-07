@@ -1,4 +1,5 @@
-import { applyTaskChange, rememberOptimisticTask, forgetOptimisticTask, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, type TaskChange } from "@/lib/task-live-state";
+import { applyTaskChange, replayTaskChanges, rememberOptimisticTask, forgetOptimisticTask, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, type TaskChange } from "@/lib/task-live-state";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { confirmDependencyMove } from "@/lib/dependency-check";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,6 +87,8 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const fastInitialDay = options?.fastInitialDay;
+  const changesDuringRead = useRef<TaskChange[]>([]);
+  const readSequence = useRef(0);
 
   // Mantém a memória sempre igual ao que está na tela (edições e tempo real)
   useEffect(() => {
@@ -94,6 +97,8 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
   const refresh = useCallback(async () => {
     if (!userId) return;
+    const sequence = ++readSequence.current;
+    changesDuringRead.current = [];
     // PostgREST caps each response at 1000 rows — page through everything,
     // otherwise later-dated tasks get silently cut off.
     const PAGE = 1000;
@@ -111,27 +116,34 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       all.push(...(data as Task[]));
       if (data.length < PAGE) break;
     }
-    if (!failed) {
-      tasksCache.set(userId, all);
-      setTasks(all);
+    if (!failed && sequence === readSequence.current) {
+      const reconciled = replayTaskChanges(all, changesDuringRead.current);
+      tasksCache.set(userId, reconciled);
+      setTasks(reconciled);
+      changesDuringRead.current = [];
     }
     setLoading(false);
   }, [userId]);
 
   const refreshInitialDay = useCallback(async () => {
     if (!userId || !fastInitialDay) return false;
-    const dayStart = `${fastInitialDay}T00:00:00.000Z`;
-    const nextDayStart = `${addDays(fastInitialDay, 1)}T00:00:00.000Z`;
-    const { data, error } = await supabase
+    // Wide UTC bounds cover the user's local calendar day, including DST offsets.
+    const dayStart = `${addDays(fastInitialDay, -1)}T00:00:00.000Z`;
+    const nextDayStart = `${addDays(fastInitialDay, 2)}T00:00:00.000Z`;
+    const sequence = ++readSequence.current;
+    changesDuringRead.current = [];
+    let data: Task[];
+    try { data = await fetchAllRows<Task>(() => supabase
       .from("tasks")
       .select("*")
       .or(
         `scheduled_date.eq.${fastInitialDay},and(scheduled_date.lt.${fastInitialDay},completed.eq.false),and(scheduled_date.gt.${fastInitialDay},completed_at.gte.${dayStart},completed_at.lt.${nextDayStart})`,
       )
       .order("scheduled_date", { ascending: true })
-      .order("position", { ascending: true });
-    if (error || !data) return false;
-    setTasks(data);
+      .order("position", { ascending: true }).order("id")); }
+    catch { return false; }
+    if (sequence !== readSequence.current) return false;
+    setTasks(replayTaskChanges(data, changesDuringRead.current));
     setLoading(false);
     return true;
   }, [fastInitialDay, userId]);
@@ -343,7 +355,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
     const onExternal = (event: Event) => {
       const change = (event as CustomEvent<TaskChange>).detail;
-      if (change?.eventType) setTasks(prev => applyTaskChange(prev, change));
+      if (change?.eventType) {
+        changesDuringRead.current.push(change);
+        if (changesDuringRead.current.length > 1000) changesDuringRead.current.shift();
+        setTasks(prev => applyTaskChange(prev, change));
+      }
     };
     const onRecover = () => void refresh();
     window.addEventListener(TASKS_CHANGED_EVENT, onExternal);

@@ -48,6 +48,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
       return;
     }
     setLoading(true);
+    let alive = true;
     const handle = setTimeout(async () => {
       const pattern = literalSearchPattern(q);
       const [tRes, pRes] = await Promise.all([
@@ -63,11 +64,12 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
           .or(`name.ilike.${pattern},description.ilike.${pattern}`)
           .limit(8),
       ]);
+      if (!alive) return;
       setTasks(tRes.data ?? []);
       setProjects(pRes.data ?? []);
       setLoading(false);
     }, 180);
-    return () => clearTimeout(handle);
+    return () => { alive = false; clearTimeout(handle); };
   }, [query, open, user]);
 
   // Reset on close

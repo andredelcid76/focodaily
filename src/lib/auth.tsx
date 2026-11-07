@@ -15,18 +15,18 @@ const Ctx = createContext<AuthCtx | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timezoneReady, setTimezoneReady] = useState(false);
+  const [timezoneUser, setTimezoneUser] = useState<string | null>(null);
+  const timezoneReady = timezoneUser === (session?.user.id ?? "anonymous");
 
   useEffect(() => {
     let alive = true;
-    setTimezoneReady(false);
     setBrowserTimezone(null);
     const uid = session?.user.id;
-    if (!uid) { setTimezoneReady(true); return; }
+    if (!uid) { setTimezoneUser("anonymous"); return; }
     void supabase.from("profiles").select("timezone").eq("user_id", uid).maybeSingle().then(({ data }) => {
       if (!alive) return;
       setBrowserTimezone(data?.timezone);
-      setTimezoneReady(true);
+      setTimezoneUser(uid);
     });
     return () => { alive = false; };
   }, [session?.user.id]);
