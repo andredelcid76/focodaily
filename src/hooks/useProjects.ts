@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { retainSharedChannel } from "@/lib/shared-channel";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
@@ -36,41 +38,61 @@ export const PROJECT_COLORS = [
   "#a855f7", // purple
 ];
 
+const EMPTY_PROJECTS: Project[] = [];
+
+async function fetchProjects(): Promise<Project[]> {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Shared cache: every screen and shell widget reads the same projects request. */
 export function useProjects(userId: string | undefined) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(() => ["projects", userId] as const, [userId]);
+  const query = useQuery({ queryKey, queryFn: fetchProjects, enabled: !!userId });
+  const projects = query.data ?? EMPTY_PROJECTS;
+  const loading = query.isPending;
   const notifyTeamAccess = useServerFn(notifyProjectTeamAccess);
+
+  const setProjects = useCallback(
+    (update: (prev: Project[]) => Project[]) => queryClient.setQueryData<Project[]>(queryKey, (prev) => update(prev ?? [])),
+    [queryClient, queryKey],
+  );
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("position", { ascending: true })
-      .order("name", { ascending: true });
-    if (!error && data) setProjects(data);
-    setLoading(false);
-  }, [userId]);
+    try {
+      await queryClient.fetchQuery({ queryKey, queryFn: fetchProjects, staleTime: 0 });
+    } catch {
+      // keep the projects already on screen
+    }
+  }, [queryClient, queryKey, userId]);
 
   useEffect(() => {
     if (!userId) return;
-    refresh();
-    const ch = supabase
-      .channel(`projects-rt-${userId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "projects", filter: `user_id=eq.${userId}` },
-        () => refresh()
-      )
-      .subscribe();
-    // Being added to / removed from a shared project changes which projects are visible.
-    const onAccess = () => void refresh();
-    window.addEventListener(PROJECT_ACCESS_CHANGED_EVENT, onAccess);
-    return () => {
-      supabase.removeChannel(ch);
-      window.removeEventListener(PROJECT_ACCESS_CHANGED_EVENT, onAccess);
-    };
-  }, [userId, refresh]);
+    const refetch = () => void queryClient.fetchQuery({ queryKey, queryFn: fetchProjects, staleTime: 0 }).catch(() => {});
+    return retainSharedChannel(`projects:${userId}`, () => {
+      const ch = supabase
+        .channel(`projects-rt-${userId}-${Math.random().toString(36).slice(2)}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "projects", filter: `user_id=eq.${userId}` },
+          refetch,
+        )
+        .subscribe();
+      // Being added to / removed from a shared project changes which projects are visible.
+      window.addEventListener(PROJECT_ACCESS_CHANGED_EVENT, refetch);
+      return () => {
+        supabase.removeChannel(ch);
+        window.removeEventListener(PROJECT_ACCESS_CHANGED_EVENT, refetch);
+      };
+    });
+  }, [queryClient, queryKey, userId]);
 
   const createProject = useCallback(
     async (data: Omit<TablesInsert<"projects">, "user_id">) => {
@@ -99,7 +121,7 @@ export function useProjects(userId: string | undefined) {
       }
       return inserted;
     },
-    [userId]
+    [notifyTeamAccess, setProjects, userId]
   );
 
   const updateProject = useCallback(
@@ -123,7 +145,7 @@ export function useProjects(userId: string | undefined) {
         });
       }
     },
-    [notifyTeamAccess, projects, userId]
+    [notifyTeamAccess, projects, setProjects, userId]
   );
 
   const deleteProject = useCallback(
@@ -151,7 +173,7 @@ export function useProjects(userId: string | undefined) {
       const { error } = await supabase.from("projects").delete().eq("id", id);
       if (error) throw error;
     },
-    []
+    [setProjects]
   );
 
 
