@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useAuth } from "@/lib/auth";
+import type { Task } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllRows } from "@/lib/fetchAll";
 import { ClaudeMark } from "./ClaudeCodeButton";
 
 export const CLAUDE_CHANGED_EVENT = "foco:claude-changed";
@@ -17,52 +18,10 @@ export async function setClaudeStarted(taskId: string, value: string | null) {
   return !error;
 }
 
-type ActiveRow = { id: string; title: string; claude_started_at: string | null };
-
-/** Faixa no topo de Hoje com TODAS as tarefas em andamento (qualquer data). */
-export function ClaudeActiveStrip() {
-  const [rows, setRows] = useState<ActiveRow[]>([]);
-
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      try {
-        const { data: auth } = await supabase.auth.getUser();
-        const uid = auth.user?.id;
-        if (!uid) {
-          if (alive) setRows([]);
-          return;
-        }
-        const data = await fetchAllRows<ActiveRow>(() =>
-          supabase
-            .from("tasks")
-            .select("id,title,claude_started_at")
-            .eq("status", "in_progress")
-            .eq("completed", false)
-            .or(`assignee_id.eq.${uid},and(assignee_id.is.null,user_id.eq.${uid})`)
-            .order("in_progress_since" as never, { ascending: false })
-            .order("id"),
-        );
-        if (alive) setRows(data);
-      } catch {
-        /* ignore */
-      }
-    };
-    void load();
-    const onChange = () => void load();
-    window.addEventListener(CLAUDE_CHANGED_EVENT, onChange);
-    window.addEventListener("foco:tasks-changed", onChange);
-    const channel = supabase
-      .channel(`in-progress-strip-${crypto.randomUUID()}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, onChange)
-      .subscribe();
-    return () => {
-      alive = false;
-      window.removeEventListener(CLAUDE_CHANGED_EVENT, onChange);
-      window.removeEventListener("foco:tasks-changed", onChange);
-      void supabase.removeChannel(channel);
-    };
-  }, []);
+/** The day collection already includes tasks from every date and receives the shared feed. */
+export function ClaudeActiveStrip({ tasks }: { tasks: Task[] }) {
+  const { user } = useAuth();
+  const rows = useMemo(() => tasks.filter(t => t.status === "in_progress" && !t.completed && (t.assignee_id === user?.id || (!t.assignee_id && t.user_id === user?.id))).sort((a, b) => (b.in_progress_since ?? "").localeCompare(a.in_progress_since ?? "")), [tasks, user?.id]);
 
   if (rows.length === 0) return null;
   return (

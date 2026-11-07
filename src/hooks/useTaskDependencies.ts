@@ -1,3 +1,4 @@
+import { DEPENDENCIES_CHANGED_EVENT } from "@/lib/task-live-state";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -24,6 +25,9 @@ export function useTaskDependencies(userId: string | undefined) {
 
   useEffect(() => {
     void refresh();
+    const onChange = () => void refresh();
+    window.addEventListener(DEPENDENCIES_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(DEPENDENCIES_CHANGED_EVENT, onChange);
   }, [refresh]);
 
   /** Predecessor ids that block a given task. */
