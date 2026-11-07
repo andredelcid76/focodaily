@@ -2,17 +2,17 @@
 BEGIN;
 DELETE FROM notifications;
 DO $$
-DECLARE owner_id uuid := gen_random_uuid(); assignee_id uuid := gen_random_uuid(); source_id uuid := gen_random_uuid(); task_id uuid := gen_random_uuid();
+DECLARE owner_id uuid := gen_random_uuid(); actor_id uuid := gen_random_uuid(); source_id uuid := gen_random_uuid(); task_id uuid := gen_random_uuid();
 BEGIN
   INSERT INTO projects(id,user_id,members_can_reassign) VALUES(source_id,owner_id,true);
-  INSERT INTO tasks(id,user_id,project_id,assignee_id) VALUES(task_id,owner_id,source_id,assignee_id);
-  PERFORM set_config('request.jwt.claim.sub',assignee_id::text,true);
+  INSERT INTO tasks(id,user_id,project_id,assignee_id) VALUES(task_id,owner_id,source_id,actor_id);
+  PERFORM set_config('request.jwt.claim.sub',actor_id::text,true);
   UPDATE tasks SET assignee_id=owner_id WHERE id=task_id;
   ASSERT (SELECT assignee_id=owner_id FROM tasks WHERE id=task_id), 'assignee reassigns when enabled';
   PERFORM set_config('request.jwt.claim.sub',owner_id::text,true);
-  UPDATE tasks SET assignee_id=assignee_id WHERE id=task_id;
+  UPDATE tasks SET assignee_id=actor_id WHERE id=task_id;
   UPDATE projects SET members_can_reassign=false WHERE id=source_id;
-  PERFORM set_config('request.jwt.claim.sub',assignee_id::text,true);
+  PERFORM set_config('request.jwt.claim.sub',actor_id::text,true);
   BEGIN UPDATE tasks SET assignee_id=owner_id WHERE id=task_id; RAISE EXCEPTION 'TEST_FAILED disabled reassign allowed';
     EXCEPTION WHEN raise_exception THEN IF SQLERRM LIKE 'TEST_FAILED%' THEN RAISE; END IF; END;
   RAISE NOTICE 'PASS database assignee reassignment enabled/disabled';
