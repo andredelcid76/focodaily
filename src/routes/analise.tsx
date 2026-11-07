@@ -56,16 +56,6 @@ const PERIOD_LABEL: Record<Period, string> = {
   all: "Tudo",
 };
 
-const periodDays = (p: Period): number => {
-  switch (p) {
-    case "today": return 1;
-    case "yesterday": return 1;
-    case "7d": return 7;
-    case "30d": return 30;
-    case "90d": return 90;
-    case "all": return 0; // The all-history range is derived from the task events below.
-  }
-};
 
 function AnalisePage() {
   const { user } = useAuth();
