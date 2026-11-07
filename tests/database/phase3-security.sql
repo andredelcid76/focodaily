@@ -6,7 +6,7 @@ grant insert, select on phase3_results to authenticated, anon;
 
 do $$
 declare
-  _me uuid; _colleague uuid; _outsider uuid; _t1 uuid; _t2 uuid; _proj uuid; _err text; _v text;
+  _me uuid; _colleague uuid; _outsider uuid; _t1 uuid; _t2 uuid; _ptask uuid; _proj uuid; _err text; _v text;
 begin
   -- Dados: dois colegas do domínio da empresa, alguém sem nada em comum, duas tarefas minhas
   -- e um projeto onde sou gestor (manager) mas não dono.
@@ -22,6 +22,8 @@ begin
     and not exists (select 1 from private.project_ids_for(_me) a(id) where public.is_project_member(a.id, p.user_id)) limit 1;
   select id into _t1 from public.tasks where user_id = _me and project_id is null and recurrence = 'none' order by created_at limit 1;
   select id into _t2 from public.tasks where user_id = _me and project_id is null and recurrence = 'none' and id <> _t1 order by created_at limit 1;
+  select id into _ptask from public.tasks where user_id = _me and project_id in (select private.project_ids_for(_me)) and recurrence = 'none' order by created_at limit 1;
+  if _ptask is null then raise exception 'fixture data missing (project task)'; end if;
   if _me is null or _colleague is null or _outsider is null or _t1 is null or _t2 is null or _proj is null then
     raise exception 'fixture data missing (me %, colleague %, outsider %, tasks % %, project %)', _me, _colleague, _outsider, _t1, _t2, _proj;
   end if;
@@ -90,6 +92,46 @@ begin
     insert into phase3_results values ('S11 manager may lower own role', false, sqlerrm);
   end;
   execute 'reset role';
+
+  -- Revisão: burla de S10 por recurrence_parent_id. Só herda quem copia dono e responsável da mãe.
+  perform set_config('request.jwt.claims', '', true);
+  update public.tasks set assignee_id = _outsider where id = _t1; -- sem ator (admin): fora do gatilho
+  perform set_config('request.jwt.claims', json_build_object('sub', _me, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  begin
+    insert into public.tasks (user_id, title, scheduled_date, recurrence_parent_id, assignee_id)
+    values (_me, 'phase3 serie herdada', '2099-01-01', _t1, _outsider);
+    insert into phase3_results values ('S10 series instance copying parent owner+assignee passes', true, 'ok');
+  exception when others then
+    insert into phase3_results values ('S10 series instance copying parent owner+assignee passes', false, sqlerrm);
+  end;
+  begin
+    insert into public.tasks (user_id, title, scheduled_date, recurrence_parent_id, assignee_id)
+    values (_me, 'phase3 serie forjada', '2099-01-02', _t2, _outsider);
+    insert into phase3_results values ('S10 bypass via recurrence_parent_id blocked', false, 'inserted');
+  exception when others then
+    insert into phase3_results values ('S10 bypass via recurrence_parent_id blocked', sqlstate = '42501' and sqlerrm like '%delegar%', sqlerrm);
+  end;
+
+  -- Revisão: burla de S10 trocando dono e responsável juntos (tarefa de projeto, a regra de acesso deixa).
+  begin
+    update public.tasks set user_id = _outsider, assignee_id = _outsider where id = _ptask;
+    insert into phase3_results values ('S10 bypass via owner+assignee swap blocked', false, 'updated');
+  exception when others then
+    insert into phase3_results values ('S10 bypass via owner+assignee swap blocked', sqlstate = '42501' and sqlerrm like '%delegar%', sqlerrm);
+  end;
+  begin
+    update public.tasks set user_id = _outsider where id = _ptask;
+    insert into phase3_results values ('S10 owner change to outsider blocked', false, 'updated');
+  exception when others then
+    insert into phase3_results values ('S10 owner change to outsider blocked', sqlstate = '42501' and sqlerrm like '%delegar%', sqlerrm);
+  end;
+  execute 'reset role';
+
+  -- Revisão: UPDATE de tasks só para usuários logados.
+  select array_to_string(roles, ',') into _v from pg_policies
+   where schemaname = 'public' and tablename = 'tasks' and cmd = 'UPDATE';
+  insert into phase3_results values ('tasks UPDATE policy is TO authenticated', _v = 'authenticated', _v);
 end $$;
 
 select name, ok, detail from phase3_results order by name;
