@@ -1,6 +1,6 @@
 import { userToday } from "@/lib/user-timezone";
 import { addDays } from "@/lib/date";
-import { probePipedriveActivities } from "@/lib/pipedrive-sync-policy";
+import { pipedriveMissingMarks, probePipedriveActivities } from "@/lib/pipedrive-sync-policy";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -555,12 +555,8 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
     }
 
 
-    for (const id of missing) {
-      const { error } = await supabaseAdmin.from("tasks").update({ pipedrive_missing: true, pipedrive_missing_reason: "Pipedrive activity lookup returned HTTP 404; task preserved." }).eq("id", id);
-      if (error) throw error;
-    }
-    for (const id of inactive) {
-      const { error } = await supabaseAdmin.from("tasks").update({ pipedrive_missing: true, pipedrive_missing_reason: "atividade desativada no Pipedrive" }).eq("id", id);
+    for (const { id, patch } of pipedriveMissingMarks({ missing, inactive })) {
+      const { error } = await supabaseAdmin.from("tasks").update(patch).eq("id", id);
       if (error) throw error;
     }
     return true;
