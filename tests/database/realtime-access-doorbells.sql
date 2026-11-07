@@ -33,9 +33,9 @@ BEGIN
   IF n <> 1 THEN RAISE EXCEPTION 'added payload missing'; END IF;
 
   -- 5) A failing realtime.send never blocks the write.
-  UPDATE realtime_fail SET on = true;
+  UPDATE realtime_fail SET enabled = true;
   UPDATE public.tasks SET assignee_id = '00000000-0000-0000-0000-00000000000e' WHERE id = '10000000-0000-0000-0000-000000000001';
   UPDATE public.tasks SET assignee_id = '00000000-0000-0000-0000-00000000000b' WHERE id = '10000000-0000-0000-0000-000000000001';
-  UPDATE realtime_fail SET on = false;
+  UPDATE realtime_fail SET enabled = false;
   RAISE NOTICE 'realtime access doorbell tests passed';
 END $$;
