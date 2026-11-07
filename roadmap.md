@@ -1,10 +1,12 @@
+# Auditoria de segurança — Fase 1
+- [x] S1: proteger posse, projeto de origem e ator MCP.
+- [x] S2/S3: proteger convites, limite combinado e e-mail confirmado.
+- [x] S4/S7: exigir Bearer MCP e validar retornos internos.
+- [x] S6: proteger agendadores e reservar notificações atomicamente; testar concorrência.
+- [x] Restringir novos cadastros e executar testes de segurança SQL e frontend.
+- [ ] Ativar chamadas agendadas com CRON_SECRET — aguardando cadastro do segredo e publicação.
+- [ ] Conferir OAuth real, convites/e-mails/Teams e MCP com tokens reais após publicação.
 # Delegação sem projeto
- # Auditoria de segurança — Fase 1
-- [ ] S1: proteger posse, projeto de origem e ator MCP.
-- [ ] S2/S3: proteger convites, limite combinado e e-mail confirmado.
-- [ ] S4/S7: exigir Bearer MCP e validar retornos internos.
-- [ ] S6: proteger agendadores e reservar notificações atomicamente.
-- [ ] Restringir novos cadastros e executar testes de segurança.
 - [x] Agrupar avisos por tarefa no sino e na página, preservando filtros e contadores.
 - [x] Validar agrupamento com cinco testes e expansão/ações em navegador com dados de exemplo.
 - [ ] Conferir ações persistidas na conta real — bloqueado por ausência de sessão autenticada na prévia.

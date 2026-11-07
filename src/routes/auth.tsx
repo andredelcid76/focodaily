@@ -45,6 +45,11 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const error = new URL(window.location.href).searchParams.get("error_description");
+    if (error) toast.error(authError(error));
+  }, []);
+
+  useEffect(() => {
     if (!loading && user) {
       const target = internalReturnPath(next, window.location.origin);
       if (target !== "/") {

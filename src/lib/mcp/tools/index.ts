@@ -894,15 +894,21 @@ export const updateTask = defineTool({
     } else if (args.blocked_reason !== undefined) {
       patch.blocked_reason = args.blocked_reason;
     }
-    if (args.assignee_id !== undefined || args.project_id !== undefined) {
-      const { data: current, error: curErr } = await db(ctx.auth)
+    const { data: current, error: curErr } = await db(ctx.auth)
         .from("tasks")
         .select("user_id,project_id,assignee_id")
         .eq("id", args.id)
         .maybeSingle();
-      if (curErr) throw new Error(curErr.message);
-      if (!current) throw new Error("Tarefa não encontrada.");
+    if (curErr) throw new Error(curErr.message);
+    if (!current) throw new Error("Tarefa não encontrada.");
+    if (current.user_id !== userId && current.assignee_id !== userId) {
       await assertCanAssign(ctx.auth, userId, current.project_id, current.user_id);
+    }
+    if ((args.assignee_id !== undefined && args.assignee_id !== current.assignee_id)
+        || (args.project_id !== undefined && args.project_id !== current.project_id)) {
+      await assertCanAssign(ctx.auth, userId, current.project_id, current.user_id);
+    }
+    if (args.assignee_id !== undefined) {
       if (args.assignee_id) {
         await assertAssigneeAllowed(ctx.auth, args.assignee_id, current.project_id, current.user_id);
       }
@@ -936,7 +942,6 @@ export const updateTask = defineTool({
       .from("tasks")
       .update(patch as never)
       .eq("id", args.id)
-      .or(`user_id.eq.${userId},assignee_id.eq.${userId}`)
       .select()
       .single();
     if (error) throw new Error(error.message);
