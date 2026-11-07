@@ -99,3 +99,8 @@ export async function topPositionFor(qc: QueryClient, date: string | null): Prom
   const min = (data?.[0] as { position?: number } | undefined)?.position;
   return typeof min === "number" ? min - 1 : 0;
 }
+
+/** Whether any cached window (including slim project-stats rows) holds this task. */
+export function isTaskInWindowCaches(qc: QueryClient, id: string): boolean {
+  return windowEntries(qc).some(({ data }) => data.some((t) => t.id === id));
+}

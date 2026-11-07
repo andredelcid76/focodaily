@@ -19,23 +19,26 @@ import {
   type TaskChange,
 } from "@/lib/task-live-state";
 import type { Task } from "@/hooks/useTasks";
+import { applyTaskUpdateToCaches, isTaskInWindowCaches } from "@/lib/task-window-cache";
+import { DELEGATED_TASKS_KEY, TASKS_ROOT_KEY } from "@/lib/task-windows";
 export { TASKS_CHANGED_EVENT } from "@/lib/task-live-state";
 
 type AssignedCache = { tasks: Task[] } | undefined;
 
-/** Task ids also held by React Query lists (Delegadas / Tarefas, project pages). */
+const LIST_KEYS = [["my-assigned-tasks"], DELEGATED_TASKS_KEY] as const;
+
+/** Task ids held by any task window or hydrated list (Tarefas / Delegadas). */
 function isTaskInQueryCaches(qc: QueryClient, id: string) {
-  const assigned = qc.getQueriesData<AssignedCache>({ queryKey: ["my-assigned-tasks"] });
-  if (assigned.some(([, data]) => data?.tasks?.some(t => t.id === id))) return true;
-  const projects = qc.getQueriesData<Task[]>({ queryKey: ["project-tasks"] });
-  return projects.some(([, data]) => Array.isArray(data) && data.some(t => t.id === id));
+  if (isTaskInWindowCaches(qc, id)) return true;
+  return LIST_KEYS.some(queryKey =>
+    qc.getQueriesData<AssignedCache>({ queryKey: [...queryKey] }).some(([, data]) => data?.tasks?.some(t => t.id === id)));
 }
 
 function removeFromQueryCaches(qc: QueryClient, id: string) {
-  qc.setQueriesData<AssignedCache>({ queryKey: ["my-assigned-tasks"] }, data =>
-    data?.tasks?.some(t => t.id === id) ? { ...data, tasks: data.tasks.filter(t => t.id !== id) } : data);
-  qc.setQueriesData<Task[]>({ queryKey: ["project-tasks"] }, data =>
-    Array.isArray(data) && data.some(t => t.id === id) ? data.filter(t => t.id !== id) : data);
+  for (const queryKey of LIST_KEYS) {
+    qc.setQueriesData<AssignedCache>({ queryKey: [...queryKey] }, data =>
+      data?.tasks?.some(t => t.id === id) ? { ...data, tasks: data.tasks.filter(t => t.id !== id) } : data);
+  }
 }
 
 const emit = (detail: LiveTaskUpdate | LiveTaskUpdate[]) =>
@@ -71,7 +74,7 @@ export function useLiveTaskSync(userId: string | undefined) {
     const removeTask = (id: string) => {
       emit({ eventType: "DELETE", new: {}, old: { id } });
       removeFromQueryCaches(qc, id);
-      invalidate([["my-assigned-tasks"], ["dependency-status"]]);
+      invalidate([["my-assigned-tasks"], [...DELEGATED_TASKS_KEY], ["dependency-status"]]);
     };
 
     const onTask = (raw: TaskChange) => {
@@ -92,8 +95,10 @@ export function useLiveTaskSync(userId: string | undefined) {
       if (!local || changesTaskScope(change)) invalidate(taskQueryKeys(change));
       else {
         // Our own write: patch list caches in place instead of repeating their reads.
-        qc.setQueriesData<AssignedCache>({ queryKey: ["my-assigned-tasks"] }, data => data ? { ...data, tasks: applyTaskChange(data.tasks, change) } : data);
-        qc.setQueriesData<Task[]>({ queryKey: ["project-tasks"] }, data => Array.isArray(data) && data.some(t => t.id === change.new.id) ? applyTaskChange(data, change) : data);
+        for (const queryKey of LIST_KEYS) {
+          qc.setQueriesData<AssignedCache>({ queryKey: [...queryKey] }, data =>
+            data?.tasks?.some(t => t.id === change.new.id) ? { ...data, tasks: applyTaskChange(data.tasks as Task[], change) } : data);
+        }
         invalidate([["dependency-status"]]);
       }
     };
@@ -116,7 +121,7 @@ export function useLiveTaskSync(userId: string | undefined) {
       if (!alive) return;
       emit({ eventType: "PROJECT_SNAPSHOT", projectId, rows });
       window.dispatchEvent(new CustomEvent(PROJECT_ACCESS_CHANGED_EVENT, { detail: { projectId } }));
-      invalidate([["my-assigned-tasks"], ["project-tasks", projectId], ["my-project-roles"], ["dependency-status"]]);
+      invalidate([["my-assigned-tasks"], [...DELEGATED_TASKS_KEY], ["my-project-roles"], ["dependency-status"]]);
     };
 
     const connect = async () => {
@@ -179,12 +184,24 @@ export function useLiveTaskSync(userId: string | undefined) {
         .subscribe();
     };
 
+    // Every change (live feed, own writes, Claude activity) lands in all cached task windows.
+    const onChanged = (event: Event) => {
+      const detail = (event as CustomEvent<LiveTaskUpdate | LiveTaskUpdate[]>).detail;
+      for (const change of (Array.isArray(detail) ? detail : [detail]).filter(c => c?.eventType)) {
+        applyTaskUpdateToCaches(qc, change);
+      }
+    };
+    // Missed-event recovery: re-read the windows (tasks, project stats, Delegadas).
+    const onResync = () => invalidate([[...TASKS_ROOT_KEY]]);
+    window.addEventListener(TASKS_CHANGED_EVENT, onChanged);
+    window.addEventListener(TASKS_RESYNC_EVENT, onResync);
+
     void connect().catch(() => {});
     void connectDoorbell().catch(() => {});
     let hiddenAt = 0;
     const recover = () => {
       window.dispatchEvent(new CustomEvent(TASKS_RESYNC_EVENT));
-      invalidate([["my-assigned-tasks"], ["project-tasks"], ["dependency-status"]]);
+      invalidate([["my-assigned-tasks"], ["dependency-status"]]);
       void connect().catch(() => {});
     };
     const onVis = () => {
@@ -200,6 +217,8 @@ export function useLiveTaskSync(userId: string | undefined) {
       if (timer) clearTimeout(timer);
       clearInterval(recovery);
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener(TASKS_CHANGED_EVENT, onChanged);
+      window.removeEventListener(TASKS_RESYNC_EVENT, onResync);
       if (channel) void supabase.removeChannel(channel);
       if (doorbell) void supabase.removeChannel(doorbell);
     };
