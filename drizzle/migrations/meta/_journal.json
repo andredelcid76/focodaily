@@ -127,6 +127,13 @@
       "when": 1794028511911,
       "tag": "0017_security_phase1_cron_notification_claims",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794028554823,
+      "tag": "0018_security_phase1_delivery_finalize",
+      "breakpoints": true
     }
   ]
 }

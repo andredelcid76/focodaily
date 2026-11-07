@@ -1818,6 +1818,17 @@ export type Database = {
       company_colleague_ids: { Args: never; Returns: string[] }
       company_domain_of: { Args: { _user_id: string }; Returns: string }
       current_actor_id: { Args: never; Returns: string }
+      finish_notification_delivery: {
+        Args: {
+          _claim: string
+          _digest: boolean
+          _error: string
+          _failed: boolean
+          _id: string
+          _teams_ok: boolean
+        }
+        Returns: undefined
+      }
       foco_cron_post: { Args: { _path: string }; Returns: number }
       is_company_colleague: {
         Args: { _a: string; _b: string }
