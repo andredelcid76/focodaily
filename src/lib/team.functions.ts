@@ -266,15 +266,25 @@ export const updateProjectMemberRole = createServerFn({ method: "POST" })
       .eq("id", data.project_id)
       .maybeSingle();
     if (!project) throw new Error("Projeto não encontrado");
-    const { data: myMembership } = await supabaseAdmin
-      .from("project_members")
-      .select("role")
-      .eq("project_id", data.project_id)
-      .eq("user_id", userId)
-      .maybeSingle();
-    const isAdmin = project.user_id === userId || ["admin","manager"].includes(myMembership?.role ?? "");
+    // S11: mesma regra do banco (is_project_admin: dono, admin/gestor do projeto ou da equipe).
+    const { data: isAdmin, error: adminErr } = await context.supabase.rpc("is_project_admin", {
+      _project_id: data.project_id,
+      _user_id: userId,
+    });
+    if (adminErr) throw new Error(adminErr.message);
     if (!isAdmin) throw new Error("Apenas o dono ou um admin pode mudar papéis");
     if (data.user_id === project.user_id) throw new Error("O dono não tem papel editável");
+    if (data.user_id === userId) {
+      const { data: myMembership } = await supabaseAdmin
+        .from("project_members")
+        .select("role")
+        .eq("project_id", data.project_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (projectRoleRank(data.role) > projectRoleRank(myMembership?.role)) {
+        throw new Error("Você não pode aumentar o próprio papel no projeto.");
+      }
+    }
 
     const { error } = await supabaseAdmin
       .from("project_members")
