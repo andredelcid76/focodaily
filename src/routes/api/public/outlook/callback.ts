@@ -130,6 +130,7 @@ function redirectWithMsg(message: string, type: "success" | "error" = "error") {
   const params = new URLSearchParams({ outlook: type, msg: message });
   return new Response(null, {
     status: 302,
-    headers: { Location: `/agenda?${params.toString()}` },
+    // Every outcome clears the single-use state cookie.
+    headers: { Location: `/agenda?${params.toString()}`, "Set-Cookie": outlookStateCookieHeader("", 0) },
   });
 }
