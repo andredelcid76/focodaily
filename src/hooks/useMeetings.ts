@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toISODate } from "@/lib/date";
+import { addDays, startOfWeek, toISODate } from "@/lib/date";
 
 export type Meeting = {
   id: string;
@@ -18,6 +19,8 @@ export type Meeting = {
   is_all_day: boolean;
 };
 
+const EMPTY: Meeting[] = [];
+
 export function meetingDurationMinutes(m: Meeting) {
   if (m.is_all_day) return 0;
   const s = new Date(m.starts_at).getTime();
@@ -25,32 +28,49 @@ export function meetingDurationMinutes(m: Meeting) {
   return Math.max(0, Math.round((e - s) / 60000));
 }
 
-export function useMeetings(userId: string) {
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [loading, setLoading] = useState(true);
+/** Cached meeting windows: one Monday–Sunday week per key, shared by Hoje, Semana and Agenda. */
+export function meetingWeekWindow(iso: string) {
+  const from = startOfWeek(iso);
+  return { from, to: addDays(from, 6) };
+}
 
-  const refresh = useCallback(async () => {
-    try {
+function meetingsQueryOptions(userId: string, range: { from: string; to: string } | null) {
+  return {
+    queryKey: ["meetings", userId, range?.from ?? "all", range?.to ?? "all"] as const,
+    queryFn: async () => {
       const { fetchAllRows } = await import("@/lib/fetchAll");
-      const data = await fetchAllRows<Meeting>(
-        () =>
-          supabase
-            .from("meetings")
-            .select("*")
-            .eq("user_id", userId)
-            .order("starts_at", { ascending: true })
-            .order("id", { ascending: true }) as never,
-      );
-      setMeetings(data);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [userId]);
+      return fetchAllRows<Meeting>(() => {
+        let q = supabase.from("meetings").select("*").eq("user_id", userId);
+        if (range) q = q.gte("scheduled_date", range.from).lte("scheduled_date", range.to);
+        return q.order("starts_at", { ascending: true }).order("id", { ascending: true }) as never;
+      });
+    },
+    enabled: !!userId,
+  };
+}
+
+/**
+ * Meetings for the user. With `aroundDate`, only that date's week is read (neighbour
+ * weeks are prefetched so moving between days never shows an empty list); without it,
+ * every meeting is read (project page, which links any meeting).
+ */
+export function useMeetings(userId: string, aroundDate?: string) {
+  const queryClient = useQueryClient();
+  const range = useMemo(() => (aroundDate ? meetingWeekWindow(aroundDate) : null), [aroundDate]);
+  const query = useQuery({ ...meetingsQueryOptions(userId, range), placeholderData: keepPreviousData });
+  const meetings = query.data ?? EMPTY;
+  const loading = query.isPending;
 
   useEffect(() => {
-    setLoading(true);
-    refresh().finally(() => setLoading(false));
-  }, [refresh]);
+    if (!userId || !range) return;
+    for (const offset of [-7, 7]) {
+      void queryClient.prefetchQuery(meetingsQueryOptions(userId, meetingWeekWindow(addDays(range.from, offset))));
+    }
+  }, [queryClient, userId, range]);
+
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["meetings", userId] });
+  }, [queryClient, userId]);
 
   const meetingsByDay = useCallback(
     (iso: string) => meetings.filter((m) => m.scheduled_date === iso),

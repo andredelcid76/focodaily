@@ -62,7 +62,7 @@ function AgendaInner({ userId, accessToken }: { userId: string; accessToken: str
     email?: string | null;
     last_sync_at?: string | null;
   }>({ connected: false });
-  const meetingsApi = useMeetings(userId);
+  const meetingsApi = useMeetings(userId, viewDate);
 
   const outlookRequest = async <T,>(method: "GET" | "POST", body?: Record<string, unknown>) => {
     const response = await fetch("/api/public/outlook", {
