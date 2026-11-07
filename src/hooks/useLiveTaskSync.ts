@@ -51,12 +51,10 @@ export function useLiveTaskSync(userId: string | undefined) {
         invalidate([["dependency-status"]]);
         window.dispatchEvent(new CustomEvent(DEPENDENCIES_CHANGED_EVENT));
       });
-      let subscribed = false;
       channel.subscribe(status => {
         if (status === "SUBSCRIBED") {
           // Recover changes missed between initial read and subscription, and on reconnect.
           window.dispatchEvent(new CustomEvent(TASKS_RESYNC_EVENT));
-          subscribed = true;
         }
       });
     };

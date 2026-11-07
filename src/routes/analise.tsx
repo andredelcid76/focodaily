@@ -81,26 +81,25 @@ function AnaliseInner({ userId }: { userId: string }) {
   const rolesById = useMemo(() => new Map(roles.map((r) => [r.id, r])), [roles]);
 
   const { cutoff, upper } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (period === "all") return { cutoff: null as Date | null, upper: null as Date | null };
+    const today = todayISO();
+    if (period === "all") return { cutoff: null as string | null, upper: null as string | null };
     if (period === "today") {
-      const end = new Date(today); end.setDate(end.getDate() + 1);
+      const end = addDays(today, 1);
       return { cutoff: today, upper: end };
     }
     if (period === "yesterday") {
-      const start = new Date(today); start.setDate(start.getDate() - 1);
+      const start = addDays(today, -1);
       return { cutoff: start, upper: today };
     }
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
-    const d = new Date(today); d.setDate(d.getDate() - days + 1);
+    const d = addDays(today, -days + 1);
     return { cutoff: d, upper: null };
   }, [period]);
 
   const inRange = (iso?: string | null) => {
     if (!iso) return false;
     if (!cutoff) return true;
-    const d = new Date(iso);
+    const d = iso.length === 10 ? iso : dateInTimezone(new Date(iso));
     if (d < cutoff) return false;
     if (upper && d >= upper) return false;
     return true;
@@ -124,7 +123,7 @@ function AnaliseInner({ userId }: { userId: string }) {
     const total = scoped.length;
     const done = scoped.filter((t) => t.completed).length;
     const overdue = scoped.filter(
-      (t) => !t.completed && t.scheduled_date && new Date(t.scheduled_date) < new Date(new Date().toDateString()),
+      (t) => !t.completed && t.scheduled_date && t.scheduled_date < todayISO(),
     ).length;
     const postponed = scoped.filter((t) => (t.postpone_count ?? 0) > 0).length;
     const critical = scoped.filter((t) => (t.postpone_count ?? 0) >= 3).length;

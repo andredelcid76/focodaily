@@ -69,7 +69,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { todayISO, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
+import { todayISO, dateInTimezone, toISODate, addDays, formatHuman, formatMinutes } from "@/lib/date";
 import { toast } from "sonner";
 import { taskNumbers } from "@/lib/task-numbering";
 
