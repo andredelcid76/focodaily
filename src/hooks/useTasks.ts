@@ -1,7 +1,11 @@
-import { applyTaskChange, applyLiveUpdate, replayTaskChanges, rememberOptimisticTask, forgetOptimisticTask, setLoadedTaskIds, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, type LiveTaskUpdate } from "@/lib/task-live-state";
+import { rememberOptimisticTask, forgetOptimisticTask, setLoadedTaskIds, TASKS_CHANGED_EVENT, type LiveTaskUpdate } from "@/lib/task-live-state";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { taskWindowKey, TASKS_ROOT_KEY, type TaskWindow } from "@/lib/task-windows";
+import { applyTaskUpdateToCaches, cachedTasksForDate, fetchTaskWindow, findCachedTask, topPositionFor } from "@/lib/task-window-cache";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { confirmDependencyMove } from "@/lib/dependency-check";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+export type { TaskWindow } from "@/lib/task-windows";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { todayISO, addDays } from "@/lib/date";
@@ -74,86 +78,89 @@ function instanceMatchesRecurrence(parent: Task, dayISO: string): boolean {
   return false;
 }
 
-// Keep the latest rows only as an internal synchronization snapshot.
-// A newly mounted screen must never render this snapshot: it can be behind
-// changes made from another screen or client. It waits for the authoritative
-// read instead, so "Hoje" cannot flash an outdated task list.
-const tasksCache = new Map<string, Task[]>();
 // Evita repetir o trabalho de materializar recorrências a cada navegação
 const ensureDoneAt = new Map<string, number>();
 const ENSURE_TTL_MS = 5 * 60 * 1000;
 
-export function useTasks(userId: string | undefined, options?: { fastInitialDay?: string }) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const fastInitialDay = options?.fastInitialDay;
-  const changesDuringRead = useRef<LiveTaskUpdate[]>([]);
-  const readSequence = useRef(0);
-  const [loadedOwner] = useState(() => Symbol("useTasks"));
+// Sentinel for "top of that day": resolved on write from the cache or with one small read.
+export const TOP_OF_DAY = -2147483648;
 
-  // Lets the live feed ignore deletes/comments of tasks no screen has loaded.
-  useEffect(() => {
-    setLoadedTaskIds(loadedOwner, new Set(tasks.map(t => t.id)));
-  }, [loadedOwner, tasks]);
-  useEffect(() => () => setLoadedTaskIds(loadedOwner, null), [loadedOwner]);
+const EMPTY_TASKS: Task[] = [];
 
-  // Mantém a memória sempre igual ao que está na tela (edições e tempo real)
-  useEffect(() => {
-    if (userId && !loading) tasksCache.set(userId, tasks);
-  }, [userId, tasks, loading]);
+/** Dependency predecessors (or any task ids) outside the loaded window: id, title and completion only. */
+export function useTaskLookup(ids: string[]) {
+  const sorted = useMemo(() => Array.from(new Set(ids)).sort(), [ids]);
+  const { data } = useQuery({
+    queryKey: ["task-lookup", sorted],
+    enabled: sorted.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const out: Array<Pick<Task, "id" | "title" | "completed">> = [];
+      for (let i = 0; i < sorted.length; i += 200) {
+        const { data: rows, error } = await supabase.from("tasks").select("id,title,completed").in("id", sorted.slice(i, i + 200));
+        if (error) throw error;
+        out.push(...((rows ?? []) as Array<Pick<Task, "id" | "title" | "completed">>));
+      }
+      return out;
+    },
+  });
+  return useMemo(() => new Map((data ?? []).map((t) => [t.id, t])), [data]);
+}
+
+/**
+ * Tasks of one screen window (see task-windows.ts). Without a window the hook only exposes
+ * actions (quick add). Actions that need other rows (series, follow-ups, positions) read
+ * exactly those rows on demand instead of holding the whole collection.
+ */
+export function useTasks(userId: string | undefined, window?: TaskWindow | null) {
+  const qc = useQueryClient();
+  const queryKey = window ? taskWindowKey(window) : (["tasks", "none"] as const);
+  const query = useQuery({
+    queryKey,
+    queryFn: () => fetchTaskWindow(window as TaskWindow),
+    enabled: !!userId && !!window,
+    placeholderData: keepPreviousData,
+  });
+  const tasks = window ? query.data ?? EMPTY_TASKS : EMPTY_TASKS;
+  const loading = !!window && query.isPending;
+
+  const apply = useCallback((change: LiveTaskUpdate) => applyTaskUpdateToCaches(qc, change), [qc]);
+  const patchLocal = useCallback((id: string, patch: Partial<Task>) => apply({ eventType: "UPDATE", new: { ...patch, id }, old: {} }), [apply]);
+  const removeLocal = useCallback((id: string) => apply({ eventType: "DELETE", new: {}, old: { id } }), [apply]);
+  const insertLocal = useCallback((row: Task) => apply({ eventType: "INSERT", new: row, old: {} }), [apply]);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const sequence = ++readSequence.current;
-    changesDuringRead.current = [];
-    // PostgREST caps each response at 1000 rows — page through everything,
-    // otherwise later-dated tasks get silently cut off.
-    const PAGE = 1000;
-    const all: Task[] = [];
-    let failed = false;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .order("scheduled_date", { ascending: true })
-        .order("position", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, from + PAGE - 1);
-      if (error || !data) { failed = true; break; }
-      all.push(...(data as Task[]));
-      if (data.length < PAGE) break;
-    }
-    if (!failed && sequence === readSequence.current) {
-      const reconciled = replayTaskChanges(all, changesDuringRead.current);
-      tasksCache.set(userId, reconciled);
-      setTasks(reconciled);
-      changesDuringRead.current = [];
-    }
-    setLoading(false);
-  }, [userId]);
+    await qc.invalidateQueries({ queryKey: TASKS_ROOT_KEY });
+  }, [qc, userId]);
 
-  const refreshInitialDay = useCallback(async () => {
-    if (!userId || !fastInitialDay) return false;
-    // Wide UTC bounds cover the user's local calendar day, including DST offsets.
-    const dayStart = `${addDays(fastInitialDay, -1)}T00:00:00.000Z`;
-    const nextDayStart = `${addDays(fastInitialDay, 2)}T00:00:00.000Z`;
-    const sequence = ++readSequence.current;
-    changesDuringRead.current = [];
-    let data: Task[];
-    try { data = await fetchAllRows<Task>(() => supabase
-      .from("tasks")
-      .select("*")
-      .or(
-        `scheduled_date.eq.${fastInitialDay},and(scheduled_date.lt.${fastInitialDay},completed.eq.false),and(scheduled_date.gt.${fastInitialDay},completed_at.gte.${dayStart},completed_at.lt.${nextDayStart})`,
-      )
-      .order("scheduled_date", { ascending: true })
-      .order("position", { ascending: true }).order("id")); }
-    catch { return false; }
-    if (sequence !== readSequence.current) return false;
-    setTasks(replayTaskChanges(data, changesDuringRead.current));
-    setLoading(false);
-    return true;
-  }, [fastInitialDay, userId]);
+  /** Cached row, else one read by id. */
+  const getTask = useCallback(async (id: string): Promise<Task | undefined> => {
+    const cached = findCachedTask(qc, id);
+    if (cached) return cached;
+    const { data } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
+    return (data as Task | null) ?? undefined;
+  }, [qc]);
+
+  const getTasks = useCallback(async (ids: string[]): Promise<Task[]> => {
+    const found = new Map<string, Task>();
+    const missing: string[] = [];
+    for (const id of ids) {
+      const cached = findCachedTask(qc, id);
+      if (cached) found.set(id, cached); else missing.push(id);
+    }
+    for (let i = 0; i < missing.length; i += 200) {
+      const { data } = await supabase.from("tasks").select("*").in("id", missing.slice(i, i + 200));
+      for (const row of (data ?? []) as Task[]) found.set(row.id, row);
+    }
+    return ids.flatMap((id) => (found.has(id) ? [found.get(id)!] : []));
+  }, [qc]);
+
+  const resolvePosition = useCallback(
+    (date: string | null | undefined, position: number | null | undefined) =>
+      position === TOP_OF_DAY ? topPositionFor(qc, date ?? null) : Promise.resolve(position),
+    [qc],
+  );
 
   // Generate recurring task instances from today through FUTURE_DAYS ahead
   const ensureRecurring = useCallback(async () => {
@@ -346,42 +353,37 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
   useEffect(() => {
     if (!userId) return;
-    (async () => {
-      // Hoje opens from a small authoritative slice first. The complete task
-      // collection is synchronized immediately afterwards for dialogs/actions.
-      const openedFast = fastInitialDay ? await refreshInitialDay() : false;
-      if (!openedFast) await refresh();
-      else void refresh();
-      // 2) Materializa recorrências em segundo plano (no máximo 1x a cada 5 min)
+    void (async () => {
+      // Materializa recorrências em segundo plano (no máximo 1x a cada 5 min)
       const last = ensureDoneAt.get(userId) ?? 0;
       if (Date.now() - last < ENSURE_TTL_MS) return;
       ensureDoneAt.set(userId, Date.now());
       await ensureRecurring();
       await refresh();
     })();
+  }, [userId, refresh, ensureRecurring]);
 
-    const onExternal = (event: Event) => {
-      const detail = (event as CustomEvent<LiveTaskUpdate | LiveTaskUpdate[]>).detail;
-      const changes = (Array.isArray(detail) ? detail : [detail]).filter(c => c?.eventType);
-      if (!changes.length) return;
-      changesDuringRead.current.push(...changes);
-      if (changesDuringRead.current.length > 1000) changesDuringRead.current.splice(0, changesDuringRead.current.length - 1000);
-      setTasks(prev => changes.reduce(applyLiveUpdate, prev));
-    };
-    const onRecover = () => void refresh();
-    window.addEventListener(TASKS_CHANGED_EVENT, onExternal);
-    window.addEventListener(TASKS_RESYNC_EVENT, onRecover);
-    return () => {
-      window.removeEventListener(TASKS_CHANGED_EVENT, onExternal);
-      window.removeEventListener(TASKS_RESYNC_EVENT, onRecover);
-    };
-  }, [userId, fastInitialDay, refresh, refreshInitialDay, ensureRecurring]);
+  // Lets the live feed ignore deletes/comments of tasks no screen has loaded.
+  const [loadedOwner] = useState(() => Symbol("useTasks"));
+  useEffect(() => {
+    setLoadedTaskIds(loadedOwner, new Set(tasks.map(t => t.id)));
+  }, [loadedOwner, tasks]);
+  useEffect(() => () => setLoadedTaskIds(loadedOwner, null), [loadedOwner]);
+
+  // Hoje: the neighbour days are read ahead so moving between days is instant.
+  useEffect(() => {
+    if (!userId || window?.kind !== "day") return;
+    for (const offset of [-1, 1]) {
+      const neighbour: TaskWindow = { kind: "day", date: addDays(window.date, offset) };
+      void qc.prefetchQuery({ queryKey: taskWindowKey(neighbour), queryFn: () => fetchTaskWindow(neighbour) });
+    }
+  }, [qc, userId, window?.kind, window?.kind === "day" ? window.date : null]);
 
   const createTask = async (data: Omit<TablesInsert<"tasks">, "user_id">) => {
     if (!userId) return;
-    // Sem responsável informado, a tarefa fica sem responsável (não auto-atribui ao criador)
     // Por padrão a tarefa fica com quem criou; null explícito = sem responsável.
-    const payload = { ...data, user_id: userId, assignee_id: data.assignee_id === undefined ? userId : data.assignee_id };
+    const position = await resolvePosition(data.scheduled_date, data.position);
+    const payload = { ...data, ...(position === undefined ? {} : { position }), user_id: userId, assignee_id: data.assignee_id === undefined ? userId : data.assignee_id };
     const { data: inserted, error } = await supabase
       .from("tasks")
       .insert(payload)
@@ -389,7 +391,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       .single();
     if (error) throw error;
     if (inserted) {
-      setTasks((prev) => (prev.some((t) => t.id === inserted.id) ? prev : [...prev, inserted]));
+      insertLocal(inserted as Task);
       // Tarefa já criada delegada: dispara os avisos externos na hora
       if (inserted.assignee_id && inserted.assignee_id !== inserted.user_id) {
         import("@/lib/notifications.functions")
@@ -407,18 +409,23 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   const updateTask = async (id: string, patch: Partial<Task>) => {
     rememberOptimisticTask(id, patch);
     // Optimistic update
-    const target = tasks.find((t) => t.id === id);
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    const target = findCachedTask(qc, id);
+    patchLocal(id, patch);
     const { data: saved, error } = await supabase.from("tasks").update(patch).eq("id", id).select().single();
-    if (error) { forgetOptimisticTask(id); if (target) setTasks(prev => prev.map(t => t.id === id ? target : t)); throw error; }
+    if (error) {
+      forgetOptimisticTask(id);
+      if (target) apply({ eventType: "UPDATE", new: target, old: {} });
+      else void refresh();
+      throw error;
+    }
     if (saved) {
-      setTasks(prev => applyTaskChange(prev, { eventType: "UPDATE", new: saved, old: target ?? {} }));
-      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail: { eventType: "UPDATE", new: saved, old: target ?? {} } }));
+      apply({ eventType: "UPDATE", new: saved as Task, old: target ?? {} });
+      globalThis.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail: { eventType: "UPDATE", new: saved, old: target ?? {} } }));
     }
     // Considera o responsável DEPOIS do patch: uma delegação feita agora também avisa.
     const nextAssignee =
-      patch.assignee_id !== undefined ? patch.assignee_id : target?.assignee_id ?? null;
-    const owner = patch.user_id ?? target?.user_id ?? null;
+      patch.assignee_id !== undefined ? patch.assignee_id : (saved as Task | null)?.assignee_id ?? target?.assignee_id ?? null;
+    const owner = patch.user_id ?? (saved as Task | null)?.user_id ?? target?.user_id ?? null;
     if (nextAssignee && nextAssignee !== owner) {
       import("@/lib/notifications.functions")
         .then((m) => m.flushNotificationDelivery())
@@ -427,7 +434,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   };
 
   const deleteTask = async (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    removeLocal(id);
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) throw error;
   };
@@ -476,11 +483,14 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   // - "this": only the single row
   // - "future": this row and all sibling instances scheduled on/after its date (plus the parent if its original_date >= this date)
   // - "all": this row + all siblings + parent
-  const getRecurrenceFamily = (task: Task) => {
+  // The series (seed + every instance) is read on demand — not from the screen's window.
+  const getRecurrenceFamily = async (task: Task) => {
     const parentId = task.recurrence_parent_id ?? task.id;
-    const parent = tasks.find((t) => t.id === parentId);
-    const instances = tasks.filter((t) => t.recurrence_parent_id === parentId);
-    return { parent, parentId, instances };
+    const [{ data: parentRow }, instances] = await Promise.all([
+      supabase.from("tasks").select("*").eq("id", parentId).maybeSingle(),
+      fetchAllRows<Task>(() => supabase.from("tasks").select("*").eq("recurrence_parent_id", parentId).order("id") as never),
+    ]);
+    return { parent: (parentRow as Task | null) ?? undefined, parentId, instances };
   };
 
   // Patch keys that should NOT be propagated to siblings (per-instance only).
@@ -549,7 +559,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     await updateTask(task.id, ownPatch);
 
 
-    const { parent, parentId, instances } = getRecurrenceFamily(task);
+    const { parent, parentId, instances } = await getRecurrenceFamily(task);
     const baseDate = task.scheduled_date ?? todayISO();
 
     if (Object.keys(seriesPatch).length > 0) {
@@ -572,18 +582,18 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
         }
       }
       if (targets.length > 0 && Object.keys(childPatch).length > 0) {
-        setTasks((prev) => prev.map((t) => (targets.find((x) => x.id === t.id) ? { ...t, ...childPatch } : t)));
+        for (const t of targets) patchLocal(t.id, childPatch);
         const ids = targets.map((t) => t.id);
         await supabase.from("tasks").update(childPatch).in("id", ids);
       }
       if (parentTarget && Object.keys(parentPatch).length > 0) {
         const pid = parentTarget.id;
-        setTasks((prev) => prev.map((t) => (t.id === pid ? { ...t, ...parentPatch } : t)));
+        patchLocal(pid, parentPatch);
         await supabase.from("tasks").update(parentPatch).eq("id", pid);
       } else if (isChild && Object.keys(rulePatch).length > 0) {
         // The seed wasn't in the propagation targets (past/completed), but the rule
         // change must still land on it — it's the only row that holds the rule.
-        setTasks((prev) => prev.map((t) => (t.id === parentId ? { ...t, ...rulePatch } : t)));
+        patchLocal(parentId, rulePatch);
         await supabase.from("tasks").update(rulePatch).eq("id", parentId);
       }
     }
@@ -617,7 +627,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
           }
         }
         if (idsToDelete.length > 0) {
-          setTasks((prev) => prev.filter((t) => !idsToDelete.includes(t.id)));
+          idsToDelete.forEach(removeLocal);
           await supabase.from("tasks").delete().in("id", idsToDelete);
         }
       }
@@ -641,16 +651,14 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
           await deleteTask(task.id);
           return;
         }
-        const nextInstance = tasks.find(
-          (t) => t.recurrence_parent_id === task.id && t.scheduled_date === nextDate
-        );
-        setTasks((prev) =>
-          prev
-            .filter((t) => t.id !== nextInstance?.id)
-            .map((t) =>
-              t.id === task.id ? { ...t, scheduled_date: nextDate, original_date: nextDate } : t
-            )
-        );
+        const { data: nextInstance } = await supabase
+          .from("tasks")
+          .select("id")
+          .eq("recurrence_parent_id", task.id)
+          .eq("scheduled_date", nextDate)
+          .maybeSingle();
+        if (nextInstance) removeLocal(nextInstance.id);
+        patchLocal(task.id, { scheduled_date: nextDate, original_date: nextDate });
         if (nextInstance) {
           const { error: deleteNextError } = await supabase.from("tasks").delete().eq("id", nextInstance.id);
           if (deleteNextError) throw deleteNextError;
@@ -665,7 +673,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       await deleteTask(task.id);
       return;
     }
-    const { parent, parentId, instances } = getRecurrenceFamily(task);
+    const { parent, parentId, instances } = await getRecurrenceFamily(task);
     const baseDate = task.scheduled_date ?? todayISO();
     const idsToDelete = new Set<string>([task.id]);
     if (scope === "all") {
@@ -685,13 +693,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     }
 
     const ids = Array.from(idsToDelete);
-    setTasks((prev) => prev.filter((t) => !idsToDelete.has(t.id)));
+    idsToDelete.forEach(removeLocal);
     if (scope === "future") {
       if (parent && !idsToDelete.has(parent.id)) {
         const until = addDays(baseDate, -1);
-        setTasks((prev) =>
-          prev.map((t) => (t.id === parent.id ? { ...t, recurrence_until: until } : t))
-        );
+        patchLocal(parent.id, { recurrence_until: until });
         const { error } = await supabase.from("tasks").update({ recurrence_until: until }).eq("id", parent.id);
         if (error) throw error;
       }
@@ -731,17 +737,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   };
 
   const reorderInDay = async (date: string, orderedIds: string[]) => {
+    const current = new Map((await getTasks(orderedIds)).map((t) => [t.id, t]));
     for (const id of orderedIds) {
-      if (tasks.find(t => t.id === id)?.scheduled_date !== date && !(await confirmDependencyMove(id, date))) return;
+      if (current.get(id)?.scheduled_date !== date && !(await confirmDependencyMove(id, date))) return;
     }
-    setTasks((prev) => {
-      const map = new Map(prev.map((t) => [t.id, t]));
-      orderedIds.forEach((id, idx) => {
-        const t = map.get(id);
-        if (t) map.set(id, { ...t, position: idx, scheduled_date: date });
-      });
-      return Array.from(map.values());
-    });
+    orderedIds.forEach((id, idx) => patchLocal(id, { position: idx, scheduled_date: date }));
     await Promise.all(
       orderedIds.map((id, idx) =>
         supabase.from("tasks").update({ position: idx, scheduled_date: date }).eq("id", id)
@@ -749,9 +749,10 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     );
   };
 
-  const moveTaskToDay = async (taskId: string, date: string, position = 0) => {
-    const task = tasks.find((t) => t.id === taskId);
+  const moveTaskToDay = async (taskId: string, date: string, requestedPosition = 0) => {
+    const task = await getTask(taskId);
     if (task?.scheduled_date !== date && !(await confirmDependencyMove(taskId, date))) return;
+    const position = (await resolvePosition(date, requestedPosition)) ?? 0;
     if (task?.recurrence_parent_id && task.scheduled_date !== date) {
       await createRecurrenceException(task.recurrence_parent_id, task.scheduled_date ?? "");
       await updateTask(taskId, {
@@ -760,7 +761,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       });
       return;
     }
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, scheduled_date: date, position } : t)));
+    patchLocal(taskId, { scheduled_date: date, position });
     await supabase.from("tasks").update({ scheduled_date: date, position }).eq("id", taskId);
   };
 
@@ -768,7 +769,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   // Each task gets a unique position so the relative order is preserved.
   const bulkMoveToDay = async (taskIds: string[], date: string) => {
     if (taskIds.length === 0) return;
-    const basePos = topPositionForDay(date);
+    const basePos = await topPositionFor(qc, date);
     for (const [idx, id] of taskIds.entries()) {
       await moveTaskToDay(id, date, basePos - idx);
     }
@@ -776,9 +777,7 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
   const bulkDelete = async (taskIds: string[]) => {
     if (taskIds.length === 0) return;
-    for (const id of taskIds) {
-      const task = tasks.find((t) => t.id === id);
-      if (!task) continue;
+    for (const task of await getTasks(taskIds)) {
       if (task.recurrence_parent_id || task.recurrence !== "none") {
         await deleteTaskWithScope(task, "this");
       } else {
@@ -789,23 +788,19 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
 
   const bulkAssignProject = async (taskIds: string[], projectId: string | null) => {
     if (taskIds.length === 0) return;
-    setTasks((prev) =>
-      prev.map((t) => (taskIds.includes(t.id) ? { ...t, project_id: projectId } : t))
-    );
+    taskIds.forEach((id) => patchLocal(id, { project_id: projectId }));
     await supabase.from("tasks").update({ project_id: projectId }).in("id", taskIds);
   };
 
   const bulkAssignRole = async (taskIds: string[], roleId: string | null) => {
     if (taskIds.length === 0) return;
-    setTasks((prev) =>
-      prev.map((t) => (taskIds.includes(t.id) ? { ...t, role_id: roleId } : t))
-    );
+    taskIds.forEach((id) => patchLocal(id, { role_id: roleId }));
     await supabase.from("tasks").update({ role_id: roleId }).in("id", taskIds);
   };
 
   const addTimeSpent = async (id: string, secondsToAdd: number) => {
     if (secondsToAdd <= 0) return;
-    const current = tasks.find((t) => t.id === id);
+    const current = await getTask(id);
     const next = (current?.time_spent_seconds ?? 0) + secondsToAdd;
     await updateTask(id, { time_spent_seconds: next });
   };
@@ -824,15 +819,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       original_date: targetDate,
       duration_minutes: task.duration_minutes,
       recurrence: "none",
-      position: (() => {
-        const dayList = tasks.filter((t) => t.scheduled_date === targetDate);
-        if (dayList.length === 0) return 0;
-        return Math.min(...dayList.map((t) => t.position ?? 0)) - 1;
-      })(),
+      position: await topPositionFor(qc, targetDate),
     };
     const { data, error } = await supabase.from("tasks").insert(payload).select().single();
     if (error) throw error;
-    if (data) setTasks((prev) => (prev.some((t) => t.id === data.id) ? prev : [...prev, data]));
+    if (data) insertLocal(data as Task);
     return data;
   };
 
@@ -841,9 +832,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
     if (!userId) return;
     const chainId = task.followup_chain_id ?? task.id;
     // Find max followup_count across the chain (including the originating task)
-    const chainMembers = tasks.filter(
-      (t) => t.followup_chain_id === chainId || t.id === chainId
-    );
+    const { data: chainRows } = await supabase
+      .from("tasks")
+      .select("id,followup_count")
+      .or(`followup_chain_id.eq.${chainId},id.eq.${chainId}`);
+    const chainMembers = (chainRows ?? []) as Array<Pick<Task, "id" | "followup_count">>;
     const maxCount = chainMembers.reduce((m, t) => Math.max(m, t.followup_count ?? 0), 0);
     // The original (root) is #1; each follow-up increments
     const originalCount = maxCount === 0 ? 1 : maxCount;
@@ -867,15 +860,11 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
       recurrence: "none",
       followup_chain_id: chainId,
       followup_count: nextCount,
-      position: (() => {
-        const dayList = tasks.filter((t) => t.scheduled_date === targetDate);
-        if (dayList.length === 0) return 0;
-        return Math.min(...dayList.map((t) => t.position ?? 0)) - 1;
-      })(),
+      position: await topPositionFor(qc, targetDate),
     };
     const { data, error } = await supabase.from("tasks").insert(payload).select().single();
     if (error) throw error;
-    if (data) setTasks((prev) => (prev.some((t) => t.id === data.id) ? prev : [...prev, data]));
+    if (data) insertLocal(data as Task);
 
     // Mark original as completed
     await updateTask(task.id, {
@@ -900,11 +889,12 @@ export function useTasks(userId: string | undefined, options?: { fastInitialDay?
   const tasksByDay = (date: string) => tasks.filter((t) => t.scheduled_date === date);
 
   // Position helper to insert a new task at the TOP of a given day
+  // Exact when a cached window holds the whole date; otherwise TOP_OF_DAY, resolved on write.
   const topPositionForDay = (date: string | null) => {
-    const dayList = tasks.filter((t) => t.scheduled_date === date);
+    const dayList = cachedTasksForDate(qc, date);
+    if (!dayList) return TOP_OF_DAY;
     if (dayList.length === 0) return 0;
-    const min = Math.min(...dayList.map((t) => t.position ?? 0));
-    return min - 1;
+    return Math.min(...dayList.map((t) => t.position ?? 0)) - 1;
   };
 
   const currentApi = {
