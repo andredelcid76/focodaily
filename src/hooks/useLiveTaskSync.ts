@@ -20,7 +20,7 @@ import {
 } from "@/lib/task-live-state";
 import type { Task } from "@/hooks/useTasks";
 import { applyTaskUpdateToCaches, isTaskInWindowCaches } from "@/lib/task-window-cache";
-import { DELEGATED_TASKS_KEY, TASKS_ROOT_KEY } from "@/lib/task-windows";
+import { DELEGATED_TASKS_KEY, isDelegatedRow, TASKS_ROOT_KEY } from "@/lib/task-windows";
 export { TASKS_CHANGED_EVENT } from "@/lib/task-live-state";
 
 type AssignedCache = { tasks: Task[] } | undefined;
@@ -89,6 +89,12 @@ export function useLiveTaskSync(userId: string | undefined) {
         if (isLoaded(id)) removeTask(id as string);
         return;
       }
+      // Delegadas: a row that stops being delegated leaves the list at once.
+      qc.setQueriesData<AssignedCache>({ queryKey: [...DELEGATED_TASKS_KEY] }, data => {
+        const existing = data?.tasks?.find(t => t.id === change.new.id);
+        if (!data || !existing || isDelegatedRow({ ...existing, ...change.new }, userId)) return data;
+        return { ...data, tasks: data.tasks.filter(t => t.id !== existing.id) };
+      });
       const local = matchesOptimisticTask(change);
       // Always reconcile trigger-produced timestamps/time totals, even for an optimistic write.
       emit(change);
