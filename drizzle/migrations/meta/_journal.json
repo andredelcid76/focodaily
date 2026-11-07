@@ -120,6 +120,13 @@
       "when": 1794028473681,
       "tag": "0016_security_phase1_ownership_invites_signup",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794028511911,
+      "tag": "0017_security_phase1_cron_notification_claims",
+      "breakpoints": true
     }
   ]
 }
