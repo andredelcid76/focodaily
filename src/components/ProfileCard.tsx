@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { setBrowserTimezone } from "@/lib/date";
 
 const TIMEZONES = [
   "America/Sao_Paulo",
@@ -45,6 +46,7 @@ export function ProfileCard() {
   });
 
   const profile = data?.profile;
+  useEffect(() => { if (profile) setBrowserTimezone(profile.timezone); }, [profile]);
   const [displayName, setDisplayName] = useState("");
   const [timezone, setTimezone] = useState("America/Sao_Paulo");
   const [locale, setLocale] = useState("pt-BR");

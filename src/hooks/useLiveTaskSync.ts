@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
-import { DEPENDENCIES_CHANGED_EVENT, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, matchesOptimisticTask, taskQueryKeys, taskSubscriptionFilters, type TaskChange } from "@/lib/task-live-state";
+import { applyTaskChange, DEPENDENCIES_CHANGED_EVENT, TASKS_CHANGED_EVENT, TASKS_RESYNC_EVENT, matchesOptimisticTask, taskQueryKeys, taskSubscriptionFilters, type TaskChange } from "@/lib/task-live-state";
+import type { Task } from "@/hooks/useTasks";
 export { TASKS_CHANGED_EVENT } from "@/lib/task-live-state";
 
 /** One filtered task feed; payloads reconcile local state without downloading the collection. */
@@ -33,7 +34,13 @@ export function useLiveTaskSync(userId: string | undefined) {
       // Always reconcile trigger-produced timestamps/time totals, even for an optimistic write.
       window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT, { detail: change }));
       if (!local) invalidate(taskQueryKeys(change));
-      else invalidate([["dependency-status"]]);
+      else {
+        // Reconcile existing task query caches without repeating their reads for our write.
+        qc.setQueriesData({ queryKey: ["my-assigned-tasks"] }, (data: { tasks: Task[] } | undefined) => data ? { ...data, tasks: applyTaskChange(data.tasks, change) } : data);
+        qc.setQueriesData({ queryKey: ["project-tasks"] }, (data: Task[] | undefined) => data?.some(t => t.id === change.new.id) ? applyTaskChange(data, change) : data);
+        invalidate([["dependency-status"]]);
+        if (change.old.project_id && change.old.project_id !== change.new.project_id) invalidate(taskQueryKeys(change));
+      }
     };
     const connect = async () => {
       const generation = ++connectGeneration;
