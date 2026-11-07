@@ -18,7 +18,7 @@ begin
    where pm.user_id = _me and pm.role = 'manager' and pr.user_id <> _me limit 1;
   select user_id into _colleague from public.profiles where user_id <> _me and public.is_company_colleague(_me, user_id) limit 1;
   select user_id into _outsider from public.profiles p where user_id <> _me
-    and not public.is_company_colleague(_me, p.user_id)
+    and not coalesce(public.is_company_colleague(_me, p.user_id), false)
     and not exists (select 1 from private.project_ids_for(_me) a(id) where public.is_project_member(a.id, p.user_id)) limit 1;
   select id into _t1 from public.tasks where user_id = _me and project_id is null and recurrence = 'none' order by created_at limit 1;
   select id into _t2 from public.tasks where user_id = _me and project_id is null and recurrence = 'none' and id <> _t1 order by created_at limit 1;
