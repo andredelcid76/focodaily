@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { delegableUserIds, maskOutsideScope } from "@/lib/delegation";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueueCollaborationEmail } from "@/lib/email/collaborationEmail.server";
 import { APP_URL } from "@/lib/app-url";
@@ -483,7 +484,8 @@ export const getTeamsOverview = createServerFn({ method: "POST" })
       .select("user_id,display_name,email,avatar_url")
       .in("user_id", Array.from(peopleIds));
 
-    const people = (profiles ?? [])
+    const allowed = await delegableUserIds(supabase);
+    const people = maskOutsideScope((profiles ?? []) as Array<{ user_id: string; email: string | null; display_name: string | null; avatar_url: string | null }>, allowed)
       .map((p) => ({
         ...p,
         is_me: p.user_id === userId,

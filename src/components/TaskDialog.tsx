@@ -218,7 +218,8 @@ export function TaskDialog({ open, onOpenChange, defaultDate, task, isSeed, role
     queryFn: () => fetchPeople(),
     staleTime: 60_000,
   });
-  const contactMembers = (peopleOverview?.people ?? []).map(person => ({ ...person, role: "contact" }));
+  // S10: só quem está no escopo de delegação (domínio da empresa ou projeto em comum).
+  const contactMembers = (peopleOverview?.people ?? []).filter((person: any) => person.can_delegate !== false).map(person => ({ ...person, role: "contact" }));
   const fetchAllPeople = useServerFn(listAllPeople);
   const { data: allPeopleData } = useQuery({
     queryKey: ["all-people"],
