@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useNotificationActions } from "@/hooks/useNotifications";
-import { NotificationItem } from "@/components/NotificationItem";
+import { GroupedNotifications } from "@/components/GroupedNotifications";
 import { NotificationPreferencesCard } from "@/components/NotificationPreferencesCard";
 import { FILTER_GROUPS, NOTIFICATION_SELECT, type NotificationRow } from "@/lib/notificationTypes";
 
@@ -65,6 +65,10 @@ function NotificationsPage() {
   }, [fetchPage]);
 
   const unread = useMemo(() => items.filter((n) => !n.read_at).length, [items]);
+  const visible = useMemo(() => {
+    const types = FILTER_GROUPS.find((g) => g.value === group)?.types;
+    return items.filter((n) => (!onlyUnread || !n.read_at) && (!types || types.includes(n.type)));
+  }, [items, onlyUnread, group]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
@@ -111,19 +115,18 @@ function NotificationsPage() {
             </Button>
           </div>
         </div>
-        {items.length === 0 && !loading ? (
+        {visible.length === 0 && !loading ? (
           <div className="px-3 py-12 text-center text-sm text-muted-foreground">Nenhuma notificação por aqui.</div>
         ) : (
-          items.map((n) => (
-            <NotificationItem
-              key={n.id}
-              n={n}
-              actor={n.actor_id ? profiles.get(n.actor_id) : undefined}
+            <GroupedNotifications
+              items={visible}
+              profiles={profiles}
               onOpen={(x) => actions.open(x, (to) => navigate({ to }))}
               onToggleRead={actions.toggleRead}
               onDelete={actions.remove}
+              onReadGroup={actions.readGroup}
+              onDeleteGroup={actions.removeGroup}
             />
-          ))
         )}
         {(hasMore || loading) && items.length > 0 && (
           <div className="p-3 text-center">

@@ -11,14 +11,21 @@ export function NotificationItem({
   onOpen,
   onToggleRead,
   onDelete,
+  compact = false,
+  taskTitle,
 }: {
   n: NotificationRow;
   actor?: MiniProfile;
   onOpen: (n: NotificationRow) => void;
   onToggleRead: (n: NotificationRow) => void;
   onDelete: (n: NotificationRow) => void;
+  compact?: boolean;
+  taskTitle?: string;
 }) {
   const unread = !n.read_at;
+  const withoutTaskTitle = (text: string) => taskTitle && taskTitle !== "Tarefa"
+    ? text.replaceAll(`"${taskTitle}"`, "esta tarefa").replaceAll(`'${taskTitle}'`, "esta tarefa").replaceAll(taskTitle, "esta tarefa")
+    : text;
   return (
     <div
       className={`group relative flex w-full items-start gap-2.5 border-b border-border/40 px-3 py-2.5 transition-colors hover:bg-muted/40 ${
@@ -35,14 +42,14 @@ export function NotificationItem({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className={`truncate text-xs ${unread ? "font-semibold" : "font-medium"}`}>{n.title}</span>
+            <span className={`truncate text-xs ${unread ? "font-semibold" : "font-medium"}`}>{compact ? withoutTaskTitle(n.title) : n.title}</span>
             {n.group_count > 1 && (
               <span className="shrink-0 rounded bg-muted px-1 text-[10px] tabular-nums text-muted-foreground">
                 {n.group_count}×
               </span>
             )}
           </div>
-          {n.body && <div className="line-clamp-4 whitespace-pre-line text-xs text-muted-foreground">{n.body}</div>}
+          {n.body && <div className={`${compact ? "line-clamp-2" : "line-clamp-4"} whitespace-pre-line text-xs text-muted-foreground`}>{compact ? withoutTaskTitle(n.body) : n.body}</div>}
           <div className="mt-0.5 text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
           </div>
