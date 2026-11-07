@@ -183,6 +183,13 @@
       "when": 1794066162011,
       "tag": "0025_phase3_delegation_null_safe",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794066359451,
+      "tag": "0026_phase3_analytics_rpc",
+      "breakpoints": true
     }
   ]
 }
