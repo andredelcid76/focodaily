@@ -15,3 +15,5 @@
 - RLS policies wrap auth.uid() as (select auth.uid()) and use my_project_ids() for project visibility, so checks run once per query instead of per row.
 - Delegation scope (self, company-domain colleague or shared project) is enforced by a tasks trigger; people pickers filter through delegable_user_ids() so the UI never offers someone the database will reject.
 - Projects, roles and meetings load through shared TanStack Query keys (meetings per Monday–Sunday week) and shared Realtime channels via retainSharedChannel, so shell widgets and pages do not duplicate requests.
+- Task screens read only their window (["tasks","day"|"week"|"project"|"project-stats",...], Delegadas ["tasks","delegated"]) via task-window-cache; every change goes through applyTaskUpdateToCaches so rows enter/leave each cached window, and actions read series/positions/follow-ups on demand instead of holding the full collection.
+- Analytics aggregates in the database (analytics_summary, SECURITY INVOKER) for the selected window; the page never downloads task rows.
