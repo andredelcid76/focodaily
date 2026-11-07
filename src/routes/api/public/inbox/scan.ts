@@ -1,6 +1,6 @@
 import { userToday } from "@/lib/user-timezone";
 import { addDays } from "@/lib/date";
-import { allowPipedriveSweep } from "@/lib/pipedrive-sync-policy";
+import { probePipedriveActivities } from "@/lib/pipedrive-sync-policy";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -502,28 +502,13 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
       })
       .filter((x): x is { task: (typeof linkedList)[number]; id: number } => !!x && !seenIds.has(x.id));
 
-    const missing: string[] = [];
-    const inactive: string[] = [];
-    for (const { task, id } of orphans.slice(0, 30)) {
-      try {
-        const pr = await fetch(`${base}/activities/${id}?api_token=${token}`);
-        if (pr.status === 404) {
-          missing.push(task.id as string);
-          if (!allowPipedriveSweep(missing.length)) {
-            console.error("Pipedrive sync aborted: more than 5 activity lookups returned 404.");
-            return false;
-          }
-          continue;
-        }
-        if (!pr.ok) continue;
-        const pj = await pr.json();
-        const act = pj?.data as PdActivity | undefined;
-        if (act && act.active_flag === false) {
-          inactive.push(task.id as string);
-        }
-      } catch {
-        // ignore individual probe failures
-      }
+    const { missing, inactive, aborted } = await probePipedriveActivities(
+      orphans.slice(0, 30).map(({ task, id }) => ({ taskId: task.id, activityId: id })),
+      id => fetch(`${base}/activities/${id}?api_token=${token}`),
+    );
+    if (aborted) {
+      console.error("Pipedrive sync aborted: more than 5 activity lookups returned 404.");
+      return false;
     }
     // ── Update / completion sync ─────────────────────────────
     for (const a of all) {
