@@ -18,6 +18,7 @@ import type { Project } from "@/hooks/useProjects";
 import { ProjectChip } from "./ProjectChip";
 import { ClaudeCodeButton, ClaudeMark } from "./ClaudeCodeButton";
 import { useProfiles, profileInitials } from "@/hooks/useProfiles";
+import { originChipHref, originChipName, type OriginKind } from "@/lib/origin-chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Props = {

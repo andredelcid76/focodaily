@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RoleBadge } from "./RoleBadge";
 import { ProjectChip } from "./ProjectChip";
+import { originChipHref, originChipName, type OriginKind } from "@/lib/origin-chip";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
   CalendarClock, Copy, Repeat2, ArrowRight, Lock, Check, Circle, ListChecks,
