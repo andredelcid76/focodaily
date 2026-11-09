@@ -1,6 +1,14 @@
 import { userToday } from "@/lib/user-timezone";
 import { addDays } from "@/lib/date";
 import { pipedriveMissingMarks, probePipedriveActivities } from "@/lib/pipedrive-sync-policy";
+import {
+  CADENCE_ORIGIN,
+  buildCadenceGroups,
+  isCadenceUrl,
+  parseCadenceSubject,
+  planCadenceTask,
+  type CadenceTaskRow,
+} from "@/lib/pipedrive-cadence";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -424,7 +432,22 @@ type PdActivity = {
   active_flag?: boolean;
   update_time?: string;
   add_time?: string;
+  user_id?: number | null;
+  assigned_to_user_id?: number | null;
 };
+
+const PD_PAGE_LIMIT = 200;
+const PD_MAX_PAGES = 25;
+/** Same meeting types fetchPipedrive skips when auto-creating tasks. */
+const PD_EXCLUDED_TYPES = new Set([
+  "meeting",
+  "reunio_online",
+  "reuniao_online",
+  "reunião_online",
+  "reuniao_presencial",
+  "reunião_presencial",
+  "reunio_presencial",
+]);
 
 function parsePdDuration(s?: string | null): number | null {
   if (!s) return null;
@@ -466,15 +489,26 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
     const startDate = addDays(today, -30);
     const endDate = addDays(today, 60);
 
-    const fetchPage = async (done: 0 | 1): Promise<PdActivity[]> => {
-      const r = await fetch(
-        `${base}/activities?user_id=${pdUserId}&done=${done}&start_date=${startDate}&end_date=${endDate}&start=0&limit=200&api_token=${token}`,
-      );
-      if (!r.ok) return [];
-      const j = await r.json();
-      return (j?.data ?? []) as PdActivity[];
+    // Paginates with start/limit until more_items_in_collection is false (bounded for safety).
+    const fetchAllActivities = async (done: 0 | 1): Promise<PdActivity[]> => {
+      const out: PdActivity[] = [];
+      let start = 0;
+      for (let page = 0; page < PD_MAX_PAGES; page++) {
+        const r = await fetch(
+          `${base}/activities?user_id=${pdUserId}&done=${done}&start_date=${startDate}&end_date=${endDate}&start=${start}&limit=${PD_PAGE_LIMIT}&api_token=${token}`,
+        );
+        if (!r.ok) break;
+        const j = await r.json();
+        out.push(...((j?.data ?? []) as PdActivity[]));
+        const pg = j?.additional_data?.pagination as
+          | { more_items_in_collection?: boolean; next_start?: number }
+          | undefined;
+        if (!pg?.more_items_in_collection) break;
+        start = typeof pg.next_start === "number" ? pg.next_start : start + PD_PAGE_LIMIT;
+      }
+      return out;
     };
-    const [pending, completed] = await Promise.all([fetchPage(0), fetchPage(1)]);
+    const [pending, completed] = await Promise.all([fetchAllActivities(0), fetchAllActivities(1)]);
     const all = [...pending, ...completed];
     const seenIds = new Set<number>(all.map((a) => a.id));
 
@@ -497,7 +531,10 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
     // ── Deletion sync ────────────────────────────────────────
     // For linked tasks whose activity didn't appear in the window, probe the
     // single-activity endpoint. Stage all results before changing any task.
+    // Cadence tasks (origin_source 'pipedrive_cadencia') are excluded: the query above only
+    // loads 'pipedrive' tasks and the guard below skips cadence URLs, which have no activity id.
     const orphans = linkedList
+      .filter((t) => !isCadenceUrl(t.origin_source_url as string | null))
       .map((t) => {
         const url = (t.origin_source_url as string | null) ?? "";
         const m = /\/activity\/(\d+)\b/.exec(url);
@@ -559,10 +596,58 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
       const { error } = await supabaseAdmin.from("tasks").update(patch).eq("id", id);
       if (error) throw error;
     }
+
+    await syncPipedriveCadences(userId, pdUserId, domain, all);
     return true;
   } catch (e) {
     console.error("pipedrive→app sync", e);
     return true;
+  }
+}
+
+/**
+ * One Foco task per cadence touch (ação × D<n>), refreshed every scan from the same
+ * activity window. Completing it in Foco never touches Pipedrive (origin 'pipedrive_cadencia').
+ */
+async function syncPipedriveCadences(
+  userId: string,
+  pdUserId: number,
+  domain: string,
+  activities: PdActivity[],
+): Promise<void> {
+  try {
+    const mine = activities.filter((a) => {
+      const owner = a.assigned_to_user_id ?? a.user_id;
+      if (owner != null && owner !== pdUserId) return false;
+      return !PD_EXCLUDED_TYPES.has((a.type ?? "").toLowerCase());
+    });
+    const groups = buildCadenceGroups(mine, (id) => pdActivityUrl(domain, id));
+    if (groups.length === 0) return;
+
+    const { data: existing, error: loadError } = await supabaseAdmin
+      .from("tasks")
+      .select("id,origin_source_url,title,description,scheduled_date,duration_minutes,completed,updated_at")
+      .eq("user_id", userId)
+      .eq("origin_source", CADENCE_ORIGIN)
+      .order("created_at", { ascending: true });
+    if (loadError) throw loadError;
+    const byUrl = new Map<string, CadenceTaskRow>();
+    for (const t of existing ?? []) {
+      const url = t.origin_source_url as string | null;
+      if (url && !byUrl.has(url)) byUrl.set(url, t as unknown as CadenceTaskRow);
+    }
+
+    const nowIso = new Date().toISOString();
+    for (const group of groups) {
+      const plan = planCadenceTask(group, byUrl.get(group.url), userId, nowIso);
+      if (!plan) continue;
+      const { error } = plan.kind === "insert"
+        ? await supabaseAdmin.from("tasks").insert(plan.row as never)
+        : await supabaseAdmin.from("tasks").update(plan.patch as never).eq("id", plan.id);
+      if (error) console.error("pipedrive cadence task", group.url, error.message);
+    }
+  } catch (e) {
+    console.error("pipedrive cadence sync", e);
   }
 }
 
@@ -811,6 +896,8 @@ export async function scanForUser(userId: string) {
 
   let autoCreated = 0;
   for (const it of pipedriveFresh) {
+    // Cadence touches are grouped into one task per (ação, D) by syncPipedriveCadences.
+    if (parseCadenceSubject(it.title_override)) continue;
     const title = (it.title_override ?? "").trim() || it.source_label || "Atividade Pipedrive";
     if (isDuplicateTitle(title, openTitleSet, openTokenSets)) continue;
     const scheduledDate = it.source_date

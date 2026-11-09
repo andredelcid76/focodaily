@@ -17,3 +17,4 @@
 - Projects, roles and meetings load through shared TanStack Query keys (meetings per Monday–Sunday week) and shared Realtime channels via retainSharedChannel, so shell widgets and pages do not duplicate requests.
 - Task screens read only their window (["tasks","day"|"week"|"project"|"project-stats",...], Delegadas ["tasks","delegated"]) via task-window-cache; every change goes through applyTaskUpdateToCaches so rows enter/leave each cached window, and actions read series/positions/follow-ups on demand instead of holding the full collection.
 - Analytics aggregates in the database (analytics_summary, SECURITY INVOKER) for the selected window; the page never downloads task rows.
+- Pipedrive cadence activities become one task per touch via pure helpers in src/lib/pipedrive-cadence.ts, with a distinct origin_source, so Foco completion never writes back to Pipedrive.
