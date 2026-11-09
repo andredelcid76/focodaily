@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { RoleBadge } from "./RoleBadge";
 import { ProjectChip } from "./ProjectChip";
+import { originChipHref, originChipName, type OriginKind } from "@/lib/origin-chip";
 import {
   GripVertical, Repeat, AlertCircle, Clock, Play, Pause, Square, Timer,
   CalendarClock, Copy, Repeat2, ArrowRight, Lock, Check, Circle, ListChecks,
@@ -283,15 +284,13 @@ export function TaskListRow({
                       </span>
                     )}
                     {(task as any).origin_source && (() => {
-                      const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
-                      const url = (task as any).origin_source_url as string | null;
+                      const src = (task as any).origin_source as OriginKind;
+                      const url = originChipHref((task as any).origin_source_url as string | null);
                       const label = (task as any).origin_source_label as string | null;
-                      const meta =
-                        src === "email"
-                          ? { l: "Outlook", c: "text-blue-600" }
-                          : src === "meeting"
-                          ? { l: "Fireflies", c: "text-purple-600" }
-                          : { l: "Pipedrive", c: "text-primary" };
+                      const meta = {
+                        l: originChipName(src),
+                        c: src === "email" ? "text-blue-600" : src === "meeting" ? "text-purple-600" : "text-primary",
+                      };
                       const inner = <span className={meta.c}>{meta.l}</span>;
                       return url ? (
                         <a

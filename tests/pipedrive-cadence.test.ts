@@ -96,6 +96,26 @@ describe("pipedrive cadence", () => {
     expect(plan?.kind === "update" && plan.patch).toMatchObject({ completed: true, status: "done", completed_at: "2026-11-09T12:00:00Z" });
   });
 
+  it("freezes title and duration when every contact is done, but refreshes the description", () => {
+    const [g] = buildCadenceGroups([
+      act(1, "83 · D3 · M1 · Ana (GE)", { done: true }),
+      act(2, "83 · D3 · M1 · Bruno (Abbott)", { done: true }),
+    ], url);
+    const before = task({ title: "83 · D3 · M1 — 2 contatos", duration_minutes: 15, description: "old" });
+    const plan = planCadenceTask(g, before, "u1", "2026-11-09T12:00:00Z");
+    const patch = plan?.kind === "update" ? plan.patch : {};
+    expect("title" in patch).toBe(false);
+    expect("duration_minutes" in patch).toBe(false);
+    expect(patch.description).toBe(`☑ Ana (GE)\n☑ Bruno (Abbott)\n\n${CADENCE_FOOTER}`);
+    expect(patch.completed).toBe(true);
+  });
+
+  it("keeps title and duration frozen on an already-completed, all-done group", () => {
+    const [g] = buildCadenceGroups([act(1, "83 · D3 · M1 · Ana (GE)", { done: true })], url);
+    const done = task({ title: "83 · D3 · M1 — 1 contatos", completed: true, description: g.description });
+    expect(planCadenceTask(g, done, "u1", "now")).toBeNull();
+  });
+
   it("never reopens a task the user completed in Foco", () => {
     const [g] = buildCadenceGroups([act(1, "83 · D3 · M1 · Ana (GE)")], url);
     const plan = planCadenceTask(g, task({ completed: true }), "u1", "now");

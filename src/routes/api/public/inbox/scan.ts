@@ -328,6 +328,36 @@ async function getPipedriveCreds(userId: string): Promise<{ token: string; domai
   return null;
 }
 
+const PD_PAGE_LIMIT = 200;
+const PD_MAX_PAGES = 25;
+
+/**
+ * Reads every page of a Pipedrive /activities list (start/limit until
+ * more_items_in_collection is false, bounded by PD_MAX_PAGES). A failed page stops paging;
+ * firstStatus is the HTTP status of the first page.
+ */
+async function fetchPdActivitiesPaged<T>(
+  buildUrl: (start: number, limit: number) => string,
+  limit = PD_PAGE_LIMIT,
+): Promise<{ items: T[]; firstStatus: number }> {
+  const items: T[] = [];
+  let start = 0;
+  let firstStatus = 0;
+  for (let page = 0; page < PD_MAX_PAGES; page++) {
+    const r = await fetch(buildUrl(start, limit));
+    if (page === 0) firstStatus = r.status;
+    if (!r.ok) break;
+    const j = await r.json();
+    items.push(...((j?.data ?? []) as T[]));
+    const pg = j?.additional_data?.pagination as
+      | { more_items_in_collection?: boolean; next_start?: number }
+      | undefined;
+    if (!pg?.more_items_in_collection) break;
+    start = typeof pg.next_start === "number" ? pg.next_start : start + limit;
+  }
+  return { items, firstStatus };
+}
+
 async function fetchPipedrive(userId: string, today: string): Promise<SourceItem[]> {
   const creds = await getPipedriveCreds(userId);
   if (!creds) return [];
@@ -350,14 +380,15 @@ async function fetchPipedrive(userId: string, today: string): Promise<SourceItem
 
     const startDate = addDays(today, -1);
     const endDate = addDays(today, 21);
-    const r = await fetch(
-      `${base}/activities?user_id=${pdUserId}&done=0&start_date=${startDate}&end_date=${endDate}&start=0&limit=100&api_token=${token}`,
+    const paged = await fetchPdActivitiesPaged<Activity>(
+      (start, limit) =>
+        `${base}/activities?user_id=${pdUserId}&done=0&start_date=${startDate}&end_date=${endDate}&start=${start}&limit=${limit}&api_token=${token}`,
+      100,
     );
-    if (!r.ok) {
-      console.error("pipedrive activities failed", r.status);
+    if (paged.firstStatus < 200 || paged.firstStatus >= 300) {
+      console.error("pipedrive activities failed", paged.firstStatus);
       return [];
     }
-    const json = await r.json();
     type Activity = {
       id: number;
       subject?: string;
@@ -378,9 +409,10 @@ async function fetchPipedrive(userId: string, today: string): Promise<SourceItem
       update_time?: string;
       add_time?: string;
     };
-    const allActs = (json?.data ?? []) as Activity[];
+    const allActs = paged.items;
     // Filtros: (1) pendente, (2) atribuída ao usuário conectado, (3) vinculada
-    // a deal/org/pessoa, (4) tipo diferente de reunião presencial/online.
+    // a deal/org/pessoa, (4) tipo diferente de reunião presencial/online,
+    // (5) fora de cadência (agrupada por syncPipedriveCadences) — antes do corte de 60.
     const EXCLUDED_TYPES = new Set([
       "meeting",
       "reunio_online",
@@ -397,6 +429,7 @@ async function fetchPipedrive(userId: string, today: string): Promise<SourceItem
       if (!(a.deal_id || a.org_id || a.person_id)) return false;
       const t = (a.type ?? "").toLowerCase();
       if (EXCLUDED_TYPES.has(t)) return false;
+      if (parseCadenceSubject(a.subject)) return false;
       return true;
     });
     return acts.slice(0, 60).map((a) => ({
@@ -436,8 +469,6 @@ type PdActivity = {
   assigned_to_user_id?: number | null;
 };
 
-const PD_PAGE_LIMIT = 200;
-const PD_MAX_PAGES = 25;
 /** Same meeting types fetchPipedrive skips when auto-creating tasks. */
 const PD_EXCLUDED_TYPES = new Set([
   "meeting",
@@ -489,25 +520,11 @@ async function syncPipedriveToApp(userId: string, today: string): Promise<boolea
     const startDate = addDays(today, -30);
     const endDate = addDays(today, 60);
 
-    // Paginates with start/limit until more_items_in_collection is false (bounded for safety).
-    const fetchAllActivities = async (done: 0 | 1): Promise<PdActivity[]> => {
-      const out: PdActivity[] = [];
-      let start = 0;
-      for (let page = 0; page < PD_MAX_PAGES; page++) {
-        const r = await fetch(
-          `${base}/activities?user_id=${pdUserId}&done=${done}&start_date=${startDate}&end_date=${endDate}&start=${start}&limit=${PD_PAGE_LIMIT}&api_token=${token}`,
-        );
-        if (!r.ok) break;
-        const j = await r.json();
-        out.push(...((j?.data ?? []) as PdActivity[]));
-        const pg = j?.additional_data?.pagination as
-          | { more_items_in_collection?: boolean; next_start?: number }
-          | undefined;
-        if (!pg?.more_items_in_collection) break;
-        start = typeof pg.next_start === "number" ? pg.next_start : start + PD_PAGE_LIMIT;
-      }
-      return out;
-    };
+    const fetchAllActivities = async (done: 0 | 1): Promise<PdActivity[]> =>
+      (await fetchPdActivitiesPaged<PdActivity>(
+        (start, limit) =>
+          `${base}/activities?user_id=${pdUserId}&done=${done}&start_date=${startDate}&end_date=${endDate}&start=${start}&limit=${limit}&api_token=${token}`,
+      )).items;
     const [pending, completed] = await Promise.all([fetchAllActivities(0), fetchAllActivities(1)]);
     const all = [...pending, ...completed];
     const seenIds = new Set<number>(all.map((a) => a.id));

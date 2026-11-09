@@ -18,6 +18,7 @@ import type { Project } from "@/hooks/useProjects";
 import { ProjectChip } from "./ProjectChip";
 import { ClaudeCodeButton, ClaudeMark } from "./ClaudeCodeButton";
 import { useProfiles, profileInitials } from "@/hooks/useProfiles";
+import { originChipHref, originChipName, type OriginKind } from "@/lib/origin-chip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Props = {
@@ -225,15 +226,18 @@ export function TaskCard({
               />
             )}
             {(task as any).origin_source && (() => {
-              const src = (task as any).origin_source as "email" | "meeting" | "pipedrive";
-              const url = (task as any).origin_source_url as string | null;
+              const src = (task as any).origin_source as OriginKind;
+              const url = originChipHref((task as any).origin_source_url as string | null);
               const label = (task as any).origin_source_label as string | null;
-              const meta =
-                src === "email"
-                  ? { l: "Outlook", c: "border-blue-500/40 bg-blue-500/10 text-blue-600" }
-                  : src === "meeting"
-                  ? { l: "Fireflies", c: "border-purple-500/40 bg-purple-500/10 text-purple-600" }
-                  : { l: "Pipedrive", c: "border-primary/40 bg-primary/15 text-primary" };
+              const meta = {
+                l: originChipName(src),
+                c:
+                  src === "email"
+                    ? "border-blue-500/40 bg-blue-500/10 text-blue-600"
+                    : src === "meeting"
+                    ? "border-purple-500/40 bg-purple-500/10 text-purple-600"
+                    : "border-primary/40 bg-primary/15 text-primary",
+              };
               const chip = (
                 <span
                   className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${meta.c}`}

@@ -125,8 +125,9 @@ export type CadencePlan =
 /**
  * Decides what one scan does with a group:
  * - open activities and no task → create;
- * - task exists → refresh title/description/duration; move the date only when Pipedrive changed after the task;
- * - every activity done → complete the task if still open; a task completed in Foco is never reopened.
+ * - task exists → refresh description; title/duration only while contacts remain open;
+ *   move the date only when Pipedrive changed after the task;
+ * - every activity done → complete the task if still open (title/duration frozen); a task completed in Foco is never reopened.
  * Groups whose activities all vanished are never passed here, so their task is left untouched.
  */
 export function planCadenceTask(
@@ -155,9 +156,12 @@ export function planCadenceTask(
   }
 
   const patch: Record<string, unknown> = {};
-  if (group.title !== task.title) patch.title = group.title;
   if (group.description !== (task.description ?? "")) patch.description = group.description;
-  if (group.durationMinutes !== task.duration_minutes) patch.duration_minutes = group.durationMinutes;
+  // With every contact done, title and duration stay frozen at their last open-state values.
+  if (group.openCount > 0) {
+    if (group.title !== task.title) patch.title = group.title;
+    if (group.durationMinutes !== task.duration_minutes) patch.duration_minutes = group.durationMinutes;
+  }
 
   const taskMs = task.updated_at ? new Date(task.updated_at).getTime() : 0;
   if (group.scheduledDate && group.scheduledDate !== task.scheduled_date && group.latestUpdateMs > taskMs) {
