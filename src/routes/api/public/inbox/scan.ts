@@ -385,7 +385,7 @@ async function fetchPipedrive(userId: string, today: string): Promise<SourceItem
         `${base}/activities?user_id=${pdUserId}&done=0&start_date=${startDate}&end_date=${endDate}&start=${start}&limit=${limit}&api_token=${token}`,
       100,
     );
-    if (paged.firstStatus !== 200 && paged.items.length === 0) {
+    if (paged.firstStatus < 200 || paged.firstStatus >= 300) {
       console.error("pipedrive activities failed", paged.firstStatus);
       return [];
     }
