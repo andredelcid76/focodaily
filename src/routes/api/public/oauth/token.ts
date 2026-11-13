@@ -111,7 +111,7 @@ export const Route = createFileRoute("/api/public/oauth/token")({
             .from("profiles")
             .select("user_id, email")
             .ilike("email", emailPattern)
-            .limit(2);
+            .limit(10);
           if (profErr) {
             console.error("[oauth/token] profile lookup failed", profErr);
             return json({ error: "server_error", error_description: "Internal server error" }, 500);
@@ -119,10 +119,24 @@ export const Route = createFileRoute("/api/public/oauth/token")({
           const matches = ((profiles ?? []) as Array<{ user_id: string; email: string }>).filter(
             (p) => p.email.toLowerCase() === email.toLowerCase(),
           );
-          if (matches.length !== 1) {
+          // Profiles can be orphaned (user_id no longer in auth.users); confirm each
+          // candidate against Auth and keep only live users with the same email.
+          const emailLower = email.toLowerCase();
+          const liveUserIds = new Set<string>();
+          for (const p of matches) {
+            if (liveUserIds.has(p.user_id)) continue;
+            const { data: authData, error: authErr } = await admin.auth.admin.getUserById(p.user_id);
+            const user = authData?.user;
+            if (authErr || !user) continue;
+            if (user.deleted_at) continue;
+            if (user.banned_until && new Date(user.banned_until).getTime() > Date.now()) continue;
+            if ((user.email ?? "").toLowerCase() !== emailLower) continue;
+            liveUserIds.add(user.id);
+          }
+          if (liveUserIds.size !== 1) {
             return json({ error: "invalid_grant", error_description: "No Foco user for this identity" }, 400);
           }
-          const userId = matches[0].user_id;
+          const [userId] = [...liveUserIds];
 
           const nowIso = new Date().toISOString();
           const { error: idErr } = await admin.from("oauth_external_identities").upsert(
