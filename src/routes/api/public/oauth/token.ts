@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { CORS_HEADERS, randomToken, sha256Base64Url, sha256Hex } from "@/lib/oauth";
+import { CORS_HEADERS, getOrigin, randomToken, sha256Base64Url, sha256Hex } from "@/lib/oauth";
+import { verifyIdJag } from "@/lib/idjag.server";
 
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 const REFRESH_TOKEN_TTL_DAYS = 90;
+const JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -51,8 +53,116 @@ export const Route = createFileRoute("/api/public/oauth/token")({
         const admin = supabaseAdmin as any;
         const body = await parseBody(request);
         const grantType = body.grant_type;
-        if (grantType !== "authorization_code" && grantType !== "refresh_token") {
+        if (
+          grantType !== "authorization_code" &&
+          grantType !== "refresh_token" &&
+          grantType !== JWT_BEARER_GRANT
+        ) {
           return json({ error: "unsupported_grant_type" }, 400);
+        }
+
+        if (grantType === JWT_BEARER_GRANT) {
+          const assertion = body.assertion;
+          const clientId = body.client_id;
+          if (!assertion || !clientId) {
+            return json({ error: "invalid_request", error_description: "Missing required parameter" }, 400);
+          }
+
+          const { data: client, error: clientErr } = await admin
+            .from("oauth_clients")
+            .select("id")
+            .eq("id", clientId)
+            .maybeSingle();
+          if (clientErr || !client) {
+            return json({ error: "invalid_client", error_description: "Unknown client" }, 400);
+          }
+
+          const expectedAudience = getOrigin(request);
+          let payload: Awaited<ReturnType<typeof verifyIdJag>>;
+          try {
+            payload = await verifyIdJag(assertion, expectedAudience, clientId);
+          } catch (e) {
+            const reason = e instanceof Error ? `${e.name}: ${e.message}` : "unknown error";
+            console.warn("[oauth/token] ID-JAG verification failed", reason);
+            return json({ error: "invalid_grant", error_description: "Invalid assertion" }, 400);
+          }
+
+          // Replay protection: each jti may be redeemed once.
+          await admin
+            .from("oauth_idjag_used_jti")
+            .delete()
+            .lt("expires_at", new Date().toISOString());
+          const { error: jtiErr } = await admin.from("oauth_idjag_used_jti").insert({
+            jti: payload.jti,
+            issuer: payload.iss,
+            expires_at: new Date(payload.exp * 1000).toISOString(),
+          } as never);
+          if (jtiErr) {
+            if (jtiErr.code === "23505") {
+              return json({ error: "invalid_grant", error_description: "Assertion already used" }, 400);
+            }
+            console.error("[oauth/token] jti insert failed", jtiErr);
+            return json({ error: "server_error", error_description: "Internal server error" }, 500);
+          }
+
+          const email = String(payload.email).trim();
+          const emailPattern = email.replace(/[\\%_]/g, (c) => `\\${c}`);
+          const { data: profiles, error: profErr } = await admin
+            .from("profiles")
+            .select("user_id, email")
+            .ilike("email", emailPattern)
+            .limit(2);
+          if (profErr) {
+            console.error("[oauth/token] profile lookup failed", profErr);
+            return json({ error: "server_error", error_description: "Internal server error" }, 500);
+          }
+          const matches = ((profiles ?? []) as Array<{ user_id: string; email: string }>).filter(
+            (p) => p.email.toLowerCase() === email.toLowerCase(),
+          );
+          if (matches.length !== 1) {
+            return json({ error: "invalid_grant", error_description: "No Foco user for this identity" }, 400);
+          }
+          const userId = matches[0].user_id;
+
+          const nowIso = new Date().toISOString();
+          const { error: idErr } = await admin.from("oauth_external_identities").upsert(
+            {
+              issuer: payload.iss,
+              subject: payload.sub,
+              user_id: userId,
+              email,
+              last_seen_at: nowIso,
+            } as never,
+            { onConflict: "issuer,subject" },
+          );
+          if (idErr) {
+            console.error("[oauth/token] external identity upsert failed", idErr);
+            return json({ error: "server_error", error_description: "Internal server error" }, 500);
+          }
+
+          const access = `foco_oauth_${randomToken(32)}`;
+          const expiresAt = new Date(Date.now() + ACCESS_TOKEN_TTL_SECONDS * 1000).toISOString();
+          const { error: insErr } = await admin.from("oauth_access_tokens").insert({
+            token_hash: sha256Hex(access),
+            refresh_token_hash: null,
+            client_id: clientId,
+            user_id: userId,
+            scope: "mcp",
+            expires_at: expiresAt,
+            refresh_expires_at: null,
+          } as never);
+          if (insErr) {
+            console.error("[oauth/token] token insert failed", insErr);
+            return json({ error: "server_error", error_description: "Internal server error" }, 500);
+          }
+
+          return json({
+            access_token: access,
+            token_type: "Bearer",
+            expires_in: ACCESS_TOKEN_TTL_SECONDS,
+            scope: "mcp",
+            issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
+          });
         }
 
         if (grantType === "refresh_token") {

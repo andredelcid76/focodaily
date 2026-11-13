@@ -745,6 +745,57 @@ export type Database = {
         }
         Relationships: []
       }
+      oauth_external_identities: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          issuer: string
+          last_seen_at: string | null
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          issuer: string
+          last_seen_at?: string | null
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          issuer?: string
+          last_seen_at?: string | null
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      oauth_idjag_used_jti: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          issuer: string
+          jti: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          issuer: string
+          jti: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          issuer?: string
+          jti?: string
+        }
+        Relationships: []
+      }
       oauth_pending_states: {
         Row: {
           created_at: string
