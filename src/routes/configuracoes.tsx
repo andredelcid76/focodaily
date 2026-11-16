@@ -230,8 +230,8 @@ function OutlookCard({
             <div>
               <CardTitle>Microsoft Outlook e Teams</CardTitle>
               <CardDescription>
-                E-mails, calendário e tarefas. Usado para varrer a caixa de entrada, sincronizar a
-                agenda e enviar aviso no Teams quando você delega uma tarefa.
+                Calendário e tarefas. Usado para sincronizar a agenda e enviar aviso no Teams
+                quando você delega uma tarefa.
               </CardDescription>
             </div>
           </div>
@@ -333,7 +333,7 @@ function PipedriveCard({
             <div>
               <CardTitle>Pipedrive</CardTitle>
               <CardDescription>
-                Atividades do CRM viram tarefas pendentes na caixa de entrada.
+                Atividades do CRM viram tarefas no Foco.
               </CardDescription>
             </div>
           </div>

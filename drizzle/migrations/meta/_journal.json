@@ -218,6 +218,13 @@
       "when": 1794589197588,
       "tag": "0030_oauth_idjag_grant",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794864337780,
+      "tag": "0031_retire_inbox_scan_cron",
+      "breakpoints": true
     }
   ]
 }

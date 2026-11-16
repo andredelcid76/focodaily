@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CalendarRange,
   FolderKanban,
-  Inbox,
   ListTodo,
   LogOut,
   Search,
@@ -40,7 +39,6 @@ type NavItem = {
   url: string;
   icon: typeof ListTodo;
   shortcut?: string;
-  badgeKey?: "inbox";
 };
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -59,7 +57,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { title: "Projetos", url: "/projetos", icon: FolderKanban, shortcut: "G P" },
       { title: "Equipes", url: "/equipes", icon: Users, shortcut: "G E" },
-      { title: "Caixa de entrada", url: "/inbox", icon: Inbox, badgeKey: "inbox", shortcut: "G I" },
     ],
   },
   {
@@ -78,38 +75,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-function useInboxCount(userId: string | undefined) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
-    const load = async () => {
-      const { count: c } = await supabase
-        .from("inbox_suggestions")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "pending");
-      if (active) setCount(c ?? 0);
-    };
-    load();
-    const channel = supabase
-      .channel("inbox-count")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "inbox_suggestions", filter: `user_id=eq.${userId}` },
-        load,
-      )
-      .subscribe();
-    const interval = setInterval(load, 60000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
-  return count;
-}
-
 // Global "g + key" hotkeys for keyboard-driven nav.
 function useNavHotkeys() {
   useEffect(() => {
@@ -122,7 +87,6 @@ function useNavHotkeys() {
       m: "/minhas-tarefas",
       p: "/projetos",
       e: "/equipes",
-      i: "/inbox",
       a: "/analise",
       c: "/configuracoes",
     };
@@ -158,7 +122,6 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut, user } = useAuth();
-  const inboxCount = useInboxCount(user?.id);
   const [highlights, setHighlights] = useState<Set<string>>(new Set());
   useEffect(() => {
     const refresh = () => setHighlights(pendingHighlights());
@@ -206,7 +169,6 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
-                  const showBadge = item.badgeKey === "inbox" && inboxCount > 0;
                   const active = isActive(item.url);
                   return (
                     <SidebarMenuItem key={item.title}>
@@ -226,17 +188,9 @@ export function AppSidebar({ onOpenSearch }: { onOpenSearch: () => void }) {
                           )}
                           <span className="relative shrink-0">
                             <item.icon className={`h-4 w-4 transition-colors ${active ? "text-primary" : ""}`} />
-                            {showBadge && collapsed && (
-                              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-circumstantial ring-2 ring-sidebar" />
-                            )}
                           </span>
                           <span className="flex-1 truncate">{item.title}</span>
-                          {showBadge && !collapsed && (
-                            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-circumstantial px-1.5 text-[10px] font-semibold text-circumstantial-foreground">
-                              {inboxCount > 99 ? "99+" : inboxCount}
-                            </span>
-                          )}
-                          {!showBadge && highlights.has(item.url) && (
+                          {highlights.has(item.url) && (
                             collapsed ? (
                               <span className="absolute left-5 top-1 h-2 w-2 rounded-full bg-primary" />
                             ) : (

@@ -23,7 +23,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { WhatsNewDialog } from "@/components/WhatsNewDialog";
 
 // Single source of truth for breadcrumb groups. The eyebrow link goes to the
-// first item of the group, so e.g. clicking "Trabalho" from /inbox returns to
+// first item of the group, so e.g. clicking "Trabalho" from /equipes returns to
 // /projetos (the section landing) — not back to "Hoje".
 type BreadcrumbEntry = {
   match: (p: string) => boolean;
@@ -40,7 +40,6 @@ const BREADCRUMBS: BreadcrumbEntry[] = [
   { match: (p) => p.startsWith("/projetos"), group: "Trabalho", groupHref: "/projetos", title: "Projetos" },
   { match: (p) => p.startsWith("/equipes"), group: "Trabalho", groupHref: "/projetos", title: "Equipes" },
   { match: (p) => p.startsWith("/papeis"), group: "Trabalho", groupHref: "/projetos", title: "Papéis" },
-  { match: (p) => p.startsWith("/inbox"), group: "Trabalho", groupHref: "/projetos", title: "Caixa de entrada" },
   { match: (p) => p.startsWith("/analise"), group: "Insights", groupHref: "/analise", title: "Análise estratégica" },
   { match: (p) => p.startsWith("/notificacoes"), group: "Sistema", groupHref: "/configuracoes", title: "Notificações" },
   { match: (p) => p.startsWith("/novidades"), group: "Sistema", groupHref: "/configuracoes", title: "Novidades" },

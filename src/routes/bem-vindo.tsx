@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import {
   ListTodo,
   FolderKanban,
-  Inbox,
   Calendar,
   Plug,
   ArrowRight,
@@ -49,12 +48,6 @@ const ACTIONS = [
     title: "Ver sua agenda",
     desc: "Encaixe tarefas entre as reuniões.",
     to: "/agenda" as const,
-  },
-  {
-    icon: Inbox,
-    title: "Abrir a caixa de entrada",
-    desc: "Sugestões geradas de e-mails, reuniões e Pipedrive.",
-    to: "/inbox" as const,
   },
   {
     icon: Plug,

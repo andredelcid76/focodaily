@@ -4,8 +4,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  * Fonte única de verdade para obter um access token válido do Outlook.
  *
  * Antes, a lógica de refresh estava duplicada em 7 lugares (outlook.ts,
- * outlook.functions.ts, planner.ts, planner.functions.ts, inbox/scan.ts,
- * inbox/tag-email.ts). Isso causava a desconexão espontânea: quando o scan de
+ * outlook.functions.ts, planner.ts, planner.functions.ts e os antigos
+ * inbox/scan.ts / inbox/tag-email.ts, já removidos). Isso causava a desconexão espontânea: quando o scan de
  * e-mail e o sync de calendário refrescavam o MESMO refresh_token quase juntos,
  * o Azure invalidava o antigo ao emitir o novo, e o segundo refresh recebia
  * `invalid_grant` e apagava a conexão.

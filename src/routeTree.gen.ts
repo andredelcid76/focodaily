@@ -40,15 +40,13 @@ import { Route as ApiPublicOutlookRouteImport } from './routes/api/public/outloo
 import { Route as ApiPublicPlannerRouteImport } from './routes/api/public/planner'
 import { Route as ApiPublicVersionRouteImport } from './routes/api/public/version'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
-import { Route as ApiPublicInboxScanRouteImport } from './routes/api/public/inbox/scan'
-import { Route as ApiPublicInboxScanAllRouteImport } from './routes/api/public/inbox/scan-all'
-import { Route as ApiPublicInboxTagEmailRouteImport } from './routes/api/public/inbox/tag-email'
 import { Route as ApiPublicNotificationsDispatchRouteImport } from './routes/api/public/notifications/dispatch'
 import { Route as ApiPublicNotificationsTickRouteImport } from './routes/api/public/notifications/tick'
 import { Route as ApiPublicOauthAuthorizeRouteImport } from './routes/api/public/oauth/authorize'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOutlookCallbackRouteImport } from './routes/api/public/outlook/callback'
+import { Route as ApiPublicSyncScanAllRouteImport } from './routes/api/public/sync/scan-all'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -211,21 +209,6 @@ const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicInboxScanRoute = ApiPublicInboxScanRouteImport.update({
-  id: '/api/public/inbox/scan',
-  path: '/api/public/inbox/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicInboxScanAllRoute = ApiPublicInboxScanAllRouteImport.update({
-  id: '/api/public/inbox/scan-all',
-  path: '/api/public/inbox/scan-all',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicInboxTagEmailRoute = ApiPublicInboxTagEmailRouteImport.update({
-  id: '/api/public/inbox/tag-email',
-  path: '/api/public/inbox/tag-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicNotificationsDispatchRoute =
   ApiPublicNotificationsDispatchRouteImport.update({
     id: '/api/public/notifications/dispatch',
@@ -259,6 +242,11 @@ const ApiPublicOutlookCallbackRoute =
     path: '/callback',
     getParentRoute: () => ApiPublicOutlookRoute,
   } as any)
+const ApiPublicSyncScanAllRoute = ApiPublicSyncScanAllRouteImport.update({
+  id: '/api/public/sync/scan-all',
+  path: '/api/public/sync/scan-all',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -308,15 +296,13 @@ export interface FileRoutesByFullPath {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/version': typeof ApiPublicVersionRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
-  '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
-  '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
   '/api/public/notifications/tick': typeof ApiPublicNotificationsTickRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/sync/scan-all': typeof ApiPublicSyncScanAllRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -353,15 +339,13 @@ export interface FileRoutesByTo {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/version': typeof ApiPublicVersionRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
-  '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
-  '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
   '/api/public/notifications/tick': typeof ApiPublicNotificationsTickRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/sync/scan-all': typeof ApiPublicSyncScanAllRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -399,15 +383,13 @@ export interface FileRoutesById {
   '/api/public/planner': typeof ApiPublicPlannerRoute
   '/api/public/version': typeof ApiPublicVersionRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
-  '/api/public/inbox/scan': typeof ApiPublicInboxScanRoute
-  '/api/public/inbox/scan-all': typeof ApiPublicInboxScanAllRoute
-  '/api/public/inbox/tag-email': typeof ApiPublicInboxTagEmailRoute
   '/api/public/notifications/dispatch': typeof ApiPublicNotificationsDispatchRoute
   '/api/public/notifications/tick': typeof ApiPublicNotificationsTickRoute
   '/api/public/oauth/authorize': typeof ApiPublicOauthAuthorizeRoute
   '/api/public/oauth/register': typeof ApiPublicOauthRegisterRoute
   '/api/public/oauth/token': typeof ApiPublicOauthTokenRoute
   '/api/public/outlook/callback': typeof ApiPublicOutlookCallbackRoute
+  '/api/public/sync/scan-all': typeof ApiPublicSyncScanAllRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -446,15 +428,13 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/version'
     | '/lovable/email/events'
-    | '/api/public/inbox/scan'
-    | '/api/public/inbox/scan-all'
-    | '/api/public/inbox/tag-email'
     | '/api/public/notifications/dispatch'
     | '/api/public/notifications/tick'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
+    | '/api/public/sync/scan-all'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -491,15 +471,13 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/version'
     | '/lovable/email/events'
-    | '/api/public/inbox/scan'
-    | '/api/public/inbox/scan-all'
-    | '/api/public/inbox/tag-email'
     | '/api/public/notifications/dispatch'
     | '/api/public/notifications/tick'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
+    | '/api/public/sync/scan-all'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -536,15 +514,13 @@ export interface FileRouteTypes {
     | '/api/public/planner'
     | '/api/public/version'
     | '/lovable/email/events'
-    | '/api/public/inbox/scan'
-    | '/api/public/inbox/scan-all'
-    | '/api/public/inbox/tag-email'
     | '/api/public/notifications/dispatch'
     | '/api/public/notifications/tick'
     | '/api/public/oauth/authorize'
     | '/api/public/oauth/register'
     | '/api/public/oauth/token'
     | '/api/public/outlook/callback'
+    | '/api/public/sync/scan-all'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -582,14 +558,12 @@ export interface RootRouteChildren {
   ApiPublicPlannerRoute: typeof ApiPublicPlannerRoute
   ApiPublicVersionRoute: typeof ApiPublicVersionRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
-  ApiPublicInboxScanRoute: typeof ApiPublicInboxScanRoute
-  ApiPublicInboxScanAllRoute: typeof ApiPublicInboxScanAllRoute
-  ApiPublicInboxTagEmailRoute: typeof ApiPublicInboxTagEmailRoute
   ApiPublicNotificationsDispatchRoute: typeof ApiPublicNotificationsDispatchRoute
   ApiPublicNotificationsTickRoute: typeof ApiPublicNotificationsTickRoute
   ApiPublicOauthAuthorizeRoute: typeof ApiPublicOauthAuthorizeRoute
   ApiPublicOauthRegisterRoute: typeof ApiPublicOauthRegisterRoute
   ApiPublicOauthTokenRoute: typeof ApiPublicOauthTokenRoute
+  ApiPublicSyncScanAllRoute: typeof ApiPublicSyncScanAllRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -814,27 +788,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/inbox/scan': {
-      id: '/api/public/inbox/scan'
-      path: '/api/public/inbox/scan'
-      fullPath: '/api/public/inbox/scan'
-      preLoaderRoute: typeof ApiPublicInboxScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/inbox/scan-all': {
-      id: '/api/public/inbox/scan-all'
-      path: '/api/public/inbox/scan-all'
-      fullPath: '/api/public/inbox/scan-all'
-      preLoaderRoute: typeof ApiPublicInboxScanAllRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/inbox/tag-email': {
-      id: '/api/public/inbox/tag-email'
-      path: '/api/public/inbox/tag-email'
-      fullPath: '/api/public/inbox/tag-email'
-      preLoaderRoute: typeof ApiPublicInboxTagEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/notifications/dispatch': {
       id: '/api/public/notifications/dispatch'
       path: '/api/public/notifications/dispatch'
@@ -876,6 +829,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/outlook/callback'
       preLoaderRoute: typeof ApiPublicOutlookCallbackRouteImport
       parentRoute: typeof ApiPublicOutlookRoute
+    }
+    '/api/public/sync/scan-all': {
+      id: '/api/public/sync/scan-all'
+      path: '/api/public/sync/scan-all'
+      fullPath: '/api/public/sync/scan-all'
+      preLoaderRoute: typeof ApiPublicSyncScanAllRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
@@ -946,14 +906,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPlannerRoute: ApiPublicPlannerRoute,
   ApiPublicVersionRoute: ApiPublicVersionRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
-  ApiPublicInboxScanRoute: ApiPublicInboxScanRoute,
-  ApiPublicInboxScanAllRoute: ApiPublicInboxScanAllRoute,
-  ApiPublicInboxTagEmailRoute: ApiPublicInboxTagEmailRoute,
   ApiPublicNotificationsDispatchRoute: ApiPublicNotificationsDispatchRoute,
   ApiPublicNotificationsTickRoute: ApiPublicNotificationsTickRoute,
   ApiPublicOauthAuthorizeRoute: ApiPublicOauthAuthorizeRoute,
   ApiPublicOauthRegisterRoute: ApiPublicOauthRegisterRoute,
   ApiPublicOauthTokenRoute: ApiPublicOauthTokenRoute,
+  ApiPublicSyncScanAllRoute: ApiPublicSyncScanAllRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
